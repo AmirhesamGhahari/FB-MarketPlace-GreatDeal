@@ -1,0 +1,61 @@
+event_key: "beabadoobee_toronto_oct2026"
+event_name: "beabadoobee Toronto 2026"
+event_date: "2026-10-07"
+
+sources:
+
+  facebook_legacy:
+    enabled: true
+    actor_id: "raidr-api/facebook-marketplace-scraper"
+    proxy:
+      use_apify_proxy: true
+      apify_proxy_groups: ["RESIDENTIAL"]
+      apify_proxy_country: "CA"
+    radius_km: 500
+    search_terms:
+      - "beabadoobee"
+      - "beabadoobee ticket"
+      - "beabadoobee toronto"
+      - "beabadoobee october"
+      - "bea toronto ticket"
+    initial_run:
+      cities:
+        - "Toronto, Ontario"
+      listings_per_search: 400
+      use_deduplication: false
+      fetch_detailed_items: false
+      filter_keywords: "beabadoobee"
+    periodic_run:
+      cities:
+        - "Toronto, Ontario"
+      listings_per_search: 100
+      days_listed: "30"
+      use_deduplication: false
+      fetch_detailed_items: false
+      filter_keywords: "beabadoobee"
+
+  facebook_new:
+    enabled: true
+    actor_id: "datavoyantlab/Facebook-marketplace-scraper"
+    filter_keywords: ["beabadoobee"]
+    marketplace_urls:
+      - "https://www.facebook.com/marketplace/toronto/search/?query=beabadoobee&exact=false"
+      - "https://www.facebook.com/marketplace/toronto/search/?query=beabadoobee+ticket&exact=false"
+    initial_run:
+      max_items: 1000
+      fetch_item_details: false
+      deduplicate_across_runs: true
+      stop_on_first_page_all_duplicates: false
+    periodic_run:
+      max_items: 200
+      fetch_item_details: false
+      deduplicate_across_runs: true
+      stop_on_first_page_all_duplicates: true
+
+  seatgeek:
+    enabled: false
+    event_id: null
+
+  stubhub:
+    enabled: false
+    event_url: https://www.stubhub.com/beabadoobee-toronto-tickets-10-7-2026/event/161462493/?quantity=0

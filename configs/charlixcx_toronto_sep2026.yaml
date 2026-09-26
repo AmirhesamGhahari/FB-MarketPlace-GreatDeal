@@ -1,0 +1,64 @@
+event_key: "charli_xcx_toronto_sep2026"
+event_name: "Charli XCX Toronto Tour Sep 2026"
+
+sources:
+
+  facebook_legacy:
+    enabled: true
+    actor_id: "raidr-api/facebook-marketplace-scraper"
+    proxy:
+      use_apify_proxy: true
+      apify_proxy_groups: ["RESIDENTIAL"]
+      apify_proxy_country: "CA"
+    radius_km: 500
+    search_terms:
+      - "charli xcx"
+      - "charli brat"
+      - "charli xcx sept"
+      - "charli ticket"
+    initial_run:
+      cities:
+        - "Toronto, Ontario"
+      listings_per_search: 300
+      use_deduplication: false
+      fetch_detailed_items: false
+      filter_keywords: "charli xcx"
+    periodic_run:
+      cities:
+        - "Toronto, Ontario"
+      listings_per_search: 100
+      days_listed: "30"
+      use_deduplication: false
+      fetch_detailed_items: false
+      filter_keywords: "charli"
+
+  facebook_new:
+    enabled: true
+    actor_id: "futurafree/facebook-marketplace-scraper-discord-alerts"
+    latitude: "43.6532"
+    longitude: "-79.3832"
+    search_radius_km: 130
+    min_price: "0"
+    max_price: "5000"
+    filter_keywords: ["charli"]
+    search_terms:
+      - "charli xcx"
+      - "charli brat"
+      - "charli xcx sept"
+      - "charli ticket"
+    initial_run:
+      listings_per_search: 300
+      days_listed: 30
+      use_deduplication: false
+    periodic_run:
+      listings_per_search: 100
+      days_listed: 30
+      use_deduplication: false
+
+  seatgeek:
+    enabled: true
+    event_id: "18076694"  # verify this ID is correct for this event at seatgeek.com
+
+  stubhub:
+    enabled: false
+    event_url: null
