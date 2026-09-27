@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime
+from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import BigInteger, Date, DateTime, ForeignKeyConstraint, Index, String, Text, func
+from sqlalchemy import BigInteger, DateTime, ForeignKeyConstraint, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -17,25 +17,22 @@ class PipelineRun(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
-    # Which pipeline stage ran (e.g. "stage1_stubhub", "stage1_facebook_new")
+    # Which pipeline stage ran (e.g. "stage1_facebook", "stage2_classify")
     stage: Mapped[str] = mapped_column(String(64), nullable=False)
 
-    # Config name — the YAML file used (e.g. "olivia_rodrigo_toronto_oct2026")
+    # Config name — the YAML file used (e.g. "iphone", "macbook")
     source: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
-    # Scraper used — "facebook_legacy" | "facebook_new" | "stubhub" | "seatgeek"
+    # Scraper used — "facebook_legacy"
     source_type: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
 
     # Run mode — "initial" (first full scrape) or "periodic"
     mode: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
 
-    # Event this run belongs to (denormalized for easy filtering)
-    event_key: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    event_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    # Category this run belongs to (denormalized for easy filtering)
+    category_key: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    category_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), nullable=True)
-
-    # For multi-date events: which specific show date this run covers (StubHub only)
-    show_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
 
     status: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     started_at: Mapped[datetime] = mapped_column(
@@ -52,13 +49,12 @@ class PipelineRun(Base):
 
     __table_args__ = (
         ForeignKeyConstraint(
-            ["event_id"], ["events.id"],
-            name="fk_pipeline_runs_event_id",
+            ["category_id"], ["categories.id"],
+            name="fk_pipeline_runs_category_id",
         ),
-        Index("idx_pipeline_runs_lstarted_at",  "started_at"),
-        Index("idx_pipeline_runs_created_at",   "created_at"),
-        Index("idx_pipeline_runs_event_key",    "event_key"),
-        Index("idx_pipeline_runs_event_id",     "event_id"),
-        Index("idx_pipeline_runs_source_type",  "source_type"),
-        Index("idx_pipeline_runs_show_date",    "show_date"),
+        Index("idx_pipeline_runs_started_at",   "started_at"),
+        Index("idx_pipeline_runs_created_at",    "created_at"),
+        Index("idx_pipeline_runs_category_key",  "category_key"),
+        Index("idx_pipeline_runs_category_id",   "category_id"),
+        Index("idx_pipeline_runs_source_type",   "source_type"),
     )

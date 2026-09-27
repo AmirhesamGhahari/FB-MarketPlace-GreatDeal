@@ -1,11 +1,11 @@
 """Facebook Marketplace pipeline CLI.
 
 Commands:
-    run-facebook-legacy from-apify --config veld_2026 --mode initial
-    run-facebook-legacy from-apify --config veld_2026 --mode periodic
-    run-facebook-legacy from-file --config veld_2026 --file sample_data/data.json
-    run-facebook-legacy classify
-    run-facebook-legacy classify --config veld_2026
+    run-facebook from-apify --config iphone --mode initial
+    run-facebook from-apify --config iphone --mode periodic
+    run-facebook from-file --config iphone --file sample_data/data.json
+    run-facebook classify
+    run-facebook classify --config iphone
 """
 
 from __future__ import annotations
@@ -59,26 +59,28 @@ def _load_config(config_name: str) -> dict:
         return yaml.safe_load(fh)
 
 
-def _resolve_event(config: dict) -> uuid.UUID:
+def _resolve_category(config: dict) -> uuid.UUID:
     with SessionLocal() as session:
         session.execute(
             text("""
-                INSERT INTO events (id, event_key, event_name)
-                VALUES (:id, :event_key, :event_name)
-                ON CONFLICT (event_key) DO NOTHING
+                INSERT INTO categories (id, category_key, category_name, product_type, brand)
+                VALUES (:id, :category_key, :category_name, :product_type, :brand)
+                ON CONFLICT (category_key) DO NOTHING
             """),
             {
                 "id": str(uuid.uuid4()),
-                "event_key": config["event_key"],
-                "event_name": config["event_name"],
+                "category_key": config["category_key"],
+                "category_name": config["category_name"],
+                "product_type": config.get("product_type"),
+                "brand": config.get("brand"),
             },
         )
         session.commit()
-        event_id = session.execute(
-            text("SELECT id FROM events WHERE event_key = :key"),
-            {"key": config["event_key"]},
+        category_id = session.execute(
+            text("SELECT id FROM categories WHERE category_key = :key"),
+            {"key": config["category_key"]},
         ).scalar()
-    return event_id
+    return category_id
 
 
 def _build_run_inputs(config: dict, mode: str) -> list[dict]:
@@ -159,7 +161,7 @@ def _print_classify_result(title: str, result, elapsed: float) -> None:
 
 @click.group()
 def cli() -> None:
-    """FB Marketplace Great Deals — Facebook Marketplace (legacy actor) pipeline."""
+    """FB Marketplace Great Deals — scrape and classify product listings."""
     _run_migrations()
 
 
@@ -184,17 +186,14 @@ def from_apify(config_name: str, mode: str, stage: str) -> None:
     console.print()
     total_start = time.monotonic()
 
-    result1 = None
-    result2 = None
-
-    config     = _load_config(config_name)
-    legacy_cfg = config.get("sources", {}).get("facebook_legacy", {})
+    config      = _load_config(config_name)
+    legacy_cfg  = config.get("sources", {}).get("facebook_legacy", {})
 
     if not legacy_cfg.get("enabled", False):
         console.print(f"[yellow]facebook_legacy is disabled for {config_name!r} — skipping.[/yellow]")
         return
 
-    event_id = _resolve_event(config)
+    category_id = _resolve_category(config)
 
     if stage in ("scrape", "all"):
         run_inputs = _build_run_inputs(config, mode)
@@ -208,14 +207,19 @@ def from_apify(config_name: str, mode: str, stage: str) -> None:
 
         source_label = f"{config_name}:{mode}"
         t0      = time.monotonic()
-        result1 = run_stage1_from_records(all_records, source=source_label,
-                                          event_id=event_id, event_key=config["event_key"], mode=mode)
+        result1 = run_stage1_from_records(
+            all_records,
+            source=source_label,
+            category_id=category_id,
+            category_key=config["category_key"],
+            mode=mode,
+        )
         _print_scrape_result("STAGE 1 — Fetch & Extract", result1, time.monotonic() - t0)
 
     if stage in ("classify", "all"):
         t0      = time.monotonic()
-        result2 = run_classify(event_id=event_id, event_key=config["event_key"])
-        _print_classify_result("STAGE 2 — LLM Classify", result2, time.monotonic() - t0)
+        result2 = run_classify(category_id=category_id, category_key=config["category_key"])
+        _print_classify_result("STAGE 2 — AI Classify", result2, time.monotonic() - t0)
 
     console.print(Rule(f"[dim]Done in {time.monotonic() - total_start:.1f}s[/dim]"))
     console.print()
@@ -242,18 +246,22 @@ def from_file(config_name: str, source_file: Path, stage: str) -> None:
     console.print()
     total_start = time.monotonic()
 
-    config = _load_config(config_name)
-    event_id = _resolve_event(config)
+    config      = _load_config(config_name)
+    category_id = _resolve_category(config)
 
     if stage in ("scrape", "all"):
-        t0 = time.monotonic()
-        result1 = run_stage1(source_file, event_id=event_id, event_key=config["event_key"])
+        t0      = time.monotonic()
+        result1 = run_stage1(
+            source_file,
+            category_id=category_id,
+            category_key=config["category_key"],
+        )
         _print_scrape_result("STAGE 1 — Extract & Load", result1, time.monotonic() - t0)
 
     if stage in ("classify", "all"):
-        t0 = time.monotonic()
-        result2 = run_classify(event_id=event_id, event_key=config["event_key"])
-        _print_classify_result("STAGE 2 — LLM Classify", result2, time.monotonic() - t0)
+        t0      = time.monotonic()
+        result2 = run_classify(category_id=category_id, category_key=config["category_key"])
+        _print_classify_result("STAGE 2 — AI Classify", result2, time.monotonic() - t0)
 
     console.print(Rule(f"[dim]Done in {time.monotonic() - total_start:.1f}s[/dim]"))
     console.print()
@@ -265,22 +273,22 @@ def from_file(config_name: str, source_file: Path, stage: str) -> None:
 @cli.command("classify")
 @click.option("--config", "-c", "config_name", required=False, default=None)
 def classify_cmd(config_name: Optional[str]) -> None:
-    """Run LLM classification on unclassified raw listings.
+    """Run AI classification on unclassified raw listings.
 
-    Without --config, classifies all unclassified listings across every event.
+    Without --config, classifies all unclassified listings across every category.
     """
     console.print()
     t0 = time.monotonic()
 
-    event_id = None
-    event_key = None
+    category_id  = None
+    category_key = None
     if config_name:
-        config = _load_config(config_name)
-        event_id = _resolve_event(config)
-        event_key = config["event_key"]
+        config       = _load_config(config_name)
+        category_id  = _resolve_category(config)
+        category_key = config["category_key"]
 
-    result = run_classify(event_id=event_id, event_key=event_key)
-    _print_classify_result("STAGE 2 — LLM Classify", result, time.monotonic() - t0)
+    result = run_classify(category_id=category_id, category_key=category_key)
+    _print_classify_result("STAGE 2 — AI Classify", result, time.monotonic() - t0)
     console.print(Rule(f"[dim]Done in {time.monotonic() - t0:.1f}s[/dim]"))
     console.print()
 

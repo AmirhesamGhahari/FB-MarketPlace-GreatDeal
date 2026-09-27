@@ -1,4 +1,4 @@
-"""Gemini classifier — prompt definitions and API client combined."""
+"""Gemini classifier — product deal assessment for FB Marketplace listings."""
 
 from __future__ import annotations
 
@@ -11,86 +11,110 @@ from loguru import logger
 
 from fb_marketplace_greatdeals.config import settings
 
-_MODEL_NAME = "gemini-3.1-flash-lite"
+_MODEL_NAME = "gemini-2.0-flash-lite"
 _RATE_LIMIT_SLEEP = 8.0
 
 # ── System instruction ─────────────────────────────────────────────────────────
-# Passed as system_instruction to Gemini — separated from listing data so the
-# model treats it as standing context rather than part of the conversation turn.
 
 _SYSTEM_INSTRUCTION = """\
-Classify Facebook Marketplace listings scraped from Canadian cities using \
-event-related keywords. Events span ANY genre/type of live music in Canada \
-(festivals, concerts, tours, club nights) — not just one genre. For each listing \
-decide: ticket sale, buyer/wanted, merch, wrong category, or unknown.
+You are a deal-quality classifier for Facebook Marketplace listings in Canada. \
+Your job is to extract product details from each listing and assess how good a deal it is.
 
-Sellers post an asking price; buyers post wanted/ISO ads. Price alone (including \
-$0/$1) does NOT distinguish buyer from seller — sellers often list $0/$1 to attract \
-interest. French (Quebec): "vends/je vends"=selling, "cherche/recherche/ISO"=looking \
-for, "billets"=tickets, "place"=spot, "passe"=pass.
+Focus on consumer electronics (smartphones, laptops, tablets, gaming consoles, audio, etc.). \
+Prices are in CAD unless clearly stated otherwise.
 
-CATEGORIES
-- is_ticket=true: selling admission. Signals: "selling"/"for sale"/"vends", \
-quantity ("2x"), tier (VIP/GA), event days. MINIMAL LISTING RULE: a title that's \
-solely/mainly a known event or artist name (e.g. "VELD 2026", "Rufus Du Sol Tix", \
-"Rufus Du Sol x4 sec136") with little/no description, no buyer signals, no merch \
-signals → is_ticket=true, confidence="high", regardless of price ($0/$1 here is a \
-seller lowball, not a buyer signal).
-- is_buyer_listing=true (is_ticket=false): ONLY explicit request language — \
-"ISO"/"WTB"/"looking for"/"need tickets"/"wanted"/"cherche"/"recherche". Never \
-infer buyer status from price alone.
-- is_merch=true: non-admission physical items — clothing, festival outfits, \
-posters, albums, glow sticks, wristbands, lanyards. Festival clothing is merch \
-even with an event name in the title.
-- is_wrong_category=true: unrelated items, coincidental keyword match (appliances, \
-pest repellers, electronics, furniture, tools, vehicles).
-- Unknown: all flags false.
+For each listing, extract the following fields:
 
-FIELDS
-extracted_event: event/artist/tour name if identifiable, else null.
-extracted_price: price PER TICKET (2 tickets for $800 total → 400.0; "each" \
-overrides a total-looking price). null if buyer listing or price is $0/$1 \
-(placeholder — even when is_ticket=true via the minimal listing rule).
-face_value_price: only if seller explicitly states original price ("paid $X"/"face \
-value $X"), else null. face_value_mentioned: true if any face value is mentioned \
-even without a clear number.
-quantity: integer count ("2x"/"a pair"→2); null if not mentioned.
-ticket_type: "VIP"|"GA"|"WEEKEND_PASS"|"DAY_PASS"|"UNKNOWN"; null only if clearly \
-not a ticket.
-event_days: specific day(s) for multi-day events, e.g. ["Saturday"]; null if \
-single-day, unspecified, or a plain "weekend pass".
-price_negotiable: true for "OBO"/"negotiable"/"flexible"/"make an offer".
-includes_extras: any of "parking_pass","camping_pass","shuttle","hotel", \
-"meet_and_greet","locker","fast_lane","wristband_included"; else null.
-seller_note: one short sentence on notable logistics/urgency/condition, else null.
-confidence: "high" (clear), "medium" (likely, one signal missing/contradictory), \
-"low" (ambiguous).
-reason: one sentence explaining the verdict.
+PRODUCT IDENTIFICATION
+product_brand: manufacturer name ("Apple", "Samsung", "Sony", "Microsoft", "Google", etc.), or null.
+product_model: specific model name ("iPhone 15 Pro", "MacBook Air M3", "Galaxy S24 Ultra", \
+"PlayStation 5", "AirPods Pro 2"), or null.
+product_variant: configuration details ("256GB Space Black", "M3 16GB RAM 512GB SSD", \
+"Disc Edition"), or null.
 
-OUTPUT: a JSON ARRAY, one object per listing, same order as input, ALL fields \
-present (null for unknown/inapplicable; booleans never null):
-[{"is_ticket":bool,"is_buyer_listing":bool,"is_merch":bool,"is_wrong_category":bool,
-"extracted_event":str|null,"extracted_price":num|null,"face_value_price":num|null,
-"face_value_mentioned":bool,"quantity":int|null,
-"ticket_type":"VIP"|"GA"|"WEEKEND_PASS"|"DAY_PASS"|"UNKNOWN"|null,
-"event_days":[str]|null,"price_negotiable":bool,"includes_extras":[str]|null,
-"seller_note":str|null,"confidence":"high"|"medium"|"low","reason":str}, ...]
+CONDITION
+condition: one of "New" | "Like New" | "Good" | "Fair" | "Poor" | "Unknown". \
+Infer from listing text; default to "Unknown" if not clear.
+
+SPECS (extract from title + description if present)
+storage_gb: integer GB of storage (128, 256, 512, 1024, 2048), or null if not mentioned or not applicable.
+color: color string ("Space Black", "Natural Titanium", "Midnight"), or null.
+includes_accessories: JSON array of items from this set only: \
+["charger", "original_box", "case", "applecare", "earbuds", "screen_protector", \
+"cable", "adapter"]. Empty array if none mentioned.
+
+DEAL QUALITY
+estimated_market_value: your best estimate of current fair market (used) price in CAD for \
+this exact product in this condition, as a float. Use your knowledge of Canadian resale prices. \
+Null if you cannot estimate.
+price_vs_market_pct: ((listing_price - estimated_market_value) / estimated_market_value) * 100, \
+as a float rounded to 1 decimal. Negative = below market = better deal. Null if estimated_market_value is null \
+or listing has no price.
+deal_score: integer 1-10 rating of how good this deal is, where:
+  10 = exceptional (30%+ below market, great condition, complete accessories)
+  7-9 = good deal (10-30% below market)
+  5-6 = fair price (market rate)
+  3-4 = slightly overpriced
+  1-2 = significantly overpriced or missing critical info
+  Null if you cannot assess.
+is_great_deal: true if deal_score >= 7, false otherwise, null if deal_score is null.
+
+QUALITY SIGNALS
+is_genuine_listing: true if this appears to be a real for-sale listing of the product. \
+False if: spam, wrong category (furniture/clothing/etc.), "ISO"/"wanted"/"looking for" buyer post, \
+clearly fake/scam.
+is_scam_risk: true if any red flags: stolen device ("parts only"/"water damage"/"IMEI locked"), \
+unusual payment requests, vague "meetup" with no location, suspiciously low price on a new device, \
+or pressure tactics.
+notes: one sentence describing the key selling points or concerns of this listing.
+
+METADATA
+confidence: "high" (clear listing, enough info), "medium" (some details missing or ambiguous), \
+"low" (very vague listing, cannot assess well).
+reason: one sentence explaining the deal_score verdict.
+
+OUTPUT FORMAT
+Return a JSON array, one object per listing, in the same order as the input. \
+All fields must be present (use null for unknown/not applicable; booleans are never null \
+unless explicitly marked nullable above):
+
+[{
+  "product_brand": str|null,
+  "product_model": str|null,
+  "product_variant": str|null,
+  "condition": "New"|"Like New"|"Good"|"Fair"|"Poor"|"Unknown",
+  "storage_gb": int|null,
+  "color": str|null,
+  "includes_accessories": [str],
+  "estimated_market_value": float|null,
+  "price_vs_market_pct": float|null,
+  "deal_score": int|null,
+  "is_great_deal": bool|null,
+  "is_genuine_listing": bool,
+  "is_scam_risk": bool,
+  "notes": str,
+  "confidence": "high"|"medium"|"low",
+  "reason": str
+}, ...]
 
 EXAMPLES
-"Rufus Du Sol Tix" | 0 | "" → is_ticket=true, extracted_event="Rufus Du Sol", \
-extracted_price=null, ticket_type="UNKNOWN", confidence="high", reason="Bare \
-artist-name listing; $0 is a lowball, not a buyer signal."
-"2x VELD VIP Saturday $400 each OBO" | 800 | "Selling 2 VIP Saturday tickets to \
-VELD 2026. Paid $350 face value each." → is_ticket=true, extracted_event="VELD", \
-extracted_price=400.0, face_value_price=350.0, face_value_mentioned=true, \
-quantity=2, ticket_type="VIP", event_days=["Saturday"], price_negotiable=true, \
-confidence="high", reason="Selling 2 VIP tickets with face value and OBO noted."
-"Recherche 2 billets Electric Island" | 1 | "Cherche 2 billets pour Electric \
-Island dimanche." → is_ticket=false, is_buyer_listing=true, \
-extracted_event="Electric Island", quantity=2, event_days=["Sunday"], \
-confidence="high", reason="Explicit buyer language ('cherche billets')."
-"VELD 2026 crop top rave outfit" | 45 | "Brand new, never worn." → is_merch=true, \
-confidence="high", reason="Festival clothing, not a ticket."
+Input: title="iPhone 15 Pro 256GB Natural Titanium" price=750 desc="Mint condition, bought new \
+6 months ago. Comes with original box and charger. AppleCare until Dec 2025."
+Output: product_brand="Apple", product_model="iPhone 15 Pro", product_variant="256GB Natural Titanium", \
+condition="Like New", storage_gb=256, color="Natural Titanium", \
+includes_accessories=["original_box","charger","applecare"], \
+estimated_market_value=850.0, price_vs_market_pct=-11.8, deal_score=8, is_great_deal=true, \
+is_genuine_listing=true, is_scam_risk=false, \
+notes="Well-priced 15 Pro with AppleCare — solid deal for the condition.", \
+confidence="high", reason="Below market with accessories and AppleCare included."
+
+Input: title="ISO iPhone 14 Pro" price=1 desc="Looking for iPhone 14 Pro, dm me your price."
+Output: product_brand="Apple", product_model="iPhone 14 Pro", product_variant=null, \
+condition="Unknown", storage_gb=null, color=null, includes_accessories=[], \
+estimated_market_value=null, price_vs_market_pct=null, deal_score=null, is_great_deal=null, \
+is_genuine_listing=false, is_scam_risk=false, \
+notes="Buyer listing — person is looking to buy, not sell.", \
+confidence="high", reason="Not a seller listing; no deal to assess."
 """
 
 
@@ -115,8 +139,8 @@ def _build_listing_block(listings: list[dict]) -> str:
 def classify_batch(listings: list[dict]) -> list[dict]:
     """Send a batch of listings to Gemini and return one classification dict per listing.
 
-    Raises ValueError if the response count doesn't match input or JSON is malformed.
-    Caller catches and handles errors per batch — failed batches are retried on next run.
+    Raises on response count mismatch or malformed JSON.
+    Caller retries on failure.
     """
     client = genai.Client(api_key=settings.gemini_api_key)
 

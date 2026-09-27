@@ -1,7 +1,7 @@
 """Facebook Marketplace — Stage 1 extract pipeline.
 
-Reads Apify raider-api records and loads them into facebook.facebook_listings_legacy_raw
-using CDC (Change Data Capture) keyed on (event_id, fb_listing_id).
+Reads Apify raider-api records and loads them into facebook.fb_listings_raw
+using CDC (Change Data Capture) keyed on (category_id, fb_listing_id).
 
 CDC rules per listing:
   - Not in DB            → insert new record (valid_from=now, valid_to=NULL)
@@ -79,14 +79,14 @@ def _parse_fetched_at(iso_str: Optional[str]) -> Optional[datetime]:
 _CDC_FIELDS = ("price", "is_sold", "title", "location_city", "location_state")
 
 
-def _load_current_state(session: Session, event_id: uuid.UUID) -> dict[str, dict]:
+def _load_current_state(session: Session, category_id: uuid.UUID) -> dict[str, dict]:
     rows = session.execute(
         text("""
             SELECT fb_listing_id, price, is_sold, title, location_city, location_state
-            FROM facebook.facebook_listings_legacy_raw
-            WHERE event_id = :event_id AND valid_to IS NULL
+            FROM facebook.fb_listings_raw
+            WHERE category_id = :category_id AND valid_to IS NULL
         """),
-        {"event_id": str(event_id)},
+        {"category_id": str(category_id)},
     ).mappings().all()
     return {row["fb_listing_id"]: dict(row) for row in rows}
 
@@ -102,14 +102,14 @@ def _has_changed(existing: dict, params: dict) -> bool:
 
 
 _INSERT_SQL = text("""
-    INSERT INTO facebook.facebook_listings_legacy_raw (
-        event_id, event_key, pipeline_run_id, fb_listing_id, listing_url, seller_profile_id,
+    INSERT INTO facebook.fb_listings_raw (
+        category_id, category_key, pipeline_run_id, fb_listing_id, listing_url, seller_profile_id,
         title, description, price, currency,
         location_city, location_state,
         image_urls, is_sold, listed_at, scraped_at,
         raw_payload, valid_from, valid_to
     ) VALUES (
-        :event_id, :event_key, :pipeline_run_id, :fb_listing_id, :listing_url, :seller_profile_id,
+        :category_id, :category_key, :pipeline_run_id, :fb_listing_id, :listing_url, :seller_profile_id,
         :title, :description, :price, :currency,
         :location_city, :location_state,
         CAST(:image_urls AS JSONB), :is_sold, :listed_at, :scraped_at,
@@ -118,19 +118,19 @@ _INSERT_SQL = text("""
 """)
 
 _CLOSE_CURRENT_SQL = text("""
-    UPDATE facebook.facebook_listings_legacy_raw
+    UPDATE facebook.fb_listings_raw
     SET valid_to = now()
-    WHERE event_id = :event_id AND fb_listing_id = :fb_listing_id AND valid_to IS NULL
+    WHERE category_id = :category_id AND fb_listing_id = :fb_listing_id AND valid_to IS NULL
 """)
 
 
-def _build_params(record: dict, run_id: uuid.UUID, event_id: uuid.UUID, event_key: str) -> dict:
+def _build_params(record: dict, run_id: uuid.UUID, category_id: uuid.UUID, category_key: str) -> dict:
     price = record.get("price") or {}
     location = record.get("location") or {}
     image = record.get("primaryImage")
     return {
-        "event_id": str(event_id),
-        "event_key": event_key,
+        "category_id": str(category_id),
+        "category_key": category_key,
         "pipeline_run_id": str(run_id),
         "fb_listing_id": record.get("listingId") or record.get("id"),
         "listing_url": record["url"],
@@ -155,16 +155,16 @@ def _build_params(record: dict, run_id: uuid.UUID, event_id: uuid.UUID, event_ke
 def _create_run(
     session: Session,
     source: str,
-    event_key: str,
-    event_id: uuid.UUID,
+    category_key: str,
+    category_id: uuid.UUID,
     mode: str,
 ) -> PipelineRun:
     run = PipelineRun(
         stage="stage1_facebook",
         source=source,
         source_type="facebook_legacy",
-        event_key=event_key,
-        event_id=event_id,
+        category_key=category_key,
+        category_id=category_id,
         mode=mode,
         status="running",
     )
@@ -193,11 +193,11 @@ def _process_records(
     db_run: PipelineRun,
     records: list[dict],
     result: PipelineResult,
-    event_id: uuid.UUID,
-    event_key: str,
+    category_id: uuid.UUID,
+    category_key: str,
 ) -> None:
-    current_state = _load_current_state(session, event_id)
-    logger.info(f"[FB Stage 1] {len(current_state)} existing current records in DB for this event")
+    current_state = _load_current_state(session, category_id)
+    logger.info(f"[FB Stage 1] {len(current_state)} existing current records in DB for this category")
 
     for record in records:
         result.total += 1
@@ -208,7 +208,7 @@ def _process_records(
             logger.debug(f"Skipping record with no listing ID: {record.get('url')!r}")
             continue
 
-        params = _build_params(record, db_run.id, event_id, event_key)
+        params = _build_params(record, db_run.id, category_id, category_key)
         existing = current_state.get(listing_id)
 
         if existing is None:
@@ -217,7 +217,7 @@ def _process_records(
             result.newly_added += 1
 
         elif _has_changed(existing, params):
-            session.execute(_CLOSE_CURRENT_SQL, {"event_id": str(event_id), "fb_listing_id": listing_id})
+            session.execute(_CLOSE_CURRENT_SQL, {"category_id": str(category_id), "fb_listing_id": listing_id})
             session.execute(_INSERT_SQL, params)
             current_state[listing_id] = params
             result.change_added += 1
@@ -231,12 +231,12 @@ def _process_records(
 # ── Entry points ──────────────────────────────────────────────────────────────
 
 
-def run(file_path: Path, event_id: uuid.UUID, event_key: str) -> PipelineResult:
+def run(file_path: Path, category_id: uuid.UUID, category_key: str) -> PipelineResult:
     """Run Stage 1 from a saved Apify JSON file (dev / backfill use)."""
     logger.info(f"[FB Stage 1] Starting — source: {file_path.name}")
 
     with SessionLocal() as session:
-        db_run = _create_run(session, file_path.name, event_key, event_id, mode="initial")
+        db_run = _create_run(session, file_path.name, category_key, category_id, mode="initial")
         result = PipelineResult(run_id=db_run.id, status="completed")
 
         try:
@@ -254,7 +254,7 @@ def run(file_path: Path, event_id: uuid.UUID, event_key: str) -> PipelineResult:
             return result
 
         logger.info(f"[FB Stage 1] Loaded {len(records)} records from file")
-        _process_records(session, db_run, records, result, event_id, event_key)
+        _process_records(session, db_run, records, result, category_id, category_key)
         _finish_run(session, db_run, result)
 
     logger.info(
@@ -268,17 +268,17 @@ def run(file_path: Path, event_id: uuid.UUID, event_key: str) -> PipelineResult:
 def run_from_records(
     records: list[dict],
     source: str,
-    event_id: uuid.UUID,
-    event_key: str,
+    category_id: uuid.UUID,
+    category_key: str,
     mode: str = "periodic",
 ) -> PipelineResult:
     """Run Stage 1 from records returned by ApifyRunner (live run)."""
     logger.info(f"[FB Stage 1] Starting — source: {source} mode: {mode} ({len(records)} records)")
 
     with SessionLocal() as session:
-        db_run = _create_run(session, source, event_key, event_id, mode)
+        db_run = _create_run(session, source, category_key, category_id, mode)
         result = PipelineResult(run_id=db_run.id, status="completed")
-        _process_records(session, db_run, records, result, event_id, event_key)
+        _process_records(session, db_run, records, result, category_id, category_key)
         _finish_run(session, db_run, result)
 
     logger.info(

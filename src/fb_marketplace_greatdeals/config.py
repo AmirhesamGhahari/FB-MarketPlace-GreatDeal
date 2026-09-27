@@ -12,9 +12,6 @@ class Settings(BaseSettings):
     database_url: PostgresDsn
     apify_api_token: str = ""
     gemini_api_key: str = ""
-    seatgeek_client_id: str = ""
-    seatgeek_client_secret: str = ""
-    scrapfly_api_key: str = ""
 
 
 settings = Settings()
