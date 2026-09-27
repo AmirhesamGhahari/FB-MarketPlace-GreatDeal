@@ -55,7 +55,7 @@ variable "db_master_password" {
 variable "db_name" {
   description = "Aurora database name"
   type        = string
-  default     = "ticket_price_tracker"
+  default     = "fb_marketplace_greatdeals"
 }
 
 variable "alert_email" {
@@ -69,7 +69,7 @@ variable "github_owner" {
 }
 
 variable "github_repo" {
-  description = "GitHub repository name, without the owner prefix (e.g. ticket-tracker)"
+  description = "GitHub repository name, without the owner prefix (e.g. FB-MarketPlace-GreatDeal)"
   type        = string
 }
 

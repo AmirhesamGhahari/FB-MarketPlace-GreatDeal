@@ -159,7 +159,7 @@ def _print_classify_result(title: str, result, elapsed: float) -> None:
 
 @click.group()
 def cli() -> None:
-    """Ticket Market Intelligence — Facebook Marketplace pipeline."""
+    """FB Marketplace Great Deals — Facebook Marketplace (legacy actor) pipeline."""
     _run_migrations()
 
 

@@ -4,8 +4,6 @@ from fb_marketplace_greatdeals.db.models.facebook_listings_legacy_raw import Fac
 from fb_marketplace_greatdeals.db.models.facebook_listings_legacy_classified import FacebookListingsLegacyClassified
 from fb_marketplace_greatdeals.db.models.facebook_listings_new_raw import FacebookListingsNewRaw
 from fb_marketplace_greatdeals.db.models.facebook_listings_new_classified import FacebookListingsNewClassified
-from fb_marketplace_greatdeals.db.models.seatgeek_event_stats import SeatGeekEventStats
-from fb_marketplace_greatdeals.db.models.stubhub_listing_raw import StubHubListingRaw
 
 __all__ = [
     "PipelineRun",
@@ -14,6 +12,4 @@ __all__ = [
     "FacebookListingsLegacyClassified",
     "FacebookListingsNewRaw",
     "FacebookListingsNewClassified",
-    "SeatGeekEventStats",
-    "StubHubListingRaw",
 ]

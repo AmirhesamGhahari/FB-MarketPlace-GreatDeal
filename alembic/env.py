@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from fb_marketplace_greatdeals.config import settings
 from fb_marketplace_greatdeals.db.base import Base
-from fb_marketplace_greatdeals.db.models import pipeline_tables, event, facebook_listings_legacy_raw, facebook_listings_legacy_classified, seatgeek_event_stats, facebook_listings_new_raw, facebook_listings_new_classified, stubhub_listing_raw  # noqa: F401 — registers models with Base.metadata
+from fb_marketplace_greatdeals.db.models import pipeline_tables, event, facebook_listings_legacy_raw, facebook_listings_legacy_classified, facebook_listings_new_raw, facebook_listings_new_classified  # noqa: F401 — registers models with Base.metadata
 
 config = context.config
 
@@ -22,7 +22,7 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-_TRACKED_SCHEMAS = {None, "facebook", "stubhub"}
+_TRACKED_SCHEMAS = {None, "facebook"}
 
 
 def _include_name(name, type_, parent_names):

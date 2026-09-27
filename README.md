@@ -1,25 +1,25 @@
-# Ticket Market Intelligence
+# FB Marketplace Great Deals
 
-A data pipeline for tracking and analyzing event ticket resale prices on Facebook Marketplace. Built initially for Toronto EDM events (VELD, Electric Island, etc.), designed to support any event via config files with zero code changes.
+An intelligent data pipeline that scrapes Facebook Marketplace listings for consumer electronics (iPhone, iPad, MacBook, etc.), detects great deals using AI classification, tracks price history over time, and surfaces results on a web dashboard.
 
 ## How it works
 
 The pipeline runs in two stages:
 
-**Stage 1 — Extract:** Scrapes listings from Facebook Marketplace via the [Apify raider-api actor](https://apify.com/raidr/facebook-marketplace-scraper) and loads them into a raw table using Change Data Capture (CDC). Each listing is tracked over time — when price, title, or location changes, the old version is closed and a new one is inserted, preserving the full price history.
+**Stage 1 — Scrape & Extract:** Fetches listings from Facebook Marketplace via Apify actors and loads them into a raw table using Change Data Capture (CDC). Each listing is tracked over time — when price, title, or location changes, the old version is closed and a new one is inserted, preserving the full price history.
 
-**Stage 2 — Transform:** Reads new raw records and enriches them into a clean `transformed` table entirely via SQL: quantity extraction (`2x` patterns), ticket type classification (VIP / GA), event day detection (Friday / Saturday / Sunday), price anomaly flagging, and relevance scoring.
+**Stage 2 — Classify:** Reads new raw records and uses Gemini AI to classify listings: product condition, deal quality score, whether it is a genuine deal vs. spam/overpriced, and extracted structured attributes (storage, colour, model variant, etc.).
 
 Both stages are idempotent — re-running them is always safe.
 
 ```
-Apify scraper
-      │
-      ▼
-raw_extract  (CDC — full history per listing)
-      │
-      ▼
-transformed  (enriched, analytics-ready)
+Apify scraper (FB Marketplace)
+            │
+            ▼
+  facebook.raw  (CDC — full price history per listing)
+            │
+            ▼
+  facebook.classified  (AI-enriched, analytics-ready)
 ```
 
 ## Stack
@@ -29,30 +29,30 @@ transformed  (enriched, analytics-ready)
 | Language | Python 3.12+ |
 | Database | PostgreSQL |
 | ORM / migrations | SQLAlchemy 2.x, Alembic |
-| Scraper | Apify `raider-api/facebook-marketplace-scraper` |
+| Scraper | Apify actors (raider-api & datavoyantlab) |
+| AI Classification | Google Gemini |
 | Config | YAML + `.env` via Pydantic Settings |
 | CLI | Click + Rich |
+| Infra | AWS (ECS, Aurora, ECR, Lambda, Step Functions) |
 
 ## Project structure
 
 ```
-├── configs/                    # One YAML file per event
-│   └── veld_2026.yaml
+├── configs/                    # One YAML file per product category search
 ├── src/fb_marketplace_greatdeals/
 │   ├── config.py               # Settings loaded from .env
-│   ├── run_pipeline.py         # CLI entry point
 │   ├── db/
 │   │   ├── engine.py
 │   │   └── models/
-│   │       ├── event.py                        # Event registry
-│   │       ├── facebook_listing_raw.py         # Raw CDC table
-│   │       ├── facebook_listing_transformed.py # Enriched table
-│   │       └── pipeline_tables.py              # Pipeline run audit log
-│   ├── pipeline/
-│   │   ├── stage1_extract/pipeline.py
-│   │   └── stage2_transform/pipeline.py
-│   └── scraper/
-│       └── apify.py            # Apify actor client wrapper
+│   │       ├── event.py                               # Category/search registry
+│   │       ├── facebook_listings_legacy_raw.py        # Raw CDC table (legacy actor)
+│   │       ├── facebook_listings_legacy_classified.py # Classified table (legacy actor)
+│   │       ├── facebook_listings_new_raw.py           # Raw CDC table (new actor)
+│   │       ├── facebook_listings_new_classified.py    # Classified table (new actor)
+│   │       └── pipeline_tables.py                     # Pipeline run audit log
+│   └── sources/
+│       ├── facebook_legacy/    # Scraping via raider-api actor
+│       └── facebook_new/       # Scraping via datavoyantlab actor
 └── alembic/                    # Database migrations
 ```
 
@@ -62,7 +62,8 @@ transformed  (enriched, analytics-ready)
 
 - Python 3.12+
 - PostgreSQL 14+
-- An [Apify](https://apify.com) account with the `raider-api/facebook-marketplace-scraper` actor (required only for live scraping; not needed for file-based runs)
+- An [Apify](https://apify.com) account (required for live scraping)
+- A [Google Gemini](https://ai.google.dev) API key (required for AI classification)
 
 ### Install
 
@@ -78,12 +79,11 @@ Copy `.env.example` to `.env` and fill in your values:
 
 ```dotenv
 DATABASE_URL=postgresql://user:password@localhost:5432/fb_marketplace_greatdeals
-APIFY_API_TOKEN=your_apify_token   # leave empty for file-based runs
+APIFY_API_TOKEN=your_apify_token
+GEMINI_API_KEY=your_gemini_key
 ```
 
 ### Database setup
-
-Run all migrations to create the schema:
 
 ```bash
 alembic upgrade head
@@ -98,135 +98,87 @@ alembic upgrade head
 
 ## Usage
 
-### Fetch live from Apify and run both pipeline stages
+### Scrape FB Marketplace and classify listings
 
 ```bash
-# Full initial scrape — no date filter, gets everything available (~30 day FB window)
-run-pipeline from-apify --config veld_2026 --mode initial
+# Full initial scrape — gets all available listings
+run-facebook-new from-config --config iphone_toronto --mode initial
 
-# Periodic update — recent listings only, uses Apify deduplication
-run-pipeline from-apify --config veld_2026 --mode periodic
+# Periodic update — recent listings only, with deduplication
+run-facebook-new from-config --config iphone_toronto --mode periodic
+
+# Scrape only (no AI classification)
+run-facebook-new from-config --config iphone_toronto --mode periodic --stage scrape
+
+# Classify previously scraped listings
+run-facebook-new classify --config iphone_toronto
 ```
 
-Cities are read from the config file. Multiple cities trigger one Apify run per city; all records are merged before Stage 1.
-
-### Load from a saved JSON file (dev / backfill)
+### Legacy actor commands
 
 ```bash
-run-pipeline from-file --config veld_2026 --file sample_data/my_dump.json
+run-facebook-legacy from-apify --config macbook_toronto --mode initial
+run-facebook-legacy from-file --config macbook_toronto --file sample_data/dump.json
+run-facebook-legacy classify
 ```
 
-### Re-run Stage 2 transform only
+## Adding a new product category search
 
-Useful after editing the transform SQL without new raw data:
-
-```bash
-run-pipeline transform --config veld_2026
-```
-
-### Run a specific stage only
-
-Any command accepts `--stage stage1`, `--stage stage2`, or `--stage all` (default):
-
-```bash
-run-pipeline from-apify --config veld_2026 --mode periodic --stage stage1
-```
-
-## Adding a new event
-
-1. Create a new config file in `configs/`:
+1. Create a YAML config in `configs/`:
 
 ```yaml
-# configs/electric_island_sep_2026.yaml
-event_key: "electric_island_sep_2026"
-event_name: "Electric Island September 2026"
-event_keyword: "electric island"
-apify_actor_id: "raidr-api/facebook-marketplace-scraper"
-radius_km: "100"
+# configs/iphone_toronto.yaml
+event_key: "iphone_toronto"
+event_name: "iPhone — Toronto"
 
-proxy:
-  use_apify_proxy: true
-  apify_proxy_groups: ["RESIDENTIAL"]
-  apify_proxy_country: "CA"
-
-search_terms:
-  - "electric island"
-  - "electric island 2026"
-  - "electric island ticket"
-  # ... add more
-
-initial_run:
-  cities:
-    - "Toronto, Ontario"
-  use_deduplication: false
-  fetch_detailed_items: false
-  listings_per_search: 50
-
-periodic_run:
-  cities:
-    - "Toronto, Ontario"
-  use_deduplication: true
-  fetch_detailed_items: false
-  listings_per_search: 24
-  days_listed: "1"
+sources:
+  facebook_new:
+    enabled: true
+    actor_id: "datavoyantlab/facebook-marketplace-scraper"
+    filter_keywords:
+      - "iphone"
+    marketplace_urls:
+      - "https://www.facebook.com/marketplace/toronto/search?query=iphone+14"
+      - "https://www.facebook.com/marketplace/toronto/search?query=iphone+15"
+    initial_run:
+      max_items: 200
+      fetch_item_details: false
+      deduplicate_across_runs: false
+      stop_on_first_page_all_duplicates: false
+    periodic_run:
+      max_items: 50
+      fetch_item_details: false
+      deduplicate_across_runs: true
+      stop_on_first_page_all_duplicates: true
 ```
 
 2. Run the pipeline:
 
 ```bash
-run-pipeline from-apify --config electric_island_sep_2026 --mode initial
+run-facebook-new from-config --config iphone_toronto --mode initial
 ```
 
-The event is automatically registered in the database on first run. No code changes, no migrations.
-
-## Config reference
-
-| Field | Description |
-|-------|-------------|
-| `event_key` | Unique slug used as the DB identifier (matches the filename) |
-| `event_name` | Human-readable name stored in the events table |
-| `event_keyword` | Word used to score `is_relevant` in transformed listings |
-| `apify_actor_id` | Apify actor to call |
-| `radius_km` | Search radius from each city center |
-| `search_terms` | List of search queries — shared across all cities and modes |
-| `{mode}_run.cities` | Cities to search for this mode (one Apify run per city) |
-| `{mode}_run.listings_per_search` | Max listings returned per search term |
-| `{mode}_run.use_deduplication` | Apify-level dedup (skip listings seen in prior runs) |
-| `{mode}_run.days_listed` | Only return listings posted within N days (omit for no filter) |
-
-> Apify advanced mode caps at 50 searches per actor run. Trim `search_terms` if you exceed that.
+The category is automatically registered in the database on first run.
 
 ## Database schema
 
 | Table | Purpose |
 |-------|---------|
-| `events` | Registry of tracked events — auto-populated on first pipeline run |
-| `raw_extract` | Raw CDC records from scrape runs. One row per version of a listing per event. `valid_to IS NULL` = current version |
-| `transformed` | Enriched analytics-ready records. One row per raw record. Populated by Stage 2 |
+| `events` | Registry of tracked product searches — auto-populated on first run |
+| `facebook.raw` | Raw CDC records from scrape runs. One row per version of a listing. `valid_to IS NULL` = current version |
+| `facebook.classified` | AI-enriched records with deal quality scores, extracted attributes |
 | `pipeline_runs` | Audit log for every Stage 1 and Stage 2 execution with record counts |
 
 ### CDC (Change Data Capture)
 
-Stage 1 tracks listing changes over time rather than overwriting:
+Stage 1 tracks listing changes over time:
 
 - **New listing** → insert with `valid_from = now()`, `valid_to = NULL`
 - **Existing listing, no change** → skip
 - **Existing listing, price/title/location changed** → close old row (`valid_to = now()`), insert new row
 
-A partial unique index on `(event_id, fb_listing_id) WHERE valid_to IS NULL` enforces that each listing has exactly one current version.
+## Infrastructure
 
-## Pipeline run output
+AWS infrastructure is managed with Terraform in `infra/terraform/`. It provisions ECS (container runs), Aurora PostgreSQL, ECR (Docker images), Lambda + Step Functions (scheduling), Secrets Manager, and CloudWatch monitoring.
 
-Each run prints a summary table:
-
-```
-────────────── STAGE 1 — Fetch & Extract ──────────────
-  Run ID           3f2a1b...
-  Status           completed
-  Total records    312
-  ✓ Newly added    48
-  ~ Changed version  5
-  – Skipped        259
-  ✗ Errors         0
-  Elapsed: 4.2s
-```
+See `infra/terraform/README.md` for full deployment instructions.

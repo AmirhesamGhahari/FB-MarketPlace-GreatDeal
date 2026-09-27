@@ -1,5 +1,5 @@
 region             = "ca-central-1"
-app_name           = "fb_marketplace_greatdeals"
+app_name           = "fb-marketplace-greatdeals"
 
 apify_api_token    = "apify_api_REPLACE_ME"
 gemini_api_key     = "REPLACE_ME_gemini_api_key"
@@ -10,7 +10,7 @@ db_name            = "fb_marketplace_greatdeals"
 
 alert_email    = "you@example.com"
 github_owner   = "your-github-username"
-github_repo    = "ticket-tracker"
+github_repo    = "FB-MarketPlace-GreatDeal"
 github_branch  = "main"
 
 # All event configs — name (YAML file without .yaml) + event_dates (list of YYYY-MM-DD).

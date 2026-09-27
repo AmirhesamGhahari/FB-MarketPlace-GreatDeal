@@ -835,7 +835,7 @@ Edit `terraform.tfvars` and fill in all values:
 
 ```hcl
 region             = "ca-central-1"
-app_name           = "ticket-tracker"
+app_name           = "fb-marketplace-greatdeals"
 
 apify_api_token    = "apify_api_YOUR_REAL_TOKEN"
 db_master_username = "fb_marketplace_greatdeals"
@@ -844,7 +844,7 @@ db_name            = "fb_marketplace_greatdeals"
 
 alert_email    = "your-real-email@example.com"
 github_owner   = "your-github-username"
-github_repo    = "ticket-tracker"
+github_repo    = "fb-marketplace-greatdeals"
 github_branch  = "main"
 ```
 
@@ -899,11 +899,11 @@ When complete, Terraform prints the root outputs:
 ```
 Outputs:
 
-aurora_endpoint       = "ticket-tracker-aurora.cluster-xxxx.ca-central-1.rds.amazonaws.com"
+aurora_endpoint       = "fb-marketplace-greatdeals-aurora.cluster-xxxx.ca-central-1.rds.amazonaws.com"
 aurora_port           = 5432
 codestar_connection_arn = "arn:aws:codestar-connections:..."
-ecr_repository_url    = "123456789012.dkr.ecr.ca-central-1.amazonaws.com/ticket-tracker"
-ecs_cluster_name      = "ticket-tracker"
+ecr_repository_url    = "123456789012.dkr.ecr.ca-central-1.amazonaws.com/fb-marketplace-greatdeals"
+ecs_cluster_name      = "fb-marketplace-greatdeals"
 ...
 ```
 
@@ -946,7 +946,7 @@ The CodePipeline will not trigger until the GitHub connection is authorized.
 
 1. Open the [AWS console](https://console.aws.amazon.com) → region `ca-central-1`
 2. Navigate to: **Developer Tools** → **Settings** → **Connections**
-3. Find the connection named `ticket-tracker-github` — it will show status `Pending`
+3. Find the connection named `fb-marketplace-greatdeals-github` — it will show status `Pending`
 4. Click the connection name → click **"Update pending connection"**
 5. A GitHub OAuth window appears — authorize AWS to access your GitHub account
 6. Status changes to `Available`
@@ -1019,7 +1019,7 @@ Invoke the fan-out Lambda directly via the AWS CLI:
 
 ```bash
 aws lambda invoke \
-  --function-name ticket-tracker-fanout \
+  --function-name fb-marketplace-greatdeals-fanout \
   --payload '{"mode": "manual"}' \
   --cli-binary-format raw-in-base64-out \
   /tmp/lambda-response.json
@@ -1032,25 +1032,25 @@ cat /tmp/lambda-response.json
 ```bash
 # List recent log streams
 aws logs describe-log-streams \
-  --log-group-name /ecs/ticket-tracker \
+  --log-group-name /ecs/fb-marketplace-greatdeals \
   --order-by LastEventTime \
   --descending \
   --max-items 5
 
 # Tail logs from a specific stream
 aws logs get-log-events \
-  --log-group-name /ecs/ticket-tracker \
+  --log-group-name /ecs/fb-marketplace-greatdeals \
   --log-stream-name pipeline/pipeline/<task-id>
 ```
 
-Or use the AWS console: **CloudWatch** → **Log groups** → `/ecs/ticket-tracker`.
+Or use the AWS console: **CloudWatch** → **Log groups** → `/ecs/fb-marketplace-greatdeals`.
 
 ### Connect to Aurora for debugging
 
 Aurora is in a private subnet and not reachable from the internet directly. To connect from your laptop, use an ECS task as a bastion, or temporarily use the AWS console's Query Editor:
 
 1. **AWS console** → **RDS** → **Query Editor**
-2. Select your cluster (`ticket-tracker-aurora`)
+2. Select your cluster (`fb-marketplace-greatdeals-aurora`)
 3. Enter your DB credentials from `terraform.tfvars`
 4. Run SQL directly
 
