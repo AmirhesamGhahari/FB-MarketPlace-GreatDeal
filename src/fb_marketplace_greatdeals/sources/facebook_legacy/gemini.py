@@ -9,7 +9,7 @@ from google import genai
 from google.genai import types
 from loguru import logger
 
-from ticket_tracker.config import settings
+from fb_marketplace_greatdeals.config import settings
 
 _MODEL_NAME = "gemini-3.1-flash-lite"
 _RATE_LIMIT_SLEEP = 8.0

@@ -10,17 +10,18 @@ from sqlalchemy import Numeric, String, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from ticket_tracker.db.base import Base
+from fb_marketplace_greatdeals.db.base import Base
 
 
-class FacebookListingsNewRaw(Base):
-    """Raw CDC record from a curious_coder/facebook-marketplace actor run.
+class FacebookListingsLegacyRaw(Base):
+    """Raw CDC record from a Facebook Marketplace scrape run (legacy raidr-api source).
 
-    Lives in the 'facebook' schema, separate from the legacy raidr-api table in public.
     One row per scraped version of a listing. Current version has valid_to IS NULL.
+    Keyed on (event_id, fb_listing_id) for CDC uniqueness.
+    Lives in the facebook schema as facebook_listings_legacy_raw.
     """
 
-    __tablename__ = "facebook_listings_new_raw"
+    __tablename__ = "facebook_listings_legacy_raw"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     event_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
@@ -28,9 +29,8 @@ class FacebookListingsNewRaw(Base):
     pipeline_run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
 
     fb_listing_id: Mapped[str] = mapped_column(Text, nullable=False)
-    listing_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    seller_id: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    seller_name: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    listing_url: Mapped[str] = mapped_column(Text, nullable=False)
+    seller_profile_id: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     title: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     price: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
@@ -39,30 +39,24 @@ class FacebookListingsNewRaw(Base):
     location_state: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     image_urls: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
     is_sold: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    is_pending: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     listed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     scraped_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     raw_payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
 
+    # CDC timestamps — valid_to IS NULL means this is the current version
     valid_from: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     valid_to: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
-        ForeignKeyConstraint(
-            ["event_id"], ["events.id"],
-            name="fk_fb_mkt_listing_raw_event_id",
-        ),
-        ForeignKeyConstraint(
-            ["pipeline_run_id"], ["pipeline_runs.id"],
-            name="fk_fb_mkt_listing_raw_run_id",
-        ),
-        Index("idx_fb_mkt_listing_raw_event_listing", "event_id", "fb_listing_id"),
-        Index("idx_fb_mkt_listing_raw_event_listed_at", "event_id", "listed_at"),
-        Index("idx_fb_mkt_listing_raw_run", "pipeline_run_id"),
+        ForeignKeyConstraint(["event_id"], ["events.id"], name="fk_fb_listing_raw_event_id"),
+        ForeignKeyConstraint(["pipeline_run_id"], ["pipeline_runs.id"], name="fk_fb_listing_raw_run_id"),
+        Index("idx_fb_listing_raw_event_listing", "event_id", "fb_listing_id"),
+        Index("idx_fb_listing_raw_event_listed_at", "event_id", "listed_at"),
+        Index("idx_fb_listing_raw_run", "pipeline_run_id"),
         Index(
-            "idx_fb_mkt_listing_raw_current_listing",
+            "idx_fb_listing_raw_current_listing",
             "event_id",
             "fb_listing_id",
             unique=True,

@@ -18,10 +18,10 @@ from rich.rule import Rule
 from rich.table import Table
 from sqlalchemy import text
 
-from ticket_tracker.config import settings
-from ticket_tracker.db.engine import SessionLocal
-from ticket_tracker.sources.stubhub.scraper import scrape_event
-from ticket_tracker.sources.stubhub.stage1 import run_from_items, PipelineResult
+from fb_marketplace_greatdeals.config import settings
+from fb_marketplace_greatdeals.db.engine import SessionLocal
+from fb_marketplace_greatdeals.sources.stubhub.scraper import scrape_event
+from fb_marketplace_greatdeals.sources.stubhub.stage1 import run_from_items, PipelineResult
 
 console = Console()
 logger.remove()

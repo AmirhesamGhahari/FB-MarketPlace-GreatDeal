@@ -9,7 +9,7 @@ from sqlalchemy import Integer, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from ticket_tracker.db.base import Base
+from fb_marketplace_greatdeals.db.base import Base
 
 
 class FacebookListingsNewClassified(Base):

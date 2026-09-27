@@ -20,10 +20,10 @@ from rich.rule import Rule
 from rich.table import Table
 from sqlalchemy import text
 
-from ticket_tracker.config import settings
-from ticket_tracker.db.engine import SessionLocal
-from ticket_tracker.sources.seatgeek.scraper import SeatGeekClient
-from ticket_tracker.sources.seatgeek.stage1 import run_snapshot
+from fb_marketplace_greatdeals.config import settings
+from fb_marketplace_greatdeals.db.engine import SessionLocal
+from fb_marketplace_greatdeals.sources.seatgeek.scraper import SeatGeekClient
+from fb_marketplace_greatdeals.sources.seatgeek.stage1 import run_snapshot
 
 console = Console()
 

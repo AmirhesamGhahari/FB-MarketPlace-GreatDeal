@@ -23,11 +23,11 @@ from rich.rule import Rule
 from rich.table import Table
 from sqlalchemy import text
 
-from ticket_tracker.config import settings
-from ticket_tracker.db.engine import SessionLocal
-from ticket_tracker.sources.facebook_new.scraper import DatavoyantlabRunner, build_run_input
-from ticket_tracker.sources.facebook_new.stage1 import run_from_records, PipelineResult
-from ticket_tracker.sources.facebook_new.stage2_classify import run as run_classify, ClassifyResult
+from fb_marketplace_greatdeals.config import settings
+from fb_marketplace_greatdeals.db.engine import SessionLocal
+from fb_marketplace_greatdeals.sources.facebook_new.scraper import DatavoyantlabRunner, build_run_input
+from fb_marketplace_greatdeals.sources.facebook_new.stage1 import run_from_records, PipelineResult
+from fb_marketplace_greatdeals.sources.facebook_new.stage2_classify import run as run_classify, ClassifyResult
 
 console = Console()
 logger.remove()

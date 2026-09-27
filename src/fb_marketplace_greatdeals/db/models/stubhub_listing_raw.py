@@ -10,7 +10,7 @@ from sqlalchemy import Integer, Numeric, String, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from ticket_tracker.db.base import Base
+from fb_marketplace_greatdeals.db.base import Base
 
 
 class StubHubListingRaw(Base):

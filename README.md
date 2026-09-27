@@ -38,7 +38,7 @@ transformed  (enriched, analytics-ready)
 ```
 ├── configs/                    # One YAML file per event
 │   └── veld_2026.yaml
-├── src/ticket_tracker/
+├── src/fb_marketplace_greatdeals/
 │   ├── config.py               # Settings loaded from .env
 │   ├── run_pipeline.py         # CLI entry point
 │   ├── db/
@@ -77,7 +77,7 @@ pip install -e .
 Copy `.env.example` to `.env` and fill in your values:
 
 ```dotenv
-DATABASE_URL=postgresql://user:password@localhost:5432/ticket_tracker
+DATABASE_URL=postgresql://user:password@localhost:5432/fb_marketplace_greatdeals
 APIFY_API_TOKEN=your_apify_token   # leave empty for file-based runs
 ```
 

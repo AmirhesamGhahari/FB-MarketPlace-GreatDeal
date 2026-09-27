@@ -1,12 +1,3 @@
-"""Facebook Marketplace (futurafree actor) — Stage 2 LLM classification.
-
-Reads unclassified current-version rows from facebook.facebook_listings_new_raw,
-sends them to Gemini in batches, and inserts results into
-facebook.facebook_listings_new_classified.
-
-Idempotent: rows already in facebook.facebook_listings_new_classified are skipped
-via NOT EXISTS. Failed batches are retried on the next run.
-"""
 from __future__ import annotations
 
 import time
@@ -19,40 +10,40 @@ from loguru import logger
 from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
-from ticket_tracker.db.engine import SessionLocal
-from ticket_tracker.db.models.facebook_listings_new_classified import FacebookListingsNewClassified
-from ticket_tracker.db.models.pipeline_tables import PipelineRun
-from ticket_tracker.sources.facebook_legacy.gemini import classify_batch
+from fb_marketplace_greatdeals.db.engine import SessionLocal
+from fb_marketplace_greatdeals.db.models.facebook_listings_legacy_classified import FacebookListingsLegacyClassified
+from fb_marketplace_greatdeals.db.models.pipeline_tables import PipelineRun
+from fb_marketplace_greatdeals.sources.facebook_legacy.gemini import classify_batch
 
 BATCH_SIZE = 15
 MAX_RETRIES = 3
 RETRY_BACKOFF_SECONDS = 5
 
 _COUNT_ALL = text("""
-    SELECT COUNT(*) FROM facebook.facebook_listings_new_raw
+    SELECT COUNT(*) FROM facebook.facebook_listings_legacy_raw
     WHERE valid_to IS NULL
       AND NOT EXISTS (
-          SELECT 1 FROM facebook.facebook_listings_new_classified
-          WHERE raw_listing_id = facebook.facebook_listings_new_raw.id
+          SELECT 1 FROM facebook.facebook_listings_legacy_classified
+          WHERE raw_listing_id = facebook.facebook_listings_legacy_raw.id
       )
 """)
 
 _COUNT_EVENT = text("""
-    SELECT COUNT(*) FROM facebook.facebook_listings_new_raw
+    SELECT COUNT(*) FROM facebook.facebook_listings_legacy_raw
     WHERE valid_to IS NULL
       AND event_id = :event_id
       AND NOT EXISTS (
-          SELECT 1 FROM facebook.facebook_listings_new_classified
-          WHERE raw_listing_id = facebook.facebook_listings_new_raw.id
+          SELECT 1 FROM facebook.facebook_listings_legacy_classified
+          WHERE raw_listing_id = facebook.facebook_listings_legacy_raw.id
       )
 """)
 
 _FETCH_ALL = text("""
-    SELECT id, title, description, price FROM facebook.facebook_listings_new_raw
+    SELECT id, title, description, price FROM facebook.facebook_listings_legacy_raw
     WHERE valid_to IS NULL
       AND NOT EXISTS (
-          SELECT 1 FROM facebook.facebook_listings_new_classified
-          WHERE raw_listing_id = facebook.facebook_listings_new_raw.id
+          SELECT 1 FROM facebook.facebook_listings_legacy_classified
+          WHERE raw_listing_id = facebook.facebook_listings_legacy_raw.id
       )
       AND id NOT IN :exclude_ids
     ORDER BY id
@@ -60,12 +51,12 @@ _FETCH_ALL = text("""
 """).bindparams(bindparam("exclude_ids", expanding=True))
 
 _FETCH_EVENT = text("""
-    SELECT id, title, description, price FROM facebook.facebook_listings_new_raw
+    SELECT id, title, description, price FROM facebook.facebook_listings_legacy_raw
     WHERE valid_to IS NULL
       AND event_id = :event_id
       AND NOT EXISTS (
-          SELECT 1 FROM facebook.facebook_listings_new_classified
-          WHERE raw_listing_id = facebook.facebook_listings_new_raw.id
+          SELECT 1 FROM facebook.facebook_listings_legacy_classified
+          WHERE raw_listing_id = facebook.facebook_listings_legacy_raw.id
       )
       AND id NOT IN :exclude_ids
     ORDER BY id
@@ -83,9 +74,11 @@ class ClassifyResult:
 
 
 def run(event_id: Optional[uuid.UUID] = None, event_key: Optional[str] = None) -> ClassifyResult:
-    """Classify all unclassified current-version rows via Gemini.
+    """Classify all unclassified current-version raw listings via Gemini.
 
     Pass event_id to restrict to one event, or omit to classify across all events.
+    Idempotent: records already in facebook.facebook_listings_legacy_classified are skipped via NOT EXISTS.
+    Failed batches are retried on the next run.
     """
     with SessionLocal() as session:
         db_run = _create_run(session, event_key, event_id=event_id)
@@ -99,11 +92,11 @@ def run(event_id: Optional[uuid.UUID] = None, event_key: Optional[str] = None) -
         result.total = total
 
         if total == 0:
-            logger.info("[FB-New Classify] No unclassified listings — nothing to do")
+            logger.info("[Classify] No unclassified listings — nothing to do")
             _finish_run(session, db_run, result)
             return result
 
-        logger.info(f"[FB-New Classify] {total} listings to classify in batches of {BATCH_SIZE}")
+        logger.info(f"[Classify] {total} listings to classify in batches of {BATCH_SIZE}")
 
         exclude_ids: list = []
         while True:
@@ -132,7 +125,7 @@ def run(event_id: Optional[uuid.UUID] = None, event_key: Optional[str] = None) -
                 try:
                     classifications = classify_batch(listings)
                     for row, clf in zip(rows, classifications):
-                        session.add(FacebookListingsNewClassified(
+                        session.add(FacebookListingsLegacyClassified(
                             raw_listing_id=row.id,
                             llm_model="gemini-3.1-flash-lite",
                             is_ticket=bool(clf.get("is_ticket", False)),
@@ -155,23 +148,18 @@ def run(event_id: Optional[uuid.UUID] = None, event_key: Optional[str] = None) -
                         ))
                     session.commit()
                     result.classified += len(rows)
-                    logger.info(f"[FB-New Classify] {result.classified}/{total} classified")
+                    logger.info(f"[Classify] {result.classified}/{total} classified")
                     success = True
                     break
 
                 except Exception as exc:
                     session.rollback()
-                    logger.warning(
-                        f"[FB-New Classify] Batch attempt {attempt}/{MAX_RETRIES} failed: {exc}"
-                    )
+                    logger.warning(f"[Classify] Batch attempt {attempt}/{MAX_RETRIES} failed: {exc}")
                     if attempt < MAX_RETRIES:
                         time.sleep(RETRY_BACKOFF_SECONDS * attempt)
 
             if not success:
-                logger.error(
-                    f"[FB-New Classify] Batch permanently failed after {MAX_RETRIES} attempts "
-                    f"— skipping {len(rows)} rows this run"
-                )
+                logger.error(f"[Classify] Batch permanently failed after {MAX_RETRIES} attempts — skipping {len(rows)} rows this run")
                 result.errors += len(rows)
                 exclude_ids.extend(row.id for row in rows)
 
@@ -179,7 +167,7 @@ def run(event_id: Optional[uuid.UUID] = None, event_key: Optional[str] = None) -
         _finish_run(session, db_run, result)
 
     logger.info(
-        f"[FB-New Classify] Done — total={result.total} "
+        f"[Classify] Done — total={result.total} "
         f"classified={result.classified} errors={result.errors}"
     )
     return result
@@ -191,9 +179,9 @@ def _create_run(
     event_id: Optional[uuid.UUID] = None,
 ) -> PipelineRun:
     run = PipelineRun(
-        stage="stage2_facebook_new",
+        stage="stage2",
         source=event_key if event_key else "all",
-        source_type="facebook_new",
+        source_type="facebook_legacy",
         event_key=event_key,
         event_id=event_id,
         status="running",

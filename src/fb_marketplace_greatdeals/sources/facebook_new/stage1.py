@@ -35,8 +35,8 @@ from loguru import logger
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from ticket_tracker.db.engine import SessionLocal
-from ticket_tracker.db.models.pipeline_tables import PipelineRun
+from fb_marketplace_greatdeals.db.engine import SessionLocal
+from fb_marketplace_greatdeals.db.models.pipeline_tables import PipelineRun
 
 
 @dataclass

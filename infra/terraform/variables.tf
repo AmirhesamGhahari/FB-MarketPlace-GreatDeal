@@ -7,7 +7,7 @@ variable "region" {
 variable "app_name" {
   description = "Application name used for resource naming"
   type        = string
-  default     = "ticket-price-tracker"
+  default     = "fb-marketplace-greatdeals"
 }
 
 variable "apify_api_token" {

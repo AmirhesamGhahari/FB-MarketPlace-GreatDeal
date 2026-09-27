@@ -8,7 +8,7 @@ from sqlalchemy import BigInteger, Date, DateTime, ForeignKeyConstraint, Index, 
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from ticket_tracker.db.base import Base
+from fb_marketplace_greatdeals.db.base import Base
 
 
 class PipelineRun(Base):

@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from ticket_tracker.config import settings
+from fb_marketplace_greatdeals.config import settings
 
 engine = create_engine(
     str(settings.database_url),

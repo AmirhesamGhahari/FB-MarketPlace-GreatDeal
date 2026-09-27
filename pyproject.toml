@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ticket-tracker"
+name = "fb-marketplace-greatdeals"
 version = "0.1.0"
-description = "Ticket Market Intelligence Platform — Backend Pipeline"
+description = "FB Marketplace Great Deals Intelligence Platform — Backend Pipeline"
 requires-python = ">=3.12"
 dependencies = [
     "sqlalchemy>=2.0,<3.0",
@@ -24,10 +24,10 @@ dependencies = [
 ]
 
 [project.scripts]
-run-facebook-legacy = "ticket_tracker.sources.facebook_legacy.cli:cli"
-run-seatgeek = "ticket_tracker.sources.seatgeek.cli:cli"
-run-facebook-new = "ticket_tracker.sources.facebook_new.cli:cli"
-run-stubhub = "ticket_tracker.sources.stubhub.cli:cli"
+run-facebook-legacy = "fb_marketplace_greatdeals.sources.facebook_legacy.cli:cli"
+run-seatgeek = "fb_marketplace_greatdeals.sources.seatgeek.cli:cli"
+run-facebook-new = "fb_marketplace_greatdeals.sources.facebook_new.cli:cli"
+run-stubhub = "fb_marketplace_greatdeals.sources.stubhub.cli:cli"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ticket_tracker"]
+packages = ["src/fb_marketplace_greatdeals"]

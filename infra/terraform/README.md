@@ -838,9 +838,9 @@ region             = "ca-central-1"
 app_name           = "ticket-tracker"
 
 apify_api_token    = "apify_api_YOUR_REAL_TOKEN"
-db_master_username = "ticket_tracker"
+db_master_username = "fb_marketplace_greatdeals"
 db_master_password = "a-strong-password-at-least-8-chars"
-db_name            = "ticket_tracker"
+db_name            = "fb_marketplace_greatdeals"
 
 alert_email    = "your-real-email@example.com"
 github_owner   = "your-github-username"

@@ -13,8 +13,8 @@ terraform {
   }
 
   backend "s3" {
-    bucket = "ticket-price-tracker-terraform-state"
-    key    = "ticket-price-tracker/terraform.tfstate"
+    bucket = "fb-marketplace-greatdeals-terraform-state"
+    key    = "fb-marketplace-greatdeals/terraform.tfstate"
     region = "ca-central-1"
   }
 }

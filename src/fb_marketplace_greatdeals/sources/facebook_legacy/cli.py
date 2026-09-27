@@ -24,12 +24,12 @@ from rich.rule import Rule
 from rich.table import Table
 from sqlalchemy import text
 
-from ticket_tracker.config import settings
-from ticket_tracker.db.engine import SessionLocal
-from ticket_tracker.sources.facebook_legacy.scraper import ApifyRunner
-from ticket_tracker.sources.facebook_legacy.stage1 import run as run_stage1
-from ticket_tracker.sources.facebook_legacy.stage1 import run_from_records as run_stage1_from_records
-from ticket_tracker.sources.facebook_legacy.stage2_classify import run as run_classify
+from fb_marketplace_greatdeals.config import settings
+from fb_marketplace_greatdeals.db.engine import SessionLocal
+from fb_marketplace_greatdeals.sources.facebook_legacy.scraper import ApifyRunner
+from fb_marketplace_greatdeals.sources.facebook_legacy.stage1 import run as run_stage1
+from fb_marketplace_greatdeals.sources.facebook_legacy.stage1 import run_from_records as run_stage1_from_records
+from fb_marketplace_greatdeals.sources.facebook_legacy.stage2_classify import run as run_classify
 
 console = Console()
 

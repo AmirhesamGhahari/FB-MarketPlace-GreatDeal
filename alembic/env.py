@@ -5,12 +5,12 @@ from pathlib import Path
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-# Ensure src/ is on the path so ticket_tracker can be imported by Alembic.
+# Ensure src/ is on the path so fb_marketplace_greatdeals can be imported by Alembic.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from ticket_tracker.config import settings
-from ticket_tracker.db.base import Base
-from ticket_tracker.db.models import pipeline_tables, event, facebook_listings_legacy_raw, facebook_listings_legacy_classified, seatgeek_event_stats, facebook_listings_new_raw, facebook_listings_new_classified, stubhub_listing_raw  # noqa: F401 — registers models with Base.metadata
+from fb_marketplace_greatdeals.config import settings
+from fb_marketplace_greatdeals.db.base import Base
+from fb_marketplace_greatdeals.db.models import pipeline_tables, event, facebook_listings_legacy_raw, facebook_listings_legacy_classified, seatgeek_event_stats, facebook_listings_new_raw, facebook_listings_new_classified, stubhub_listing_raw  # noqa: F401 — registers models with Base.metadata
 
 config = context.config
 
