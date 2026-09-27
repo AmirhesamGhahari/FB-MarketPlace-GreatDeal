@@ -24,8 +24,7 @@ dependencies = [
 ]
 
 [project.scripts]
-run-facebook-legacy = "fb_marketplace_greatdeals.sources.facebook_legacy.cli:cli"
-run-facebook-new = "fb_marketplace_greatdeals.sources.facebook_new.cli:cli"
+run-facebook = "fb_marketplace_greatdeals.sources.facebook_legacy.cli:cli"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/fb_marketplace_greatdeals"]

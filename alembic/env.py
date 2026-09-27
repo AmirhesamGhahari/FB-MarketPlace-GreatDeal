@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from fb_marketplace_greatdeals.config import settings
 from fb_marketplace_greatdeals.db.base import Base
-from fb_marketplace_greatdeals.db.models import pipeline_tables, event, facebook_listings_legacy_raw, facebook_listings_legacy_classified, facebook_listings_new_raw, facebook_listings_new_classified  # noqa: F401 — registers models with Base.metadata
+from fb_marketplace_greatdeals.db.models import pipeline_tables, category, fb_listing_raw, fb_listing_classified  # noqa: F401 — registers models with Base.metadata
 
 config = context.config
 
@@ -28,12 +28,8 @@ _TRACKED_SCHEMAS = {None, "facebook"}
 def _include_name(name, type_, parent_names):
     """Tell autogenerate which schemas to scan.
 
-    None = the default (public) schema: events, pipeline_runs, seatgeek_event_stats.
-    Keeping schema=None on those models avoids the Alembic behaviour where explicit
-    schema='public' causes autogenerate to treat them as new tables (not yet in DB).
-    Cross-schema FK strings use unqualified names ('events.id') so SQLAlchemy can
-    resolve them against the None-schema metadata entry; PostgreSQL resolves the DDL
-    FK via search_path at runtime.
+    None = the default (public) schema: categories, pipeline_runs.
+    facebook = schema for fb_listings_raw, fb_listings_classified.
     """
     if type_ == "schema":
         return name in _TRACKED_SCHEMAS
