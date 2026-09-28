@@ -6,7 +6,7 @@ brand: Apple
 sources:
   facebook_legacy:
     enabled: true
-    actor_id: "raidr/facebook-marketplace-scraper"
+    actor_id: "raidr-api/facebook-marketplace-scraper"
     radius_km: "100"
 
     proxy:
