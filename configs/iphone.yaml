@@ -24,8 +24,6 @@ sources:
       - iphone 15
       - iphone 14 pro
       - iphone 14
-      - iphone 13 pro
-      - iphone 13
       - iphone 17
       - iphone 17 pro
       - iphone 17 pro max
@@ -34,15 +32,15 @@ sources:
       cities:
         - "Toronto, Ontario"
       use_deduplication: false
-      fetch_detailed_items: false
-      listings_per_search: 500
+      fetch_detailed_items: true
+      listings_per_search: 200
       filter_keywords: "iphone"
 
     periodic_run:
       cities:
         - "Toronto, Ontario"
-      use_deduplication: true
-      fetch_detailed_items: false
-      listings_per_search: 100
+      use_deduplication: false
+      fetch_detailed_items: true
+      listings_per_search: 80
       days_listed: "7"
       filter_keywords: "iphone"

@@ -22,12 +22,9 @@ variable "ecs_task_sg_id" {
   type = string
 }
 
-variable "event_configs" {
-  description = "Event config objects. Each entry has 'name' (YAML filename without .yaml) and 'event_dates' (list of YYYY-MM-DD). Single-date events have a one-item list. The Lambda uses event_dates for frequency checks and StubHub task generation; ECS CLIs read the full YAML from disk."
-  type = list(object({
-    name        = string
-    event_dates = list(string)
-  }))
+variable "category_configs" {
+  description = "List of config names to run (YAML filename without .yaml, e.g. [\"iphone\", \"macbook\"]). The Lambda launches one ECS task per entry on every scheduled run."
+  type        = list(string)
 }
 
 variable "lambda_source_dir" {

@@ -72,7 +72,7 @@ resource "aws_lambda_function" "fanout" {
   environment {
     variables = {
       STATE_TABLE_NAME = aws_dynamodb_table.pipeline_state.name
-      EVENT_CONFIGS    = jsonencode(var.event_configs)
+      CATEGORY_CONFIGS = jsonencode(var.category_configs)
     }
   }
 }
@@ -217,71 +217,20 @@ locals {
     }
   }
 
-  task_iterator_fn = {
-    StartAt = "LaunchFN"
-    States = {
-      LaunchFN = {
-        Type           = "Task"
-        Resource       = "arn:aws:states:::ecs:runTask.sync"
-        TimeoutSeconds = 3600
-        Parameters     = local._ecs_task_params
-        ResultPath     = null
-        Next           = "SetPeriodicFN"
-        Catch          = [{ ErrorEquals = ["States.ALL"], ResultPath = null, Next = "EndFN" }]
-      }
-      SetPeriodicFN = {
-        Type       = "Task"
-        Resource   = "arn:aws:states:::dynamodb:updateItem"
-        Parameters = local._dynamo_set_periodic_params
-        ResultPath = null
-        Next       = "EndFN"
-        Catch      = [{ ErrorEquals = ["States.ALL"], ResultPath = null, Next = "EndFN" }]
-      }
-      EndFN = { Type = "Pass", End = true }
-    }
-  }
-
-  task_iterator_sh = {
-    StartAt = "LaunchSH"
-    States = {
-      LaunchSH = {
-        Type           = "Task"
-        Resource       = "arn:aws:states:::ecs:runTask.sync"
-        TimeoutSeconds = 3600
-        Parameters     = local._ecs_task_params
-        ResultPath     = null
-        Next           = "SetPeriodicSH"
-        Catch          = [{ ErrorEquals = ["States.ALL"], ResultPath = null, Next = "EndSH" }]
-      }
-      SetPeriodicSH = {
-        Type       = "Task"
-        Resource   = "arn:aws:states:::dynamodb:updateItem"
-        Parameters = local._dynamo_set_periodic_params
-        ResultPath = null
-        Next       = "EndSH"
-        Catch      = [{ ErrorEquals = ["States.ALL"], ResultPath = null, Next = "EndSH" }]
-      }
-      EndSH = { Type = "Pass", End = true }
-    }
-  }
 }
 
 # ── State machine ──────────────────────────────────────────────────────────────
 #
 # Flow:
 #   TaskProducer (Lambda)
-#     reads current time → morning | evening
-#     reads event configs → applies frequency rules per source
-#     batch-reads DynamoDB → gets mode per event×source
-#     returns {run, tasks: {facebook_legacy:[...], facebook_new:[...], stubhub:[...]}}
+#     reads CATEGORY_CONFIGS → batch-reads DynamoDB for mode per config
+#     returns {run, tasks: {facebook_legacy: [{command, state_key, mode}, ...]}}
 #
-#   RunSources (Parallel — all 3 branches run simultaneously)
-#     Branch 1: RunFBLegacy  — Map (MaxConcurrency=1, sequential)
-#     Branch 2: RunFBNew     — Map (MaxConcurrency=1, sequential)
-#     Branch 3: RunStubHub   — Map (MaxConcurrency=1, sequential)
-#
-#   Each Map item:
-#     LaunchTask (ECS waitForTaskToken) → RecordSuccess | RecordFailure → Done
+#   RunFBLegacy (Map, MaxConcurrency=1 — sequential)
+#     For each config task:
+#       LaunchFL  — ECS .sync: Fargate runs the pipeline, SFN waits via EventBridge
+#       SetPeriodicFL — DynamoDB UpdateItem: marks mode=periodic after first success
+#       EndFL     — terminal Pass state
 #
 resource "aws_sfn_state_machine" "dispatcher" {
   name     = "${var.app_name}-dispatcher"
@@ -294,7 +243,7 @@ resource "aws_sfn_state_machine" "dispatcher" {
   }
 
   definition = jsonencode({
-    Comment = "Ticket tracker pipeline dispatcher"
+    Comment = "FB Marketplace Great Deals — pipeline dispatcher"
     StartAt = "TaskProducer"
 
     States = {
@@ -303,66 +252,26 @@ resource "aws_sfn_state_machine" "dispatcher" {
         Resource = "arn:aws:states:::lambda:invoke"
         Parameters = {
           FunctionName = local.lambda_arn
-          "Payload.$"  = "$"   # forward full input so manual run= override works
+          "Payload.$"  = "$"   # forward full input so manual override works
         }
         ResultSelector = {
           "run.$"   = "$.Payload.run"
           "tasks.$" = "$.Payload.tasks"
         }
         Retry = local.lambda_retry
-        Next  = "RunSources"
+        Next  = "RunFBLegacy"
       }
 
-      RunSources = {
-        Type = "Parallel"
-        End  = true
-
-        Branches = [
-          # ── Branch 1: Facebook Legacy ────────────────────────────────────────
-          {
-            StartAt = "RunFBLegacy"
-            States = {
-              RunFBLegacy = {
-                Type           = "Map"
-                ItemsPath      = "$.tasks.facebook_legacy"
-                MaxConcurrency = 1   # sequential — one event at a time per source
-                Parameters     = { "task.$" = "$$.Map.Item.Value" }
-                Iterator       = local.task_iterator_fl
-                End            = true
-              }
-            }
-          },
-
-          # ── Branch 2: Facebook New ───────────────────────────────────────────
-          {
-            StartAt = "RunFBNew"
-            States = {
-              RunFBNew = {
-                Type           = "Map"
-                ItemsPath      = "$.tasks.facebook_new"
-                MaxConcurrency = 1
-                Parameters     = { "task.$" = "$$.Map.Item.Value" }
-                Iterator       = local.task_iterator_fn
-                End            = true
-              }
-            }
-          },
-
-          # ── Branch 3: StubHub ────────────────────────────────────────────────
-          {
-            StartAt = "RunStubHub"
-            States = {
-              RunStubHub = {
-                Type           = "Map"
-                ItemsPath      = "$.tasks.stubhub"
-                MaxConcurrency = 1
-                Parameters     = { "task.$" = "$$.Map.Item.Value" }
-                Iterator       = local.task_iterator_sh
-                End            = true
-              }
-            }
-          }
-        ]
+      # Run each category config sequentially (MaxConcurrency=1).
+      # Each item: {command, state_key, mode}
+      # On success: SetPeriodicFL marks mode=periodic in DynamoDB for the next run.
+      RunFBLegacy = {
+        Type           = "Map"
+        ItemsPath      = "$.tasks.facebook_legacy"
+        MaxConcurrency = 1
+        Parameters     = { "task.$" = "$$.Map.Item.Value" }
+        Iterator       = local.task_iterator_fl
+        End            = true
       }
     }
   })

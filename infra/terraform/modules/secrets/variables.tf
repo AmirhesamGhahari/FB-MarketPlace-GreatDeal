@@ -12,21 +12,6 @@ variable "gemini_api_key" {
   sensitive = true
 }
 
-variable "seatgeek_client_id" {
-  type      = string
-  sensitive = true
-}
-
-variable "seatgeek_client_secret" {
-  type      = string
-  sensitive = true
-}
-
-variable "scrapfly_api_key" {
-  type      = string
-  sensitive = true
-}
-
 variable "db_master_username" {
   type = string
 }

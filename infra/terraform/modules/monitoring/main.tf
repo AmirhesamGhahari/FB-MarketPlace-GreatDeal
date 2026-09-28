@@ -84,13 +84,13 @@ resource "aws_cloudwatch_metric_alarm" "sfn_execution_timeout" {
 }
 
 # ── Alarm 4: Consecutive pipeline source failures ──────────────────────────────
-# The dispatcher Lambda emits this metric to TicketTracker/Pipeline when
+# The dispatcher Lambda emits this metric to FBMarketplace/Pipeline when
 # consecutive_failures ≥ 3 for any event×source. This catches scraper rot
 # (e.g. Scrapfly blocks, Apify actor broken, StubHub URL changed).
 resource "aws_cloudwatch_metric_alarm" "consecutive_source_failures" {
   alarm_name          = "${var.app_name}-consecutive-source-failures"
   alarm_description   = "A scraper source has failed 3+ times consecutively — check Step Functions execution history and DynamoDB pipeline-state table"
-  namespace           = "TicketTracker/Pipeline"
+  namespace           = "FBMarketplace/Pipeline"
   metric_name         = "ConsecutiveFailures"
   statistic           = "Maximum"
   period              = 3600
@@ -140,7 +140,7 @@ resource "aws_cloudwatch_log_metric_filter" "pipeline_failures" {
 
   metric_transformation {
     name          = "PipelineFailures"
-    namespace     = "TicketTracker/Pipeline"
+    namespace     = "FBMarketplace/Pipeline"
     value         = "1"
     default_value = "0"
   }
@@ -149,7 +149,7 @@ resource "aws_cloudwatch_log_metric_filter" "pipeline_failures" {
 resource "aws_cloudwatch_metric_alarm" "pipeline_failures" {
   alarm_name          = "${var.app_name}-pipeline-stage-failed"
   alarm_description   = "A pipeline stage logged a failure (stage1 extract or stage2 transform)"
-  namespace           = "TicketTracker/Pipeline"
+  namespace           = "FBMarketplace/Pipeline"
   metric_name         = "PipelineFailures"
   statistic           = "Sum"
   period              = 300
