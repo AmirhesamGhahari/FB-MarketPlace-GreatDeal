@@ -26,22 +26,23 @@ sources:
       - iphone 14
       - iphone 13 pro
       - iphone 13
-      - iphone se 2024
-      - iphone se 3rd gen
+      - iphone 17
+      - iphone 17 pro
+      - iphone 17 pro max
 
     initial_run:
       cities:
         - "Toronto, Ontario"
-        - "Vancouver, British Columbia"
       use_deduplication: false
       fetch_detailed_items: false
-      listings_per_search: 50
+      listings_per_search: 500
+      filter_keywords: "iphone"
 
     periodic_run:
       cities:
         - "Toronto, Ontario"
-        - "Vancouver, British Columbia"
       use_deduplication: true
       fetch_detailed_items: false
-      listings_per_search: 24
-      days_listed: "3"
+      listings_per_search: 100
+      days_listed: "7"
+      filter_keywords: "iphone"

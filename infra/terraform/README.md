@@ -1,4 +1,4 @@
-# Terraform Infrastructure — Ticket Price Tracker
+# Terraform Infrastructure — FB Marketplace Great Deals
 
 This document is a complete reference for the AWS infrastructure defined in this Terraform codebase.
 It covers what every file and resource does, how the modules connect to each other, and the exact

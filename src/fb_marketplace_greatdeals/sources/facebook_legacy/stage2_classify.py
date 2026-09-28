@@ -133,18 +133,26 @@ def run(category_id: Optional[uuid.UUID] = None, category_key: Optional[str] = N
                         deal_score = clf.get("deal_score")
                         emv = clf.get("estimated_market_value")
                         pvm = clf.get("price_vs_market_pct")
+                        bh = clf.get("battery_health_pct")
+                        cc = clf.get("cycle_count")
                         session.add(FbListingClassified(
                             raw_listing_id=row.id,
                             category_id=row.category_id,
                             fb_listing_id=row.fb_listing_id,
                             llm_model=_MODEL_NAME,
+                            listing_type=clf.get("listing_type"),
                             product_brand=clf.get("product_brand"),
                             product_model=clf.get("product_model"),
                             product_variant=clf.get("product_variant"),
                             condition=clf.get("condition"),
                             storage_gb=clf.get("storage_gb"),
                             color=clf.get("color"),
+                            battery_health_pct=int(bh) if bh is not None else None,
+                            cycle_count=int(cc) if cc is not None else None,
+                            is_unlocked=clf.get("is_unlocked"),
+                            warranty_notes=clf.get("warranty_notes"),
                             includes_accessories=clf.get("includes_accessories") or [],
+                            is_store_seller=bool(clf.get("is_store_seller", False)),
                             deal_score=int(deal_score) if deal_score is not None else None,
                             is_great_deal=clf.get("is_great_deal"),
                             estimated_market_value=Decimal(str(emv)) if emv is not None else None,

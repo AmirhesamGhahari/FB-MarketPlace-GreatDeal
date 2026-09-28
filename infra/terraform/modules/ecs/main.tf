@@ -39,9 +39,6 @@ resource "aws_iam_role_policy" "execution_secrets" {
         var.db_url_secret_arn,
         var.apify_token_secret_arn,
         var.gemini_api_key_secret_arn,
-        var.seatgeek_client_id_secret_arn,
-        var.seatgeek_client_secret_secret_arn,
-        var.scrapfly_api_key_secret_arn
       ]
     }]
   })
@@ -66,8 +63,8 @@ resource "aws_ecs_task_definition" "pipeline" {
   family                   = "${var.app_name}-pipeline"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = 256
-  memory                   = 512
+  cpu                      = 512
+  memory                   = 1024
   execution_role_arn       = aws_iam_role.execution.arn
   task_role_arn            = aws_iam_role.task.arn
 
@@ -96,18 +93,6 @@ resource "aws_ecs_task_definition" "pipeline" {
       {
         name      = "GEMINI_API_KEY"
         valueFrom = var.gemini_api_key_secret_arn
-      },
-      {
-        name      = "SEATGEEK_CLIENT_ID"
-        valueFrom = var.seatgeek_client_id_secret_arn
-      },
-      {
-        name      = "SEATGEEK_CLIENT_SECRET"
-        valueFrom = var.seatgeek_client_secret_secret_arn
-      },
-      {
-        name      = "SCRAPFLY_API_KEY"
-        valueFrom = var.scrapfly_api_key_secret_arn
       }
     ]
 

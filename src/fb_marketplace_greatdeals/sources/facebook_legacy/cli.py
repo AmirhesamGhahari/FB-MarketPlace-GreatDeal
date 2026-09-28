@@ -83,7 +83,7 @@ def _resolve_category(config: dict) -> uuid.UUID:
     return category_id
 
 
-def _build_run_inputs(config: dict, mode: str) -> list[dict]:
+def _build_run_input(config: dict, mode: str) -> dict:
     legacy_cfg = config["sources"]["facebook_legacy"]
     run_config = legacy_cfg[f"{mode}_run"]
 
@@ -98,27 +98,27 @@ def _build_run_inputs(config: dict, mode: str) -> list[dict]:
             entry["filterKeywords"] = run_config["filter_keywords"]
         searches.append(entry)
 
-    run_inputs = []
-    for city in run_config["cities"]:
-        run_input: dict = {
-            "searchMode": "advanced",
-            "location": city,
-            "radiusKm": str(legacy_cfg["radius_km"]),
-            "searches": searches,
-            "listingsPerSearch": run_config["listings_per_search"],
-            "useDeduplication": run_config["use_deduplication"],
-            "fetchDetailedItems": run_config.get("fetch_detailed_items", False),
-            "proxyConfiguration": {
-                "useApifyProxy": legacy_cfg["proxy"]["use_apify_proxy"],
-                "apifyProxyGroups": legacy_cfg["proxy"]["apify_proxy_groups"],
-                "apifyProxyCountry": legacy_cfg["proxy"]["apify_proxy_country"],
-            },
-        }
-        if run_config.get("max_listing_age") is not None:
-            run_input["maxListingAge"] = run_config["max_listing_age"]
-        run_inputs.append(run_input)
+    cities = run_config["cities"]
+    city = cities[0] if isinstance(cities, list) else cities
 
-    return run_inputs
+    run_input: dict = {
+        "searchMode": "advanced",
+        "location": city,
+        "radiusKm": str(legacy_cfg["radius_km"]),
+        "searches": searches,
+        "listingsPerSearch": run_config["listings_per_search"],
+        "useDeduplication": run_config["use_deduplication"],
+        "fetchDetailedItems": run_config.get("fetch_detailed_items", False),
+        "proxyConfiguration": {
+            "useApifyProxy": legacy_cfg["proxy"]["use_apify_proxy"],
+            "apifyProxyGroups": legacy_cfg["proxy"]["apify_proxy_groups"],
+            "apifyProxyCountry": legacy_cfg["proxy"]["apify_proxy_country"],
+        },
+    }
+    if run_config.get("max_listing_age") is not None:
+        run_input["maxListingAge"] = run_config["max_listing_age"]
+
+    return run_input
 
 
 # ── Formatting helpers ────────────────────────────────────────────────────────
@@ -196,14 +196,11 @@ def from_apify(config_name: str, mode: str, stage: str) -> None:
     category_id = _resolve_category(config)
 
     if stage in ("scrape", "all"):
-        run_inputs = _build_run_inputs(config, mode)
+        run_input  = _build_run_input(config, mode)
         runner     = ApifyRunner(settings.apify_api_token, legacy_cfg["actor_id"])
 
-        all_records: list[dict] = []
-        for run_input in run_inputs:
-            city = run_input["location"]
-            logger.info(f"[Apify] Fetching city: {city!r}")
-            all_records.extend(runner.run(run_input))
+        logger.info(f"[Apify] Fetching: {run_input['location']!r}")
+        all_records = runner.run(run_input)
 
         source_label = f"{config_name}:{mode}"
         t0      = time.monotonic()

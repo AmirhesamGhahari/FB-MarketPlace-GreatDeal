@@ -39,6 +39,13 @@ class FbListingRaw(Base):
     location_state: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     image_urls: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
     is_sold: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    # Structured fields from Apify payload (no LLM needed)
+    search_query: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    fb_condition: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    delivery_types: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
+    is_highly_rated_seller: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    original_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
     listed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     scraped_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     raw_payload: Mapped[dict] = mapped_column(JSONB, nullable=False)

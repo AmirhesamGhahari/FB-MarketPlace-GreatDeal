@@ -76,13 +76,13 @@ def _parse_fetched_at(iso_str: Optional[str]) -> Optional[datetime]:
 # ── CDC helpers ───────────────────────────────────────────────────────────────
 
 
-_CDC_FIELDS = ("price", "is_sold", "title", "location_city", "location_state")
+_CDC_FIELDS = ("price", "is_sold", "title", "description", "location_city", "location_state")
 
 
 def _load_current_state(session: Session, category_id: uuid.UUID) -> dict[str, dict]:
     rows = session.execute(
         text("""
-            SELECT fb_listing_id, price, is_sold, title, location_city, location_state
+            SELECT fb_listing_id, price, is_sold, title, description, location_city, location_state
             FROM facebook.fb_listings_raw
             WHERE category_id = :category_id AND valid_to IS NULL
         """),
@@ -107,12 +107,14 @@ _INSERT_SQL = text("""
         title, description, price, currency,
         location_city, location_state,
         image_urls, is_sold, listed_at, scraped_at,
+        search_query, fb_condition, delivery_types, is_highly_rated_seller, original_price,
         raw_payload, valid_from, valid_to
     ) VALUES (
         :category_id, :category_key, :pipeline_run_id, :fb_listing_id, :listing_url, :seller_profile_id,
         :title, :description, :price, :currency,
         :location_city, :location_state,
         CAST(:image_urls AS JSONB), :is_sold, :listed_at, :scraped_at,
+        :search_query, :fb_condition, CAST(:delivery_types AS JSONB), :is_highly_rated_seller, :original_price,
         CAST(:raw_payload AS JSONB), now(), NULL
     )
 """)
@@ -127,7 +129,31 @@ _CLOSE_CURRENT_SQL = text("""
 def _build_params(record: dict, run_id: uuid.UUID, category_id: uuid.UUID, category_key: str) -> dict:
     price = record.get("price") or {}
     location = record.get("location") or {}
-    image = record.get("primaryImage")
+    extra = record.get("extraListingData") or {}
+
+    # Collect all image URLs; primary first, then extras
+    extra_images: list = extra.get("images") or []
+    primary = record.get("primaryImage")
+    if primary and primary not in extra_images:
+        all_images = [primary] + extra_images
+    else:
+        all_images = extra_images or ([primary] if primary else [])
+
+    # Structured condition from FB attribute_data (e.g. "used_like_new", "new")
+    fb_condition = None
+    for attr in (extra.get("attribute_data") or []):
+        if attr.get("attribute_name") == "Condition":
+            fb_condition = attr.get("value")
+            break
+
+    # Seller trust badge ("Highly rated on Marketplace")
+    badges = extra.get("commerce_badges_info") or {}
+    is_highly_rated = badges.get("source_summary") is not None
+
+    # Strikethrough (was) price — present when seller has marked down from a higher price
+    strikethrough = record.get("strikethroughPrice") or {}
+    original_price = _parse_price(strikethrough.get("amount"))
+
     return {
         "category_id": str(category_id),
         "category_key": category_key,
@@ -136,15 +162,20 @@ def _build_params(record: dict, run_id: uuid.UUID, category_id: uuid.UUID, categ
         "listing_url": record["url"],
         "seller_profile_id": None,
         "title": record.get("title"),
-        "description": None,
+        "description": extra.get("description"),
         "price": _parse_price(price.get("formatted")),
         "currency": price.get("currency"),
         "location_city": location.get("city"),
         "location_state": location.get("state"),
-        "image_urls": json.dumps([image] if image else []),
+        "image_urls": json.dumps(all_images),
         "is_sold": bool(record.get("isSold", False)),
         "listed_at": _parse_listed_at(record.get("listing_date_ms")),
         "scraped_at": _parse_fetched_at(record.get("_fetchedAt")),
+        "search_query": record.get("searchQuery"),
+        "fb_condition": fb_condition,
+        "delivery_types": json.dumps(record.get("deliveryTypes") or []),
+        "is_highly_rated_seller": is_highly_rated,
+        "original_price": original_price,
         "raw_payload": json.dumps(record),
     }
 

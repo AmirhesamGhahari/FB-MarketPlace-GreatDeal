@@ -5,7 +5,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKeyConstraint, Index
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKeyConstraint, Index, Integer
 from sqlalchemy import Numeric, SmallInteger, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -30,6 +30,9 @@ class FbListingClassified(Base):
 
     llm_model: Mapped[str] = mapped_column(Text, nullable=False)
 
+    # What kind of listing this is
+    listing_type: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
     # Product identification (AI-extracted)
     product_brand: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     product_model: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -41,7 +44,12 @@ class FbListingClassified(Base):
     # Specs
     storage_gb: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     color: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    battery_health_pct: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
+    cycle_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    is_unlocked: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    warranty_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     includes_accessories: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
+    is_store_seller: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
 
     # Deal quality
     deal_score: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
