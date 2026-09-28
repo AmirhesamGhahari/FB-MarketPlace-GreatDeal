@@ -4,8 +4,8 @@ app_name = "fb-marketplace-greatdeals"
 # ARNs of existing secrets from your other AWS project.
 # Copy these from the Secrets Manager console (or `aws secretsmanager list-secrets`).
 # This project will NOT create new secrets — it just grants ECS permission to read these.
-apify_token_secret_arn    = "arn:aws:secretsmanager:ca-central-1:123456789012:secret:your-project/apify-api-token-XXXXXX"
-gemini_api_key_secret_arn = "arn:aws:secretsmanager:ca-central-1:123456789012:secret:your-project/gemini-api-key-XXXXXX"
+apify_token_secret_arn    = "XXXX"
+gemini_api_key_secret_arn = "XXXX"
 
 db_master_username = "amir_ghahari"
 db_master_password = "REPLACE_ME_secure_password_min_8_chars"
