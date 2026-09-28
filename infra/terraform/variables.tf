@@ -13,13 +13,11 @@ variable "app_name" {
 variable "apify_token_secret_arn" {
   description = "ARN of an existing Secrets Manager secret containing the Apify API token (from another AWS project)"
   type        = string
-  default     = "arn:aws:secretsmanager:ca-central-1:794038223644:secret:ticket-price-tracker/apify-api-token-S7zX1q"
 }
 
 variable "gemini_api_key_secret_arn" {
   description = "ARN of an existing Secrets Manager secret containing the Google Gemini API key (from another AWS project)"
   type        = string
-  default     = "arn:aws:secretsmanager:ca-central-1:794038223644:secret:ticket-price-tracker/gemini-api-key-rovQdN"
 }
 
 variable "db_master_username" {
