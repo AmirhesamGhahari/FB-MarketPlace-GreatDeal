@@ -4,8 +4,7 @@ data "archive_file" "fanout" {
   output_path = "${path.module}/fanout.zip"
 }
 
-# ── DynamoDB: per-event-per-source run state ───────────────────────────────────
-# pk = "{config_name}#{source}"
+# ── DynamoDB: per-config run state (pk = "{config}#facebook_legacy") ──────────
 resource "aws_dynamodb_table" "pipeline_state" {
   name         = "${var.app_name}-pipeline-state"
   billing_mode = "PAY_PER_REQUEST"
@@ -19,7 +18,7 @@ resource "aws_dynamodb_table" "pipeline_state" {
   tags = { App = var.app_name }
 }
 
-# ── Lambda: task_producer + record_result ─────────────────────────────────────
+# ── Lambda: TaskProducer — reads DynamoDB mode, returns task list for SFN ─────
 resource "aws_iam_role" "lambda" {
   name = "${var.app_name}-fanout-lambda"
 
@@ -119,13 +118,13 @@ resource "aws_iam_role_policy" "sfn_policy" {
         Resource = [aws_lambda_function.fanout.arn]
       },
       {
-        # .sync integration — SFN creates/manages StepFunctionsGetEventsForECSTaskRule internally
+        # .sync integration — SFN creates/manages this EventBridge rule internally
         Effect   = "Allow"
         Action   = ["events:PutTargets", "events:PutRule", "events:DescribeRule"]
         Resource = ["arn:aws:events:*:*:rule/StepFunctionsGetEventsForECSTaskRule"]
       },
       {
-        # Direct DynamoDB integration — marks mode=periodic after each successful ECS task
+        # Marks mode=periodic after each successful ECS task
         Effect   = "Allow"
         Action   = ["dynamodb:UpdateItem"]
         Resource = [aws_dynamodb_table.pipeline_state.arn]
@@ -143,26 +142,14 @@ resource "aws_iam_role_policy" "sfn_policy" {
   })
 }
 
-# ── Locals: shared ASL building blocks ────────────────────────────────────────
+# ── Locals: ASL building blocks ───────────────────────────────────────────────
 locals {
-  lambda_arn = aws_lambda_function.fanout.arn
-
   lambda_retry = [{
     ErrorEquals     = ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException"]
     IntervalSeconds = 2
     MaxAttempts     = 3
     BackoffRate     = 2
   }]
-
-  # Each source branch gets its own iterator with unique state names.
-  # SFN validates state names globally across all Parallel branches and Map iterators,
-  # so sharing one iterator definition across 3 Maps causes DUPLICATE_STATE_NAME errors.
-  #
-  # All 3 iterators are identical in logic:
-  #   Launch  — ECS .sync: SFN runs the task and waits via EventBridge until exit.
-  #             Exit code 0 → SetPeriodic; timeout/non-zero → Catch → End (next item continues).
-  #   SetPeriodic — direct DynamoDB UpdateItem: sets mode="periodic" after first success.
-  #   End     — terminal Pass state.
 
   _ecs_task_params = {
     LaunchType     = "FARGATE"
@@ -216,21 +203,16 @@ locals {
       EndFL = { Type = "Pass", End = true }
     }
   }
-
 }
 
 # ── State machine ──────────────────────────────────────────────────────────────
 #
-# Flow:
-#   TaskProducer (Lambda)
-#     reads CATEGORY_CONFIGS → batch-reads DynamoDB for mode per config
-#     returns {run, tasks: {facebook_legacy: [{command, state_key, mode}, ...]}}
-#
-#   RunFBLegacy (Map, MaxConcurrency=1 — sequential)
-#     For each config task:
-#       LaunchFL  — ECS .sync: Fargate runs the pipeline, SFN waits via EventBridge
-#       SetPeriodicFL — DynamoDB UpdateItem: marks mode=periodic after first success
-#       EndFL     — terminal Pass state
+# Flow: EventBridge → SFN
+#   TaskProducer (Lambda) — reads DynamoDB mode per config, returns task list
+#   RunFBLegacy (Map, MaxConcurrency=1) — for each config:
+#     LaunchFL       — ECS runTask.sync: Fargate runs pipeline, SFN waits via EventBridge
+#     SetPeriodicFL  — DynamoDB UpdateItem: marks mode=periodic after first success
+#     EndFL          — terminal Pass
 #
 resource "aws_sfn_state_machine" "dispatcher" {
   name     = "${var.app_name}-dispatcher"
@@ -251,8 +233,8 @@ resource "aws_sfn_state_machine" "dispatcher" {
         Type     = "Task"
         Resource = "arn:aws:states:::lambda:invoke"
         Parameters = {
-          FunctionName = local.lambda_arn
-          "Payload.$"  = "$"   # forward full input so manual override works
+          FunctionName = aws_lambda_function.fanout.arn
+          "Payload.$"  = "$"
         }
         ResultSelector = {
           "run.$"   = "$.Payload.run"
@@ -262,9 +244,6 @@ resource "aws_sfn_state_machine" "dispatcher" {
         Next  = "RunFBLegacy"
       }
 
-      # Run each category config sequentially (MaxConcurrency=1).
-      # Each item: {command, state_key, mode}
-      # On success: SetPeriodicFL marks mode=periodic in DynamoDB for the next run.
       RunFBLegacy = {
         Type           = "Map"
         ItemsPath      = "$.tasks.facebook_legacy"
@@ -279,9 +258,8 @@ resource "aws_sfn_state_machine" "dispatcher" {
   depends_on = [aws_cloudwatch_log_group.sfn]
 }
 
-# ── EventBridge Scheduler ──────────────────────────────────────────────────────
-# Fires at 00:00 UTC (8pm ET) and 12:00 UTC (8am ET).
-# TaskProducer Lambda reads the clock to decide morning vs evening.
+# ── EventBridge Scheduler → Step Functions ─────────────────────────────────────
+# Fires at 00:00 UTC and 12:00 UTC (twice daily).
 resource "aws_iam_role" "scheduler" {
   name = "${var.app_name}-eventbridge-scheduler"
 

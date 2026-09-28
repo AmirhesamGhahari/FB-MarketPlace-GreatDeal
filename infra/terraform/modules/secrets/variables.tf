@@ -2,16 +2,6 @@ variable "app_name" {
   type = string
 }
 
-variable "apify_api_token" {
-  type      = string
-  sensitive = true
-}
-
-variable "gemini_api_key" {
-  type      = string
-  sensitive = true
-}
-
 variable "db_master_username" {
   type = string
 }

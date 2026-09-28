@@ -10,34 +10,16 @@ variable "app_name" {
   default     = "fb-marketplace-greatdeals"
 }
 
-variable "apify_api_token" {
-  description = "Apify API token for the scraper"
+variable "apify_token_secret_arn" {
+  description = "ARN of an existing Secrets Manager secret containing the Apify API token (from another AWS project)"
   type        = string
-  sensitive   = true
+  default     = "arn:aws:secretsmanager:ca-central-1:794038223644:secret:ticket-price-tracker/apify-api-token-S7zX1q"
 }
 
-variable "scrapfly_api_key" {
-  description = "Scrapfly API key for the StubHub scraper"
+variable "gemini_api_key_secret_arn" {
+  description = "ARN of an existing Secrets Manager secret containing the Google Gemini API key (from another AWS project)"
   type        = string
-  sensitive   = true
-}
-
-variable "gemini_api_key" {
-  description = "Google Gemini API key for LLM classification"
-  type        = string
-  sensitive   = true
-}
-
-variable "seatgeek_client_id" {
-  description = "SeatGeek API client ID"
-  type        = string
-  sensitive   = true
-}
-
-variable "seatgeek_client_secret" {
-  description = "SeatGeek API client secret"
-  type        = string
-  sensitive   = true
+  default     = "arn:aws:secretsmanager:ca-central-1:794038223644:secret:ticket-price-tracker/gemini-api-key-rovQdN"
 }
 
 variable "db_master_username" {
@@ -58,18 +40,13 @@ variable "db_name" {
   default     = "fb_marketplace_greatdeals"
 }
 
-variable "alert_email" {
-  description = "Email address to receive CloudWatch alarm notifications"
-  type        = string
-}
-
 variable "github_owner" {
   description = "GitHub username or organization (e.g. amirhesam)"
   type        = string
 }
 
 variable "github_repo" {
-  description = "GitHub repository name, without the owner prefix (e.g. FB-MarketPlace-GreatDeal)"
+  description = "GitHub repository name, without the owner prefix (e.g. FB-MarketPlace-GreatDeals)"
   type        = string
 }
 
@@ -79,11 +56,8 @@ variable "github_branch" {
   default     = "main"
 }
 
-variable "event_configs" {
-  description = "Event config objects — name (YAML without .yaml) + event_dates (list of YYYY-MM-DD). The Lambda uses event_dates to determine scheduling frequency and to generate one StubHub task per upcoming show date. ECS CLIs read the full YAML from disk for URLs and FB settings."
-  type = list(object({
-    name        = string
-    event_dates = list(string)
-  }))
-  default = []
+variable "category_configs" {
+  description = "List of config names to scrape on each run (YAML filename without .yaml). Example: [\"iphone\", \"macbook\"]."
+  type        = list(string)
+  default     = ["iphone"]
 }

@@ -1,89 +1,57 @@
-"""Pipeline task_producer Lambda.
+"""Pipeline dispatcher Lambda — TaskProducer for Step Functions.
 
-Called once per Step Functions execution (TaskProducer state).
+Called by the SFN TaskProducer state. Reads DynamoDB to determine the
+run mode (initial vs periodic) for each category config, then returns
+a task list that SFN uses to drive the RunFBLegacy Map state.
 
-1. Reads CATEGORY_CONFIGS env var — JSON list of config names (e.g. ["iphone", "macbook"]).
-2. Batch-reads DynamoDB to get mode (initial | periodic) per config.
-3. Returns {run, tasks: {facebook_legacy: [...]}}.
-
-DynamoDB state keys
-───────────────────
-"{config_name}#facebook_legacy"  →  mode: "initial" | "periodic"
-Written to "periodic" by the SetPeriodicFL Step Functions state after each successful ECS task.
-On the next scheduled run the same config uses periodic mode automatically.
-
-Manual override
-───────────────
-Invoke the Step Functions state machine from the AWS console with custom input to override:
-
-  Force a specific config to run in initial mode:
-    {"tasks": {"facebook_legacy": [{"command": ["run-facebook", "from-apify", "--config", "iphone", "--mode", "initial", "--stage", "all"], "state_key": "iphone#facebook_legacy", "mode": "initial"}]}}
-
-  Force all configs to run (scheduled logic bypassed):
-    {"run": "manual"}
+Manual override: pass {"tasks": {"facebook_legacy": [...]}} as SFN input
+to bypass DynamoDB lookup and run specific tasks directly.
 """
 from __future__ import annotations
 
 import json
 import os
+import uuid
+from datetime import datetime, timezone
 
 import boto3
 
-dynamodb = boto3.resource("dynamodb")
+dynamodb = boto3.client("dynamodb")
 
 
 def lambda_handler(event, context):
-    return _task_producer(event)
-
-
-def _task_producer(event: dict) -> dict:
-    # Full passthrough: tasks are fully specified in input — skip generation entirely.
-    # Useful for forcing a specific config/mode from the AWS console.
+    # Manual override: caller passes {"tasks": {...}} directly in SFN input
     if "tasks" in event:
-        run = event.get("run", "manual")
-        print(f"[PASSTHROUGH] run={run} tasks={event['tasks']}")
-        return {"run": run, "tasks": event["tasks"]}
+        return event
 
-    run = event.get("run", "scheduled")
+    configs: list[str] = json.loads(os.environ["CATEGORY_CONFIGS"])
+    state_table = os.environ["STATE_TABLE_NAME"]
 
-    category_configs: list[str] = json.loads(os.environ["CATEGORY_CONFIGS"])
+    # Batch-read current mode for each config
+    keys = [{"pk": {"S": f"{c}#facebook_legacy"}} for c in configs]
+    response = dynamodb.batch_get_item(
+        RequestItems={state_table: {"Keys": keys}}
+    )
+    items = {
+        item["pk"]["S"]: item.get("mode", {}).get("S", "initial")
+        for item in response.get("Responses", {}).get(state_table, [])
+    }
 
-    if not category_configs:
-        print("[WARN] CATEGORY_CONFIGS is empty — no tasks to run")
-        return {"run": run, "tasks": {"facebook_legacy": []}}
+    run_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
 
-    # Batch-read DynamoDB to get initial/periodic mode for each config
-    state_keys = [f"{name}#facebook_legacy" for name in category_configs]
-    states = _batch_get_states(state_keys)
-
-    tasks: list[dict] = []
-    for name in category_configs:
-        state_key = f"{name}#facebook_legacy"
-        mode = states.get(state_key, {}).get("mode") or "initial"
-        tasks.append({
-            "command":   _build_command(name, mode),
+    facebook_legacy_tasks = []
+    for config in configs:
+        state_key = f"{config}#facebook_legacy"
+        mode = items.get(state_key, "initial")
+        command = ["run-facebook", "from-apify", "--config", config, "--mode", mode, "--stage", "all"]
+        facebook_legacy_tasks.append({
+            "command": command,
             "state_key": state_key,
-            "mode":      mode,
+            "mode": mode,
         })
-        print(f"[QUEUE] {name}/facebook_legacy mode={mode}")
 
-    print(f"[PLAN] run={run} configs={len(tasks)}")
-    return {"run": run, "tasks": {"facebook_legacy": tasks}}
-
-
-def _build_command(config_name: str, mode: str) -> list[str]:
-    return ["run-facebook", "from-apify", "--config", config_name, "--mode", mode, "--stage", "all"]
-
-
-def _batch_get_states(state_keys: list[str]) -> dict[str, dict]:
-    table_name = os.environ["STATE_TABLE_NAME"]
-    try:
-        response = dynamodb.batch_get_item(
-            RequestItems={table_name: {"Keys": [{"pk": k} for k in state_keys]}}
-        )
-        if response.get("UnprocessedKeys"):
-            print("[WARN] DynamoDB UnprocessedKeys — some items may default to initial mode")
-        return {item["pk"]: item for item in response.get("Responses", {}).get(table_name, [])}
-    except Exception as exc:
-        print(f"[WARN] batch_get_states failed: {exc} — defaulting all to initial mode")
-        return {}
+    return {
+        "run": {"id": run_id, "started_at": now},
+        "tasks": {"facebook_legacy": facebook_legacy_tasks},
+    }

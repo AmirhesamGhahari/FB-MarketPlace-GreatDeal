@@ -34,33 +34,35 @@ This is a fully serverless, event-driven scraping pipeline on AWS. There is no a
 Resources only run when a scrape job is triggered.
 
 ```
-EventBridge (cron, every 6h)
+EventBridge (cron, every 12h)
        |
        v
-  Lambda (fan-out)  ──────────────────────────────────────────────────────────>  CloudWatch Alarms
-       |                                                                               |
-       v                                                                               v
-  ECS Fargate Task                                                              SNS Topic
-  (Python scraper)                                                                     |
-       |                                                                               v
-       |──── reads secrets from ──>  Secrets Manager                           Email Alert
+  Step Functions ──> Lambda (TaskProducer)
+       |               reads CATEGORY_CONFIGS + DynamoDB mode (initial|periodic)
+       |               returns task list for each config
+       v
+  ECS Fargate Task (one per category config, sequential)
+  Python pipeline: Apify scrape → Stage 1 CDC → Gemini classify → Aurora
+       |
+       |──── reads secrets from ──>  Secrets Manager (DATABASE_URL, APIFY_API_TOKEN, GEMINI_API_KEY)
        |
        v
-  Aurora Serverless PostgreSQL
+  Aurora Serverless v2 PostgreSQL    CloudWatch Alarms ──> SNS ──> Email Alert
   (private subnet, not internet-accessible)
 
-GitHub push
+GitHub push to main
        |
        v
-  CodePipeline  -->  CodeBuild  -->  Docker image  -->  ECR  -->  new ECS task definition revision
+  CodePipeline  -->  CodeBuild  -->  Docker image (ARM64)  -->  ECR  -->  new ECS task definition
 ```
 
-**Key design decisions encoded in this infrastructure:**
+**Key design decisions:**
 
 - ECS tasks live in **public subnets** with no NAT Gateway (saves ~$30/month) — they have public IPs but the security group allows no inbound connections.
-- Aurora lives in **private subnets** only — the internet cannot reach it directly. Only ECS tasks can connect, enforced at the security group level.
-- Docker images are tagged with both a **short commit SHA** (traceable, immutable) and `latest` (always points to newest).
-- Everything is ARM64 (Graviton) — both the CodeBuild environment and ECS runtime — so images built locally match what runs in production.
+- Aurora lives in **private subnets** only — only ECS tasks can connect, enforced by security group.
+- Docker images are tagged with both a **short commit SHA** and `latest`. Everything is ARM64 (Graviton).
+- **DynamoDB tracks initial/periodic mode** per config — first successful run switches a config to periodic mode automatically. Reset by deleting the DynamoDB item.
+- **Scheduling**: EventBridge fires every 12h. Step Functions runs the task sequentially (one ECS task per category). The 1-hour ECS timeout covers a full Apify + Gemini classification run.
 
 ---
 
@@ -498,37 +500,29 @@ resource "aws_lambda_function" "fanout" {
 
 ### Lambda Environment Variables
 
-The Lambda receives all the ECS context it needs to launch tasks:
+The Lambda receives the config list and DynamoDB table name:
 
 ```hcl
 environment {
   variables = {
-    ECS_CLUSTER_ARN        = var.ecs_cluster_arn
-    TASK_DEFINITION_FAMILY = var.task_family
-    SUBNET_IDS             = join(",", var.public_subnet_ids)
-    SECURITY_GROUP_ID      = var.ecs_task_sg_id
-    EVENT_CONFIGS          = jsonencode(var.event_configs)
+    STATE_TABLE_NAME = aws_dynamodb_table.pipeline_state.name
+    CATEGORY_CONFIGS = jsonencode(var.category_configs)
   }
 }
 ```
 
-`EVENT_CONFIGS` is a JSON-encoded list of event config names (e.g. `["veld_2026", "electric_island_sep2026"]`). The Lambda loops over this list and launches one ECS task per config — that is the "fan-out" behaviour.
+`CATEGORY_CONFIGS` is a JSON-encoded list of config names (e.g. `["iphone"]`). The Lambda loops over this list and launches one ECS Fargate task per config via Step Functions.
 
 ### EventBridge Schedule
 
 ```hcl
-resource "aws_scheduler_schedule" "periodic" {
-  schedule_expression          = "cron(0 */6 * * ? *)"
+resource "aws_scheduler_schedule" "dispatcher" {
+  schedule_expression          = "cron(0 */12 * * ? *)"
   schedule_expression_timezone = "UTC"
-
-  target {
-    arn   = aws_lambda_function.fanout.arn
-    input = jsonencode({ mode = "periodic" })
-  }
 }
 ```
 
-Fires at 00:00, 06:00, 12:00, 18:00 UTC every day. On each fire, it invokes the Lambda with `{ "mode": "periodic" }`. The Lambda then reads `EVENT_CONFIGS` and starts one ECS task per event.
+Fires at 00:00 and 12:00 UTC (8pm ET and 8am ET) every day. Step Functions then invokes the Lambda, which builds the task list and runs each ECS task sequentially.
 
 ---
 
