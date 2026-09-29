@@ -11,10 +11,22 @@ class ApifyRunner:
         self._client = ApifyClient(api_token)
         self._actor_id = actor_id
 
-    def run(self, run_input: dict[str, Any]) -> list[dict]:
-        logger.info(f"[Apify] Calling actor {self._actor_id!r}")
+    def run(
+        self,
+        run_input: dict[str, Any],
+        timeout_secs: int = 7200,
+        memory_mbytes: int = 4096,
+    ) -> list[dict]:
+        logger.info(
+            f"[Apify] Calling actor {self._actor_id!r} "
+            f"(timeout={timeout_secs}s, memory={memory_mbytes}MB)"
+        )
         try:
-            run = self._client.actor(self._actor_id).call(run_input=run_input)
+            run = self._client.actor(self._actor_id).call(
+                run_input=run_input,
+                timeout_secs=timeout_secs,
+                memory_mbytes=memory_mbytes,
+            )
         except Exception as exc:
             logger.error(f"[Apify] Actor call failed: {exc}")
             raise

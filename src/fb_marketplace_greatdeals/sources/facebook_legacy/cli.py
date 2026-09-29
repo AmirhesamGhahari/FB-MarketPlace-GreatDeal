@@ -196,11 +196,14 @@ def from_apify(config_name: str, mode: str, stage: str) -> None:
     category_id = _resolve_category(config)
 
     if stage in ("scrape", "all"):
-        run_input  = _build_run_input(config, mode)
-        runner     = ApifyRunner(settings.apify_api_token, legacy_cfg["actor_id"])
+        run_input    = _build_run_input(config, mode)
+        run_cfg      = legacy_cfg[f"{mode}_run"]
+        timeout_secs  = run_cfg.get("actor_timeout_secs", 7200)
+        memory_mbytes = run_cfg.get("actor_memory_mb", 2048)
+        runner        = ApifyRunner(settings.apify_api_token, legacy_cfg["actor_id"])
 
         logger.info(f"[Apify] Fetching: {run_input['location']!r}")
-        all_records = runner.run(run_input)
+        all_records = runner.run(run_input, timeout_secs=timeout_secs, memory_mbytes=memory_mbytes)
 
         source_label = f"{config_name}:{mode}"
         t0      = time.monotonic()
