@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from zoneinfo import ZoneInfo
 from decimal import Decimal
 from typing import Optional
@@ -213,7 +213,7 @@ def _create_run(
 
 def _finish_run(session: Session, run: PipelineRun, result: ClassifyResult) -> None:
     run.status = result.status
-    un.finished_at = datetime.now(ZoneInfo("America/Toronto"))
+    run.finished_at = datetime.now(ZoneInfo("America/Toronto"))
     run.total_records = result.total
     run.newly_added_count = result.classified
     run.error_count = result.errors

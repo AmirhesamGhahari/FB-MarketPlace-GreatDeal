@@ -15,7 +15,7 @@ import json
 import re
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from zoneinfo import ZoneInfo
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -70,7 +70,7 @@ def _parse_fetched_at(iso_str: Optional[str]) -> Optional[datetime]:
     if not iso_str:
         return None
     try:
-        return datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+        return datetime.fromisoformat(iso_str.replace("Z", "+00:00")).astimezone(ZoneInfo("America/Toronto"))
     except ValueError:
         return None
 
