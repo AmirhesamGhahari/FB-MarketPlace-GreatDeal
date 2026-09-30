@@ -90,8 +90,8 @@ def _build_run_input(config: dict, mode: str) -> dict:
     searches = []
     for term in legacy_cfg["search_terms"]:
         entry: dict = {"searchTerm": term}
-        if run_config.get("listings_per_search"):
-            entry["listingsPerSearch"] = run_config["listings_per_search"]
+        if run_config.get("listings_per_search") is not None:
+            entry["listingsPerSearch"] = int(run_config["listings_per_search"])
         if run_config.get("days_listed"):
             entry["daysListed"] = run_config["days_listed"]
         if run_config.get("filter_keywords"):
@@ -106,7 +106,6 @@ def _build_run_input(config: dict, mode: str) -> dict:
         "location": city,
         "radiusKm": str(legacy_cfg["radius_km"]),
         "searches": searches,
-        "listingsPerSearch": run_config["listings_per_search"],
         "useDeduplication": run_config["use_deduplication"],
         "fetchDetailedItems": run_config.get("fetch_detailed_items", False),
         "proxyConfiguration": {
@@ -115,6 +114,8 @@ def _build_run_input(config: dict, mode: str) -> dict:
             "apifyProxyCountry": legacy_cfg["proxy"]["apify_proxy_country"],
         },
     }
+    if run_config.get("listings_per_search") is not None:
+        run_input["listingsPerSearch"] = int(run_config["listings_per_search"])
     if run_config.get("max_listing_age") is not None:
         run_input["maxListingAge"] = run_config["max_listing_age"]
 

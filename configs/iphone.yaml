@@ -44,8 +44,8 @@ sources:
         - "Toronto, Ontario"
       use_deduplication: true
       fetch_detailed_items: true
-      listings_per_search: 
-      days_listed: "80"
+      listings_per_search: 80
+      days_listed: "7"
       filter_keywords: "iphone"
       actor_timeout_secs: 10800    
       actor_memory_mb: 2048
