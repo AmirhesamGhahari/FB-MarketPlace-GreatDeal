@@ -259,7 +259,6 @@ resource "aws_sfn_state_machine" "dispatcher" {
 }
 
 # ── EventBridge Scheduler → Step Functions ─────────────────────────────────────
-# Fires at 00:00 UTC and 12:00 UTC (twice daily).
 resource "aws_iam_role" "scheduler" {
   name = "${var.app_name}-eventbridge-scheduler"
 
@@ -293,8 +292,8 @@ resource "aws_scheduler_schedule" "dispatcher" {
 
   flexible_time_window { mode = "OFF" }
 
-  schedule_expression          = "cron(0 */12 * * ? *)"
-  schedule_expression_timezone = "UTC"
+  schedule_expression          = "cron(0 5,17 * * ? *)"
+  schedule_expression_timezone = "America/Toronto"
 
   target {
     arn      = aws_sfn_state_machine.dispatcher.arn

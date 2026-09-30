@@ -16,6 +16,7 @@ import re
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Optional
@@ -59,7 +60,8 @@ def _parse_listed_at(ms: Optional[int]) -> Optional[datetime]:
     if ms is None:
         return None
     try:
-        return datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
+        return datetime.fromtimestamp(ms / 1000, tz=ZoneInfo("America/Toronto"),
+  )
     except (OSError, ValueError, OverflowError):
         return None
 
@@ -207,7 +209,7 @@ def _create_run(
 
 def _finish_run(session: Session, run: PipelineRun, result: PipelineResult) -> None:
     run.status = result.status
-    run.finished_at = datetime.now(timezone.utc)
+    run.finished_at = datetime.now(ZoneInfo("America/Toronto"))
     run.total_records = result.total
     run.error_count = result.errors
     run.newly_added_count = result.newly_added

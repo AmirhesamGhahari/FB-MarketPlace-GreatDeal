@@ -13,6 +13,7 @@ import json
 import os
 import uuid
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 import boto3
 
@@ -38,7 +39,7 @@ def lambda_handler(event, context):
     }
 
     run_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(ZoneInfo("America/Toronto")).isoformat()
 
     facebook_legacy_tasks = []
     for config in configs:

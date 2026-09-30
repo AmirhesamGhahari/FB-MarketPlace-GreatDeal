@@ -518,11 +518,11 @@ environment {
 ```hcl
 resource "aws_scheduler_schedule" "dispatcher" {
   schedule_expression          = "cron(0 */12 * * ? *)"
-  schedule_expression_timezone = "UTC"
+  schedule_expression_timezone = "America/Toronto"
 }
 ```
 
-Fires at 00:00 and 12:00 UTC (8pm ET and 8am ET) every day. Step Functions then invokes the Lambda, which builds the task list and runs each ECS task sequentially.
+Fires at 00:00 and 12:00 America/Toronto (8pm ET and 8am ET) every day. Step Functions then invokes the Lambda, which builds the task list and runs each ECS task sequentially.
 
 ---
 
