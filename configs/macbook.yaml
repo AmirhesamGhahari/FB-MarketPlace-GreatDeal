@@ -34,7 +34,7 @@ sources:
       fetch_detailed_items: true
       listings_per_search: 200
       filter_keywords: "macbook"
-      actor_timeout_secs: 10800   # 3 hours — 10 terms × 200 listings
+      actor_timeout_secs: 10800   
       actor_memory_mb: 4096
 
     periodic_run:
