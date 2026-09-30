@@ -57,5 +57,5 @@ variable "github_branch" {
 variable "category_configs" {
   description = "List of config names to scrape on each run (YAML filename without .yaml). Example: [\"iphone\", \"macbook\"]."
   type        = list(string)
-  default     = ["iphone"]
+  default     = ["iphone", "macbook", "ipad", "samsung_galaxy", "gaming_console", "apple_watch", "airpods", "windows_laptop"]
 }

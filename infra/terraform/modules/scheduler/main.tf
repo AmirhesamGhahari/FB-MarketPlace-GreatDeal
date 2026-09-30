@@ -186,7 +186,7 @@ locals {
       LaunchFL = {
         Type           = "Task"
         Resource       = "arn:aws:states:::ecs:runTask.sync"
-        TimeoutSeconds = 3600
+        TimeoutSeconds = 18000
         Parameters     = local._ecs_task_params
         ResultPath     = null
         Next           = "SetPeriodicFL"

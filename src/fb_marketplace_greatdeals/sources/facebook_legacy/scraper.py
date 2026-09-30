@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Any
 
 from apify_client import ApifyClient
@@ -15,7 +16,7 @@ class ApifyRunner:
         self,
         run_input: dict[str, Any],
         timeout_secs: int = 7200,
-        memory_mbytes: int = 4096,
+        memory_mbytes: int = 2048,
     ) -> list[dict]:
         logger.info(
             f"[Apify] Calling actor {self._actor_id!r} "
@@ -24,7 +25,7 @@ class ApifyRunner:
         try:
             run = self._client.actor(self._actor_id).call(
                 run_input=run_input,
-                timeout_secs=timeout_secs,
+                run_timeout=timedelta(seconds=timeout_secs),
                 memory_mbytes=memory_mbytes,
             )
         except Exception as exc:
