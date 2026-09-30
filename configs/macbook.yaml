@@ -1,0 +1,49 @@
+category_key: macbook
+category_name: MacBook
+product_type: Laptop
+brand: Apple
+
+sources:
+  facebook_legacy:
+    enabled: true
+    actor_id: "raidr-api/facebook-marketplace-scraper"
+    radius_km: "100"
+
+    proxy:
+      use_apify_proxy: true
+      apify_proxy_groups: ["RESIDENTIAL"]
+      apify_proxy_country: "CA"
+
+    search_terms:
+      - macbook air
+      - macbook air m2
+      - macbook air m3
+      - macbook pro
+      - macbook pro m2
+      - macbook pro m3
+      - macbook pro m4
+      - macbook pro m5
+      - macbook 14
+      - macbook 16
+      - macbook 13
+
+    initial_run:
+      cities:
+        - "Toronto, Ontario"
+      use_deduplication: true
+      fetch_detailed_items: true
+      listings_per_search: 200
+      filter_keywords: "macbook"
+      actor_timeout_secs: 10800   # 3 hours — 10 terms × 200 listings
+      actor_memory_mb: 4096
+
+    periodic_run:
+      cities:
+        - "Toronto, Ontario"
+      use_deduplication: true
+      fetch_detailed_items: true
+      listings_per_search: 70
+      days_listed: "7"
+      filter_keywords: "macbook"
+      actor_timeout_secs: 7200
+      actor_memory_mb: 2048

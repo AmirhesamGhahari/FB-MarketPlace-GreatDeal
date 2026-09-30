@@ -1,0 +1,49 @@
+category_key: samsung_galaxy
+category_name: Samsung Galaxy
+product_type: Smartphone
+brand: Samsung
+
+sources:
+  facebook_legacy:
+    enabled: true
+    actor_id: "raidr-api/facebook-marketplace-scraper"
+    radius_km: "100"
+
+    proxy:
+      use_apify_proxy: true
+      apify_proxy_groups: ["RESIDENTIAL"]
+      apify_proxy_country: "CA"
+
+    search_terms:
+      - samsung galaxy s24 ultra
+      - samsung galaxy s24
+      - samsung galaxy s23 ultra
+      - samsung galaxy s23
+      - samsung galaxy s22
+      - samsung galaxy z fold 6
+      - samsung galaxy z fold 5
+      - samsung galaxy z flip 6
+      - samsung galaxy z flip 5
+      - samsung galaxy a55
+      - samsung galaxy a35
+
+    initial_run:
+      cities:
+        - "Toronto, Ontario"
+      use_deduplication: true
+      fetch_detailed_items: true
+      listings_per_search: 200
+      filter_keywords: "samsung"
+      actor_timeout_secs: 10800
+      actor_memory_mb: 4096
+
+    periodic_run:
+      cities:
+        - "Toronto, Ontario"
+      use_deduplication: true
+      fetch_detailed_items: true
+      listings_per_search: 70
+      days_listed: "7"
+      filter_keywords: "samsung"
+      actor_timeout_secs: 7200
+      actor_memory_mb: 2048

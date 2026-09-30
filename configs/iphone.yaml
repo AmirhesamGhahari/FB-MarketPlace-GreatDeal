@@ -15,15 +15,16 @@ sources:
       apify_proxy_country: "CA"
 
     search_terms:
+      - iphone 14 pro
+      - iphone 14
+      - iphone air
+      - iphone 15 pro
+      - iphone 15 pro max
+      - iphone 15
       - iphone 16 pro
       - iphone 16 pro max
       - iphone 16
       - iphone 16 plus
-      - iphone 15 pro
-      - iphone 15 pro max
-      - iphone 15
-      - iphone 14 pro
-      - iphone 14
       - iphone 17
       - iphone 17 pro
       - iphone 17 pro max
@@ -31,16 +32,20 @@ sources:
     initial_run:
       cities:
         - "Toronto, Ontario"
-      use_deduplication: false
+      use_deduplication: true
       fetch_detailed_items: true
-      listings_per_search: 200
+      listings_per_search: 250
       filter_keywords: "iphone"
+      actor_timeout_secs: 10800   # 3 hours — large initial scrape
+      actor_memory_mb: 4096
 
     periodic_run:
       cities:
         - "Toronto, Ontario"
-      use_deduplication: false
+      use_deduplication: true
       fetch_detailed_items: true
-      listings_per_search: 80
-      days_listed: "7"
+      listings_per_search: 
+      days_listed: "80"
       filter_keywords: "iphone"
+      actor_timeout_secs: 10800    
+      actor_memory_mb: 2048

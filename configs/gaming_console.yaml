@@ -1,0 +1,44 @@
+category_key: gaming_console
+category_name: Gaming Console
+product_type: Gaming Console
+brand: Various
+
+sources:
+  facebook_legacy:
+    enabled: true
+    actor_id: "raidr-api/facebook-marketplace-scraper"
+    radius_km: "100"
+
+    proxy:
+      use_apify_proxy: true
+      apify_proxy_groups: ["RESIDENTIAL"]
+      apify_proxy_country: "CA"
+
+    search_terms:
+      - playstation 5
+      - ps5 slim
+      - ps5 digital edition
+      - nintendo switch oled
+      - nintendo switch
+      - nintendo switch lite
+      - xbox series x
+      - xbox series s
+
+    initial_run:
+      cities:
+        - "Toronto, Ontario"
+      use_deduplication: true
+      fetch_detailed_items: true
+      listings_per_search: 200
+      actor_timeout_secs: 7200
+      actor_memory_mb: 4096
+
+    periodic_run:
+      cities:
+        - "Toronto, Ontario"
+      use_deduplication: true
+      fetch_detailed_items: true
+      listings_per_search: 70
+      days_listed: "7"
+      actor_timeout_secs: 3600
+      actor_memory_mb: 2048

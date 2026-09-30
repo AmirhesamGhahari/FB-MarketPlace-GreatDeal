@@ -1,0 +1,49 @@
+category_key: apple_watch
+category_name: Apple Watch
+product_type: Smartwatch
+brand: Apple
+
+sources:
+  facebook_legacy:
+    enabled: true
+    actor_id: "raidr-api/facebook-marketplace-scraper"
+    radius_km: "100"
+
+    proxy:
+      use_apify_proxy: true
+      apify_proxy_groups: ["RESIDENTIAL"]
+      apify_proxy_country: "CA"
+
+    search_terms:
+      - apple watch ultra 2
+      - apple watch ultra 3
+      - apple watch ultra 4
+      - apple watch ultra
+      - apple watch series 10
+      - apple watch series 9
+      - apple watch series 8
+      - apple watch series 7
+      - apple watch series 11
+      - apple watch series 12
+      - apple watch se
+
+    initial_run:
+      cities:
+        - "Toronto, Ontario"
+      use_deduplication: true
+      fetch_detailed_items: true
+      listings_per_search: 200
+      filter_keywords: "apple watch"
+      actor_timeout_secs: 10800
+      actor_memory_mb: 4096
+
+    periodic_run:
+      cities:
+        - "Toronto, Ontario"
+      use_deduplication: true
+      fetch_detailed_items: true
+      listings_per_search: 60
+      days_listed: "7"
+      filter_keywords: "apple watch"
+      actor_timeout_secs: 7200
+      actor_memory_mb: 2048

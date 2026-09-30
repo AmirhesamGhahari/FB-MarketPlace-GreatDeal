@@ -1,0 +1,43 @@
+category_key: airpods
+category_name: AirPods
+product_type: Audio
+brand: Apple
+
+sources:
+  facebook_legacy:
+    enabled: true
+    actor_id: "raidr-api/facebook-marketplace-scraper"
+    radius_km: "100"
+
+    proxy:
+      use_apify_proxy: true
+      apify_proxy_groups: ["RESIDENTIAL"]
+      apify_proxy_country: "CA"
+
+    search_terms:
+      - airpods pro 2
+      - airpods pro
+      - airpods max
+      - airpods 4
+      - airpods 3rd generation
+
+    initial_run:
+      cities:
+        - "Toronto, Ontario"
+      use_deduplication: true
+      fetch_detailed_items: true
+      listings_per_search: 200
+      filter_keywords: "airpods"
+      actor_timeout_secs: 10800
+      actor_memory_mb: 2048
+
+    periodic_run:
+      cities:
+        - "Toronto, Ontario"
+      use_deduplication: true
+      fetch_detailed_items: true
+      listings_per_search: 70
+      days_listed: "7"
+      filter_keywords: "airpods"
+      actor_timeout_secs: 3600
+      actor_memory_mb: 2048
