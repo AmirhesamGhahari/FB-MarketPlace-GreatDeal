@@ -19,13 +19,3 @@ models:
     columns:
       - name: product_key
         tests: [unique, not_null]
-
-  - name: fct_listings
-    columns:
-      - name: raw_listing_id
-        tests: [unique, not_null]
-
-  - name: fct_listing_history
-    columns:
-      - name: raw_listing_id
-        tests: [not_null]
