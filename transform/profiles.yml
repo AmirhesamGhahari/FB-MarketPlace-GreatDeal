@@ -1,0 +1,13 @@
+fb_marketplace:
+  target: prod
+  outputs:
+    prod:
+      type: postgres
+      host: "{{ env_var('DBT_DB_HOST') }}"
+      port: "{{ env_var('DBT_DB_PORT') | int }}"
+      dbname: "{{ env_var('DBT_DB_NAME') }}"
+      user: "{{ env_var('DBT_DB_USER') }}"
+      password: "{{ env_var('DBT_DB_PASSWORD') }}"
+      schema: transformed
+      threads: 1
+      sslmode: require

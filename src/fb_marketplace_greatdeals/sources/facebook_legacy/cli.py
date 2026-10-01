@@ -30,6 +30,7 @@ from fb_marketplace_greatdeals.sources.facebook_legacy.scraper import ApifyRunne
 from fb_marketplace_greatdeals.sources.facebook_legacy.stage1 import run as run_stage1
 from fb_marketplace_greatdeals.sources.facebook_legacy.stage1 import run_from_records as run_stage1_from_records
 from fb_marketplace_greatdeals.sources.facebook_legacy.stage2_classify import run as run_classify
+from fb_marketplace_greatdeals.sources.facebook_legacy.stage3_transform import run as run_transform
 
 console = Console()
 
@@ -292,6 +293,29 @@ def classify_cmd(config_name: Optional[str]) -> None:
     _print_classify_result("STAGE 2 — AI Classify", result, time.monotonic() - t0)
     console.print(Rule(f"[dim]Done in {time.monotonic() - t0:.1f}s[/dim]"))
     console.print()
+
+
+@cli.command("transform")
+def transform_cmd() -> None:
+    """Rebuild mart tables by running dbt models (dim_category, dim_product, fct_listings, fct_listing_history)."""
+    console.print()
+    t0 = time.monotonic()
+
+    result = run_transform()
+
+    console.print(Rule("[bold cyan]STAGE 3 — dbt Transform[/bold cyan]"))
+    table = Table(show_header=False, box=None, padding=(0, 2))
+    table.add_column(style="dim", width=26)
+    table.add_column()
+    table.add_row("Status", result.status)
+    table.add_row("Return code", str(result.returncode))
+    console.print(table)
+    console.print(f"  [dim]Elapsed: {time.monotonic() - t0:.1f}s[/dim]")
+    console.print(Rule(f"[dim]Done in {time.monotonic() - t0:.1f}s[/dim]"))
+    console.print()
+
+    if result.returncode != 0:
+        raise SystemExit(result.returncode)
 
 
 if __name__ == "__main__":
