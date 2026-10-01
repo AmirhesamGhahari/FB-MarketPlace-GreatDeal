@@ -157,7 +157,7 @@ locals {
     TaskDefinition = var.task_family
     NetworkConfiguration = {
       AwsvpcConfiguration = {
-        Subnets        = var.public_subnet_ids
+        Subnets        = [var.public_subnet_ids[0]]
         SecurityGroups = [var.ecs_task_sg_id]
         AssignPublicIp = "ENABLED"
       }
@@ -250,8 +250,37 @@ resource "aws_sfn_state_machine" "dispatcher" {
         MaxConcurrency = 1
         Parameters     = { "task.$" = "$$.Map.Item.Value" }
         Iterator       = local.task_iterator_fl
-        End            = true
+        Next           = "RunTransform"
       }
+
+      RunTransform = {
+        Type           = "Task"
+        Resource       = "arn:aws:states:::ecs:runTask.sync"
+        TimeoutSeconds = 1800
+        Parameters     = {
+          LaunchType     = "FARGATE"
+          Cluster        = var.ecs_cluster_arn
+          TaskDefinition = var.task_family
+          NetworkConfiguration = {
+            AwsvpcConfiguration = {
+              Subnets        = [var.public_subnet_ids[0]]
+              SecurityGroups = [var.ecs_task_sg_id]
+              AssignPublicIp = "ENABLED"
+            }
+          }
+          Overrides = {
+            ContainerOverrides = [{
+              Name    = "pipeline"
+              Command = ["run-facebook", "transform"]
+            }]
+          }
+        }
+        ResultPath = null
+        Next       = "EndTransform"
+        Catch      = [{ ErrorEquals = ["States.ALL"], ResultPath = null, Next = "EndTransform" }]
+      }
+
+      EndTransform = { Type = "Pass", End = true }
     }
   })
 

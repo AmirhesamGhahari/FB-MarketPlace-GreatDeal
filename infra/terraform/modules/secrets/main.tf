@@ -12,3 +12,4 @@ resource "aws_secretsmanager_secret_version" "db_url" {
     "/", var.db_name
   ])
 }
+

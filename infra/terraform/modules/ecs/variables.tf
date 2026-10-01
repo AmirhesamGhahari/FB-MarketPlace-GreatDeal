@@ -21,3 +21,4 @@ variable "apify_token_secret_arn" {
 variable "gemini_api_key_secret_arn" {
   type = string
 }
+

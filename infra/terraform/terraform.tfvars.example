@@ -1,20 +1,15 @@
-region   = "ca-central-1"
+# AWS region to deploy all resources into.
+region = "ca-central-1"
 app_name = "fb-marketplace-greatdeals"
 
-# ARNs of existing secrets from your other AWS project.
-# Copy these from the Secrets Manager console (or `aws secretsmanager list-secrets`).
-# This project will NOT create new secrets — it just grants ECS permission to read these.
-apify_token_secret_arn    = "XXXX"
-gemini_api_key_secret_arn = "XXXX"
-
-db_master_username = "amir_ghahari"
+db_master_username = "your_db_username"
 db_master_password = "REPLACE_ME_secure_password_min_8_chars"
 db_name            = "fb_marketplace_greatdeals"
+
+
 
 github_owner  = "your-github-username"
 github_repo   = "FB-MarketPlace-GreatDeal"
 github_branch = "main"
 
-# List of config names to scrape on each scheduled run.
-# Each name maps to a YAML file in configs/ (e.g. "iphone" → configs/iphone.yaml).
-category_configs = ["iphone"]
+category_configs = ["iphone", "macbook"]
