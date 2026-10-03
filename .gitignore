@@ -36,6 +36,12 @@ html_data/
 #documentation
 documentation/
 
+# dbt
+transform/target/
+transform/dbt_packages/
+transform/logs/
+transform/.user.yml
+
 # Terraform
 infra/terraform/.terraform/
 infra/terraform/.terraform.lock.hcl

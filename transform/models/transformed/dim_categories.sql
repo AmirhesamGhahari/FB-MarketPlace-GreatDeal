@@ -6,3 +6,5 @@ select
     brand,
     created_at
 from {{ source('public', 'categories') }}
+
+{{ config(materialized='view') }}

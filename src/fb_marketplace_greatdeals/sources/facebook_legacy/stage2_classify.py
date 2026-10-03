@@ -43,7 +43,7 @@ _COUNT_CATEGORY = text("""
 """)
 
 _FETCH_ALL = text("""
-    SELECT id, fb_listing_id, category_id, title, description, price
+    SELECT id, fb_listing_id, category_id, title, description, price, search_query
     FROM facebook.fb_listings_raw
     WHERE valid_to IS NULL
       AND NOT EXISTS (
@@ -56,7 +56,7 @@ _FETCH_ALL = text("""
 """).bindparams(bindparam("exclude_ids", expanding=True))
 
 _FETCH_CATEGORY = text("""
-    SELECT id, fb_listing_id, category_id, title, description, price
+    SELECT id, fb_listing_id, category_id, title, description, price, search_query
     FROM facebook.fb_listings_raw
     WHERE valid_to IS NULL
       AND category_id = :category_id
@@ -119,6 +119,7 @@ def run(category_id: Optional[uuid.UUID] = None, category_key: Optional[str] = N
             listings = [
                 {
                     "id": row.id,
+                    "search_query": row.search_query,
                     "title": row.title,
                     "description": row.description,
                     "price": float(row.price) if row.price is not None else None,
@@ -150,16 +151,13 @@ def run(category_id: Optional[uuid.UUID] = None, category_key: Optional[str] = N
                             color=clf.get("color"),
                             battery_health_pct=int(bh) if bh is not None else None,
                             cycle_count=int(cc) if cc is not None else None,
-                            is_unlocked=clf.get("is_unlocked"),
                             warranty_notes=clf.get("warranty_notes"),
                             includes_accessories=clf.get("includes_accessories") or [],
-                            is_store_seller=bool(clf.get("is_store_seller", False)),
                             deal_score=int(deal_score) if deal_score is not None else None,
                             is_great_deal=clf.get("is_great_deal"),
                             estimated_market_value=Decimal(str(emv)) if emv is not None else None,
                             price_vs_market_pct=Decimal(str(pvm)) if pvm is not None else None,
-                            is_genuine_listing=bool(clf.get("is_genuine_listing", True)),
-                            is_scam_risk=bool(clf.get("is_scam_risk", False)),
+                            is_relevant_listing=bool(clf.get("is_relevant_listing", False)),
                             notes=clf.get("notes"),
                             confidence=clf.get("confidence", "low"),
                             reason=clf.get("reason"),

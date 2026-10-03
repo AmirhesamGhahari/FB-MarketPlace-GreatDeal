@@ -46,10 +46,8 @@ class FbListingClassified(Base):
     color: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     battery_health_pct: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
     cycle_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    is_unlocked: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
     warranty_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     includes_accessories: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
-    is_store_seller: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
 
     # Deal quality
     deal_score: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
@@ -57,9 +55,8 @@ class FbListingClassified(Base):
     estimated_market_value: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
     price_vs_market_pct: Mapped[Optional[Decimal]] = mapped_column(Numeric(6, 2), nullable=True)
 
-    # Quality signals
-    is_genuine_listing: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
-    is_scam_risk: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    # Relevance
+    is_relevant_listing: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Metadata
