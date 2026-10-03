@@ -10,12 +10,100 @@ sources:
       - name: fb_listings_classified
 
 models:
-  - name: dim_category
+  - name: dim_classified_listings
+    description: "All current FB Marketplace listings joined with Gemini classifications. Base model — all category dims and fact tables read from here via ref()."
+    columns:
+      - name: fb_listing_id
+        tests: [unique, not_null]
+      - name: category_key
+        tests: [not_null]
+      - name: listing_type
+        tests:
+          - accepted_values:
+              values: ['smartphone', 'laptop', 'tablet', 'gaming_console', 'smartwatch', 'earbuds', 'smart_ring', 'case', 'accessory', 'parts', 'box_only', 'buyer_post', 'multiple_items', 'other']
+
+  - name: dim_categories
+    description: "Lookup table of all product categories."
     columns:
       - name: category_key
         tests: [unique, not_null]
+      - name: category_id
+        tests: [unique, not_null]
 
-  - name: dim_product
+  - name: dim_product_stats
+    description: "Aggregated market value and deal stats per product (category + brand + model + variant + storage). Only relevant listings included."
     columns:
       - name: product_key
         tests: [unique, not_null]
+
+  - name: dim_iphones
+    description: "Relevant iPhone listings only (is_relevant_listing = true, category_key = 'iphone')."
+    columns:
+      - name: listing_key
+        tests: [unique, not_null]
+      - name: fb_listing_id
+        tests: [unique, not_null]
+
+  - name: dim_macbooks
+    description: "Relevant MacBook listings only (is_relevant_listing = true, category_key = 'macbook')."
+    columns:
+      - name: listing_key
+        tests: [unique, not_null]
+      - name: fb_listing_id
+        tests: [unique, not_null]
+
+  - name: dim_airpods
+    description: "Relevant AirPods listings only (is_relevant_listing = true, category_key = 'airpods')."
+    columns:
+      - name: listing_key
+        tests: [unique, not_null]
+      - name: fb_listing_id
+        tests: [unique, not_null]
+
+  - name: dim_apple_watches
+    description: "Relevant Apple Watch listings only (is_relevant_listing = true, category_key = 'apple_watch')."
+    columns:
+      - name: listing_key
+        tests: [unique, not_null]
+      - name: fb_listing_id
+        tests: [unique, not_null]
+
+  - name: dim_gaming_consoles
+    description: "Relevant gaming console listings only (is_relevant_listing = true, category_key = 'gaming_console')."
+    columns:
+      - name: listing_key
+        tests: [unique, not_null]
+      - name: fb_listing_id
+        tests: [unique, not_null]
+
+  - name: dim_samsung_galaxies
+    description: "Relevant Samsung Galaxy listings only (is_relevant_listing = true, category_key = 'samsung_galaxy')."
+    columns:
+      - name: listing_key
+        tests: [unique, not_null]
+      - name: fb_listing_id
+        tests: [unique, not_null]
+
+  - name: dim_smart_rings
+    description: "Relevant smart ring listings only (is_relevant_listing = true, category_key = 'smart_rings')."
+    columns:
+      - name: listing_key
+        tests: [unique, not_null]
+      - name: fb_listing_id
+        tests: [unique, not_null]
+
+  - name: dim_windows_laptops
+    description: "Relevant Windows laptop listings only (is_relevant_listing = true, category_key = 'windows_laptop')."
+    columns:
+      - name: listing_key
+        tests: [unique, not_null]
+      - name: fb_listing_id
+        tests: [unique, not_null]
+
+  - name: fct_daily_stats_by_product
+    description: "Daily aggregated listing stats grouped by category, product model, condition, and listing type. Only relevant listings included."
+    columns:
+      - name: listing_date
+        tests: [not_null]
+      - name: category_key
+        tests: [not_null]
