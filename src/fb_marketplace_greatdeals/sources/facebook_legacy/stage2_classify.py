@@ -21,7 +21,7 @@ BATCH_SIZE = 20
 MAX_RETRIES = 3
 RETRY_BACKOFF_SECONDS = 5
 
-_MODEL_NAME = "gemini-3.5-flash-lite"
+_MODEL_NAME = "gemini-2.5-flash-lite"
 
 _COUNT_ALL = text("""
     SELECT COUNT(*) FROM facebook.fb_listings_raw
