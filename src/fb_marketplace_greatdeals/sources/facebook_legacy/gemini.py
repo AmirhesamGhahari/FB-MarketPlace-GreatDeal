@@ -114,7 +114,7 @@ product_model (str | null)
     "17P"/"17pro"                  → "iPhone 17 Pro"
     "14pm"                         → "iPhone 14 Pro Max"
     "13pm"                         → "iPhone 13 Pro Max"
-    "17 Air"/"iPhone Air"          → "iPhone 17 Air"
+    "17 Air"/"iPhone Air"/"Air 17"  → "iPhone 17 Air"
     "SE4"/"SE 2024"/"SE fourth"    → "iPhone SE (4th generation)"
     "SE3"/"SE 2022"/"SE third"     → "iPhone SE (3rd generation)"
     "SE2"/"SE 2020"                → "iPhone SE (2nd generation)"
@@ -133,39 +133,81 @@ product_model (str | null)
     MacBook Air M1 only comes in 13-inch — omit size.
 
   ── Apple iPad ─────────────────────────────────────────────
-    "iPad Pro M4 11-inch" / "iPad Pro M4 13-inch" (two sizes exist — include when stated)
-    "iPad Pro M2 11-inch" / "iPad Pro M2 12.9-inch"
-    "iPad Pro M1 11-inch" / "iPad Pro M1 12.9-inch"
-    "iPad Air M3 11-inch" / "iPad Air M3 13-inch"
-    "iPad Air M2 11-inch" / "iPad Air M2 13-inch"
-    "iPad Air M1"  (5th gen, single size) → "iPad Air M1"
-    "iPad mini (7th generation)" / "mini 7"
-    "iPad mini (6th generation)" / "mini 6"
-    "iPad mini (5th generation)" / "mini 5"
-    "iPad (11th generation)" / "iPad A16" / "iPad 2024"
-    "iPad (10th generation)" / "iPad 2022"
-    "iPad (9th generation)"  / "iPad 2021"
-    If size not stated for iPad Pro/Air: "iPad Pro M4", "iPad Air M3" (no size appended).
+    iPad Pro (M-chip era) — include screen size when stated, omit if unknown:
+      "iPad Pro M1 11-inch" / "iPad Pro M1 12.9-inch"  (alias: "Pro 3rd gen 11-inch", "Pro 5th gen 12.9-inch")
+      "iPad Pro M2 11-inch" / "iPad Pro M2 12.9-inch"  (alias: "Pro 4th gen 11-inch", "Pro 6th gen 12.9-inch")
+      "iPad Pro M4 11-inch" / "iPad Pro M4 13-inch"    (alias: "Pro 7th gen")
+      If screen size not stated: "iPad Pro M1", "iPad Pro M2", "iPad Pro M4" (no size appended)
+
+    iPad Pro (pre-M chip) — use screen size + generation number:
+      "iPad Pro (9.7-inch)"                    → 1st gen, 2016
+      "iPad Pro (10.5-inch)"                   → 2nd gen, 2017
+      "iPad Pro (11-inch) (1st generation)"    → 2018, A12X
+      "iPad Pro (11-inch) (2nd generation)"    → 2020, A12Z
+      "iPad Pro (11-inch) (3rd generation)"    → IS the iPad Pro M1 → output "iPad Pro M1 11-inch"
+      "iPad Pro (12.9-inch) (1st generation)"  → 2015
+      "iPad Pro (12.9-inch) (2nd generation)"  → 2017
+      "iPad Pro (12.9-inch) (4th generation)"  → 2020, A12Z
+      "iPad Pro (12.9-inch) (5th generation)"  → IS the iPad Pro M1 → output "iPad Pro M1 12.9-inch"
+      If size and generation both unknown → "iPad Pro"
+
+    iPad Air (M-chip era) — ALWAYS use chip name, NEVER write "(Nth generation)":
+      "iPad Air M1"       → ALSO WRITTEN AS: "iPad Air 5th generation", "iPad Air 2022"
+                            ⚠️ "iPad Air (5th generation)" does NOT exist — always output "iPad Air M1"
+      "iPad Air M2 11-inch" / "iPad Air M2 13-inch"  (alias: "iPad Air 2024")
+      "iPad Air M3 11-inch" / "iPad Air M3 13-inch"  (alias: "iPad Air 2025")
+      If M2/M3 size not stated: "iPad Air M2", "iPad Air M3" (no size appended)
+
+    iPad Air (pre-M chip) — use these EXACT canonical strings:
+      "iPad Air"    → 1st generation, 2013  (bare name only for this gen)
+      "iPad Air 2"  → 2nd generation, 2014  (alias: "iPad Air (2nd generation)" → ALWAYS output "iPad Air 2")
+      "iPad Air (3rd generation)" → 2019, A12  (alias: "iPad Air 3")
+      "iPad Air (4th generation)" → 2020, A14  (alias: "iPad Air 4")
+      ⚠️ There is no "iPad Air (5th generation)" — the 5th gen iPad Air IS "iPad Air M1"
+      ⚠️ NEVER output "iPad Air (2nd generation)" — always "iPad Air 2"
+
+    iPad mini — EXACT canonical strings for each generation:
+      "iPad mini"                  → 1st generation, 2012  (bare name only for 1st gen)
+      "iPad mini (2nd generation)" → 2013  (alias: "iPad mini 2" → ALWAYS output "(2nd generation)")
+      "iPad mini (3rd generation)" → 2014  (alias: "iPad mini 3")
+      "iPad mini (4th generation)" → 2015  (alias: "iPad mini 4" → ALWAYS output "(4th generation)")
+      "iPad mini (5th generation)" → 2019  (alias: "mini 5")
+      "iPad mini (6th generation)" → 2021  (alias: "mini 6")
+      "iPad mini (7th generation)" → 2025  (alias: "mini 7", "iPad mini A17 Pro" → ALWAYS "(7th generation)")
+      ⚠️ NEVER output "iPad mini 2" or "iPad mini 4" — always use "(Nth generation)" format
+      Trust seller for 8th generation and higher.
+
+    iPad (standard/base model):
+      "iPad (9th generation)"   / "iPad 2021"
+      "iPad (10th generation)"  / "iPad 2022"
+      "iPad (11th generation)"  / "iPad 2024" / "iPad A16"
+      Trust seller for 12th generation and higher.
+      If only "iPad" with no generation info → "iPad" (last resort)
 
   ── Apple Watch ────────────────────────────────────────────
     Use the EXACT series/generation number the seller states — trust them for any number.
     "Series 7/8/9/10/11/12/..."   → "Apple Watch Series [N]"
-    "Watch SE" / "SE 1st"         → "Apple Watch SE"
-    "Watch SE 2" / "SE 2nd gen"   → "Apple Watch SE (2nd generation)"
-    "Watch SE 3" / "SE 3rd gen"   → "Apple Watch SE (3rd generation)"
-    "Watch Ultra" / "Ultra 1st"   → "Apple Watch Ultra"
-    "Watch Ultra 2"               → "Apple Watch Ultra 2"
-    "Watch Ultra 3/4/..."         → "Apple Watch Ultra 3/4/..." (trust seller)
+    "Watch SE" / "SE 1st"               → "Apple Watch SE"
+    "Watch SE 2" / "SE 2nd gen" / "SE2" → "Apple Watch SE (2nd generation)"
+    "Watch SE 3" / "SE 3rd gen" / "SE3" → "Apple Watch SE (3rd generation)"
+    ⚠️ MUST use "(Nth generation)" suffix — NEVER output "Apple Watch SE 3" or "Apple Watch SE2"
+    "Watch Ultra" / "Ultra 1st"         → "Apple Watch Ultra"
+    "Watch Ultra 2"                     → "Apple Watch Ultra 2"
+    "Watch Ultra 3/4/..."               → "Apple Watch Ultra 3/4/..." (trust seller)
+    "Apple Watch Hermès Series N"       → "Apple Watch Series N"  (Hermès → product_variant only)
+    "Apple Watch Hermès Ultra N"        → "Apple Watch Ultra N"   (Hermès → product_variant only)
     Do NOT put case size (42mm/44mm/45mm/46mm/49mm) in product_model — it goes in product_variant.
 
   ── AirPods ────────────────────────────────────────────────
     Trust seller for any generation number.
     "AirPods" / "AirPods 1" / "AirPods 1st gen"    → "AirPods (1st generation)"
+    bare "AirPods" with no number or gen stated     → "AirPods (1st generation)" (default; NEVER output bare "AirPods")
     "AirPods 2" / "AirPods 2nd gen"                → "AirPods (2nd generation)"
     "AirPods 3" / "AirPods 3rd gen"                → "AirPods (3rd generation)"
     "AirPods 4" / "AirPods 4th gen"                → "AirPods (4th generation)"
     "AirPods 5" [FB naming lag — really AirPods 4th gen] → "AirPods (4th generation)"
     "AirPods Pro" / "Pro 1" / "AirPods Pro 1st"    → "AirPods Pro (1st generation)"
+    "AirPods Pro" with no generation stated         → "AirPods Pro (1st generation)" (default)
     "AirPods Pro 2" / "Pro 2nd gen"                → "AirPods Pro (2nd generation)"
     "AirPods Pro 3" / "Pro 3rd gen"                → "AirPods Pro (3rd generation)"
     "AirPods Max" (Lightning port / pre-2024)      → "AirPods Max"
@@ -240,15 +282,18 @@ product_model (str | null)
     If only brand is determinable (e.g., "Acer laptop, no model stated"): "Acer Laptop" (last resort).
 
   ── Smart rings ────────────────────────────────────────────
-    "Oura Ring 3" / "Oura Gen 3"    → "Oura Ring 3"
-    "Oura Ring 4" / "Oura Gen 4"    → "Oura Ring 4"
+    "Oura Ring 3" / "Oura Gen 3" / "Oura Ring Gen 3" → "Oura Ring 3"
+    "Oura Ring 4" / "Oura Gen 4" / "Oura Ring Gen 4" → "Oura Ring 4"
     "Galaxy Ring"                    → "Samsung Galaxy Ring"
 
   ── Cases / Accessories ────────────────────────────────────
     product_model = the device the item is made for (e.g., case for AirPods Pro → "AirPods Pro").
     Null if the target device model cannot be determined.
 
-  Null for the listing overall if product cannot be identified at all.
+  ▸ FALLBACK — when listing content is too vague to determine product_model, use search_query.
+    Example: a generic case with search_query="iphone 16 pro" and no device info in the listing
+    → product_model="iPhone 16 Pro". Apply the same normalization rules as usual.
+    Return null ONLY if listing_type is "other" or search_query itself names no specific product.
 
 ── PRODUCT VARIANT by category ──────────────────────────
 
