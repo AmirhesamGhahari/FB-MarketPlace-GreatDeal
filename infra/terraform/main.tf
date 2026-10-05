@@ -27,6 +27,7 @@ module "secrets" {
   aurora_endpoint    = module.aurora.cluster_endpoint
   aurora_port        = module.aurora.cluster_port
   db_name            = var.db_name
+  gemini_api_key     = var.gemini_api_key
 }
 
 module "ecs" {
@@ -36,7 +37,7 @@ module "ecs" {
   ecr_repository_url        = module.ecr.repository_url
   db_url_secret_arn         = module.secrets.db_url_secret_arn
   apify_token_secret_arn    = var.apify_token_secret_arn
-  gemini_api_key_secret_arn = var.gemini_api_key_secret_arn
+  gemini_api_key_secret_arn = module.secrets.gemini_api_key_secret_arn
 }
 
 module "scheduler" {

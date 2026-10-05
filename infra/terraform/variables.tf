@@ -15,9 +15,10 @@ variable "apify_token_secret_arn" {
   type        = string
 }
 
-variable "gemini_api_key_secret_arn" {
-  description = "ARN of an existing Secrets Manager secret containing the Google Gemini API key (from another AWS project)"
+variable "gemini_api_key" {
+  description = "Google Gemini API key"
   type        = string
+  sensitive   = true
 }
 
 variable "db_master_username" {

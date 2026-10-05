@@ -22,3 +22,8 @@ variable "aurora_port" {
 variable "db_name" {
   type = string
 }
+
+variable "gemini_api_key" {
+  type      = string
+  sensitive = true
+}
