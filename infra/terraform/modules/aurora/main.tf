@@ -15,6 +15,7 @@ resource "aws_rds_cluster" "main" {
   skip_final_snapshot    = true
   deletion_protection    = false
   storage_encrypted      = true
+  enable_http_endpoint = true
 
   serverlessv2_scaling_configuration {
     min_capacity = 0
