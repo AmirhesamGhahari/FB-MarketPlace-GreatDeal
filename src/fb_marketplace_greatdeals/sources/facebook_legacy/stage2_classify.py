@@ -17,9 +17,9 @@ from fb_marketplace_greatdeals.db.models.fb_listing_classified import FbListingC
 from fb_marketplace_greatdeals.db.models.pipeline_tables import PipelineRun
 from fb_marketplace_greatdeals.sources.facebook_legacy.gemini import classify_batch
 
-BATCH_SIZE = 20
+BATCH_SIZE = 40
 MAX_RETRIES = 3
-RETRY_BACKOFF_SECONDS = 5
+RETRY_BACKOFF_SECONDS = 4
 
 _MODEL_NAME = "gemini-3.5-flash-lite"
 
