@@ -2,12 +2,11 @@ fb_marketplace:
   target: prod
   outputs:
     prod:
-      type: postgres
-      host: "{{ env_var('DBT_DB_HOST') }}"
-      port: "{{ env_var('DBT_DB_PORT') | int }}"
-      dbname: "{{ env_var('DBT_DB_NAME') }}"
-      user: "{{ env_var('DBT_DB_USER') }}"
-      password: "{{ env_var('DBT_DB_PASSWORD') }}"
-      schema: transformed
-      threads: 1
-      sslmode: require
+      type: athena
+      region_name: "{{ env_var('DBT_REGION') }}"
+      s3_staging_dir: "{{ env_var('DBT_S3_STAGING_DIR') }}"
+      database: "{{ env_var('DBT_DATABASE') }}"
+      schema: "{{ env_var('DBT_SCHEMA') }}"
+      work_group: "{{ env_var('DBT_WORKGROUP') }}"
+      threads: 4
+      aws_profile_name: null

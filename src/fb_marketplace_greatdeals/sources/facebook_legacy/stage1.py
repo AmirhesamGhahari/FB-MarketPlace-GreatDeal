@@ -1,12 +1,8 @@
 """Facebook Marketplace — Stage 1 extract pipeline.
 
-Reads Apify raider-api records and loads them into facebook.fb_listings_raw
-using CDC (Change Data Capture) keyed on (category_id, fb_listing_id).
-
-CDC rules per listing:
-  - Not in DB            → insert new record (valid_from=now, valid_to=NULL)
-  - Exists, no change    → skip
-  - Exists, data changed → close old record (valid_to=now), insert new record
+Reads Apify records and writes them as Parquet to S3.
+Each run appends a new file: s3://bucket/raw/category_key={key}/run_date={YYYY-MM-DD}/{run_id}.parquet
+Deduplication (latest version per fb_listing_id) is handled at query time in Athena via ROW_NUMBER().
 """
 
 from __future__ import annotations
@@ -17,42 +13,40 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Optional
 
+import awswrangler as wr
+import boto3
+import pandas as pd
 from loguru import logger
-from sqlalchemy import text
-from sqlalchemy.orm import Session
 
-from fb_marketplace_greatdeals.db.engine import SessionLocal
-from fb_marketplace_greatdeals.db.models.pipeline_tables import PipelineRun
+from fb_marketplace_greatdeals.config import settings
 
-
-# ── Result ────────────────────────────────────────────────────────────────────
+_TZ = ZoneInfo("America/Toronto")
 
 
 @dataclass
 class PipelineResult:
-    run_id: uuid.UUID
+    run_id: str
     status: str
     total: int = 0
     errors: int = 0
     newly_added: int = 0
-    change_added: int = 0
-    skipped: int = 0
+    change_added: int = 0  # unused in S3 mode, kept for CLI display compatibility
+    skipped: int = 0       # unused in S3 mode, kept for CLI display compatibility
 
 
 # ── Field parsing ─────────────────────────────────────────────────────────────
 
 
-def _parse_price(price_str: Optional[str]) -> Optional[Decimal]:
+def _parse_price(price_str: Optional[str]) -> Optional[float]:
     if not price_str:
         return None
     try:
         digits = re.sub(r"[^\d.]", "", str(price_str))
-        return Decimal(digits) if digits else None
-    except InvalidOperation:
+        return float(digits) if digits else None
+    except (ValueError, TypeError):
         return None
 
 
@@ -60,8 +54,7 @@ def _parse_listed_at(ms: Optional[int]) -> Optional[datetime]:
     if ms is None:
         return None
     try:
-        return datetime.fromtimestamp(ms / 1000, tz=ZoneInfo("America/Toronto"),
-  )
+        return datetime.fromtimestamp(ms / 1000, tz=_TZ)
     except (OSError, ValueError, OverflowError):
         return None
 
@@ -70,70 +63,19 @@ def _parse_fetched_at(iso_str: Optional[str]) -> Optional[datetime]:
     if not iso_str:
         return None
     try:
-        return datetime.fromisoformat(iso_str.replace("Z", "+00:00")).astimezone(ZoneInfo("America/Toronto"))
+        return datetime.fromisoformat(iso_str.replace("Z", "+00:00")).astimezone(_TZ)
     except ValueError:
         return None
 
 
-# ── CDC helpers ───────────────────────────────────────────────────────────────
+# ── Row builder ───────────────────────────────────────────────────────────────
 
 
-_CDC_FIELDS = ("price", "is_sold", "title", "description", "location_city", "location_state")
-
-
-def _load_current_state(session: Session, category_id: uuid.UUID) -> dict[str, dict]:
-    rows = session.execute(
-        text("""
-            SELECT fb_listing_id, price, is_sold, title, description, location_city, location_state
-            FROM facebook.fb_listings_raw
-            WHERE category_id = :category_id AND valid_to IS NULL
-        """),
-        {"category_id": str(category_id)},
-    ).mappings().all()
-    return {row["fb_listing_id"]: dict(row) for row in rows}
-
-
-def _has_changed(existing: dict, params: dict) -> bool:
-    for field in _CDC_FIELDS:
-        if existing.get(field) != params.get(field):
-            return True
-    return False
-
-
-# ── SQL statements ────────────────────────────────────────────────────────────
-
-
-_INSERT_SQL = text("""
-    INSERT INTO facebook.fb_listings_raw (
-        category_id, category_key, pipeline_run_id, fb_listing_id, listing_url, seller_profile_id,
-        title, description, price, currency,
-        location_city, location_state,
-        image_urls, is_sold, listed_at, scraped_at,
-        search_query, fb_condition, delivery_types, is_highly_rated_seller, original_price,
-        raw_payload, valid_from, valid_to
-    ) VALUES (
-        :category_id, :category_key, :pipeline_run_id, :fb_listing_id, :listing_url, :seller_profile_id,
-        :title, :description, :price, :currency,
-        :location_city, :location_state,
-        CAST(:image_urls AS JSONB), :is_sold, :listed_at, :scraped_at,
-        :search_query, :fb_condition, CAST(:delivery_types AS JSONB), :is_highly_rated_seller, :original_price,
-        CAST(:raw_payload AS JSONB), now(), NULL
-    )
-""")
-
-_CLOSE_CURRENT_SQL = text("""
-    UPDATE facebook.fb_listings_raw
-    SET valid_to = now()
-    WHERE category_id = :category_id AND fb_listing_id = :fb_listing_id AND valid_to IS NULL
-""")
-
-
-def _build_params(record: dict, run_id: uuid.UUID, category_id: uuid.UUID, category_key: str) -> dict:
+def _build_row(record: dict, run_id: str, category_key: str) -> dict:
     price = record.get("price") or {}
     location = record.get("location") or {}
     extra = record.get("extraListingData") or {}
 
-    # Collect all image URLs; primary first, then extras
     extra_images: list = extra.get("images") or []
     primary = record.get("primaryImage")
     if primary and primary not in extra_images:
@@ -141,32 +83,29 @@ def _build_params(record: dict, run_id: uuid.UUID, category_id: uuid.UUID, categ
     else:
         all_images = extra_images or ([primary] if primary else [])
 
-    # Structured condition from FB attribute_data (e.g. "used_like_new", "new")
     fb_condition = None
     for attr in (extra.get("attribute_data") or []):
         if attr.get("attribute_name") == "Condition":
             fb_condition = attr.get("value")
             break
 
-    # Seller trust badge ("Highly rated on Marketplace")
     badges = extra.get("commerce_badges_info") or {}
     is_highly_rated = badges.get("source_summary") is not None
 
-    # Strikethrough (was) price — present when seller has marked down from a higher price
     strikethrough = record.get("strikethroughPrice") or {}
     original_price = _parse_price(strikethrough.get("amount"))
 
     return {
-        "category_id": str(category_id),
+        "raw_id": str(uuid.uuid4()),
+        "pipeline_run_id": run_id,
         "category_key": category_key,
-        "pipeline_run_id": str(run_id),
         "fb_listing_id": record.get("listingId") or record.get("id"),
-        "listing_url": record["url"],
-        "seller_profile_id": None,
+        "listing_url": record.get("url"),
         "title": record.get("title"),
         "description": extra.get("description"),
         "price": _parse_price(price.get("formatted")),
         "currency": price.get("currency"),
+        "original_price": original_price,
         "location_city": location.get("city"),
         "location_state": location.get("state"),
         "image_urls": json.dumps(all_images),
@@ -177,123 +116,98 @@ def _build_params(record: dict, run_id: uuid.UUID, category_id: uuid.UUID, categ
         "fb_condition": fb_condition,
         "delivery_types": json.dumps(record.get("deliveryTypes") or []),
         "is_highly_rated_seller": is_highly_rated,
-        "original_price": original_price,
-        "raw_payload": json.dumps(record),
     }
 
 
-# ── Pipeline run helpers ──────────────────────────────────────────────────────
+# ── S3 write ──────────────────────────────────────────────────────────────────
 
 
-def _create_run(
-    session: Session,
-    source: str,
-    category_key: str,
-    category_id: uuid.UUID,
-    mode: str,
-) -> PipelineRun:
-    run = PipelineRun(
-        stage="stage1_facebook",
-        source=source,
-        source_type="facebook_legacy",
-        category_key=category_key,
-        category_id=category_id,
-        mode=mode,
-        status="running",
+def _write_to_s3(rows: list[dict], category_key: str, run_id: str) -> None:
+    run_date = datetime.now(_TZ).strftime("%Y-%m-%d")
+    s3_path = (
+        f"s3://{settings.s3_bucket}/raw/"
+        f"category_key={category_key}/"
+        f"run_date={run_date}/"
+        f"{run_id}.parquet"
     )
-    session.add(run)
-    session.commit()
-    session.refresh(run)
-    return run
+    df = pd.DataFrame(rows)
+    for col in ("listed_at", "scraped_at"):
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], utc=True)
+    wr.s3.to_parquet(df=df, path=s3_path, boto3_session=boto3.Session(region_name=settings.aws_region))
+    logger.info(f"[FB Stage 1] Wrote {len(rows)} rows → {s3_path}")
 
 
-def _finish_run(session: Session, run: PipelineRun, result: PipelineResult) -> None:
-    run.status = result.status
-    run.finished_at = datetime.now(ZoneInfo("America/Toronto"))
-    run.total_records = result.total
-    run.error_count = result.errors
-    run.newly_added_count = result.newly_added
-    run.change_added_count = result.change_added
-    run.skipped_count = result.skipped
-    session.commit()
+def _write_run_metadata(run_id: str, result: PipelineResult) -> None:
+    body = json.dumps({
+        "run_id": run_id,
+        "status": result.status,
+        "total": result.total,
+        "newly_added": result.newly_added,
+        "errors": result.errors,
+        "finished_at": datetime.now(_TZ).isoformat(),
+    }).encode()
+    s3 = boto3.client("s3", region_name=settings.aws_region)
+    s3.put_object(
+        Bucket=settings.s3_bucket,
+        Key=f"pipeline_runs/stage1/{run_id}.json",
+        Body=body,
+    )
 
 
-# ── Core CDC logic ────────────────────────────────────────────────────────────
+# ── Core logic ────────────────────────────────────────────────────────────────
 
 
 def _process_records(
-    session: Session,
-    db_run: PipelineRun,
     records: list[dict],
-    result: PipelineResult,
-    category_id: uuid.UUID,
+    run_id: str,
     category_key: str,
+    result: PipelineResult,
 ) -> None:
-    current_state = _load_current_state(session, category_id)
-    logger.info(f"[FB Stage 1] {len(current_state)} existing current records in DB for this category")
-
+    rows = []
     for record in records:
         result.total += 1
-
         listing_id = record.get("listingId") or record.get("id")
         if not listing_id:
             result.errors += 1
-            logger.debug(f"Skipping record with no listing ID: {record.get('url')!r}")
+            logger.debug(f"[FB Stage 1] Skipping record with no listing ID: {record.get('url')!r}")
             continue
+        rows.append(_build_row(record, run_id, category_key))
+        result.newly_added += 1
 
-        params = _build_params(record, db_run.id, category_id, category_key)
-        existing = current_state.get(listing_id)
-
-        if existing is None:
-            session.execute(_INSERT_SQL, params)
-            current_state[listing_id] = params
-            result.newly_added += 1
-
-        elif _has_changed(existing, params):
-            session.execute(_CLOSE_CURRENT_SQL, {"category_id": str(category_id), "fb_listing_id": listing_id})
-            session.execute(_INSERT_SQL, params)
-            current_state[listing_id] = params
-            result.change_added += 1
-
-        else:
-            result.skipped += 1
-
-    session.commit()
+    if rows:
+        _write_to_s3(rows, category_key, run_id)
 
 
 # ── Entry points ──────────────────────────────────────────────────────────────
 
 
-def run(file_path: Path, category_id: uuid.UUID, category_key: str) -> PipelineResult:
+def run(file_path: Path, category_key: str) -> PipelineResult:
     """Run Stage 1 from a saved Apify JSON file (dev / backfill use)."""
+    run_id = str(uuid.uuid4())
     logger.info(f"[FB Stage 1] Starting — source: {file_path.name}")
+    result = PipelineResult(run_id=run_id, status="completed")
 
-    with SessionLocal() as session:
-        db_run = _create_run(session, file_path.name, category_key, category_id, mode="initial")
-        result = PipelineResult(run_id=db_run.id, status="completed")
+    try:
+        with open(file_path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        if not isinstance(data, list):
+            raise ValueError(f"Expected a JSON array, got {type(data).__name__}")
+        records = [r for r in data if isinstance(r, dict)]
+        if not records:
+            raise ValueError("File contains no readable records")
+    except Exception as exc:
+        result.status = "failed"
+        logger.error(f"[FB Stage 1] Failed to read file: {exc}")
+        _write_run_metadata(run_id, result)
+        return result
 
-        try:
-            with open(file_path, encoding="utf-8") as fh:
-                data = json.load(fh)
-            if not isinstance(data, list):
-                raise ValueError(f"Expected a JSON array, got {type(data).__name__}")
-            records = [r for r in data if isinstance(r, dict)]
-            if not records:
-                raise ValueError("File contains no readable records")
-        except Exception as exc:
-            result.status = "failed"
-            _finish_run(session, db_run, result)
-            logger.error(f"[FB Stage 1] Failed to read file: {exc}")
-            return result
-
-        logger.info(f"[FB Stage 1] Loaded {len(records)} records from file")
-        _process_records(session, db_run, records, result, category_id, category_key)
-        _finish_run(session, db_run, result)
-
+    logger.info(f"[FB Stage 1] Loaded {len(records)} records from file")
+    _process_records(records, run_id, category_key, result)
+    _write_run_metadata(run_id, result)
     logger.info(
         f"[FB Stage 1] Done — total={result.total} "
-        f"newly_added={result.newly_added} change_added={result.change_added} "
-        f"skipped={result.skipped} errors={result.errors}"
+        f"newly_added={result.newly_added} errors={result.errors}"
     )
     return result
 
@@ -301,22 +215,17 @@ def run(file_path: Path, category_id: uuid.UUID, category_key: str) -> PipelineR
 def run_from_records(
     records: list[dict],
     source: str,
-    category_id: uuid.UUID,
     category_key: str,
     mode: str = "periodic",
 ) -> PipelineResult:
     """Run Stage 1 from records returned by ApifyRunner (live run)."""
+    run_id = str(uuid.uuid4())
     logger.info(f"[FB Stage 1] Starting — source: {source} mode: {mode} ({len(records)} records)")
-
-    with SessionLocal() as session:
-        db_run = _create_run(session, source, category_key, category_id, mode)
-        result = PipelineResult(run_id=db_run.id, status="completed")
-        _process_records(session, db_run, records, result, category_id, category_key)
-        _finish_run(session, db_run, result)
-
+    result = PipelineResult(run_id=run_id, status="completed")
+    _process_records(records, run_id, category_key, result)
+    _write_run_metadata(run_id, result)
     logger.info(
         f"[FB Stage 1] Done — total={result.total} "
-        f"newly_added={result.newly_added} change_added={result.change_added} "
-        f"skipped={result.skipped} errors={result.errors}"
+        f"newly_added={result.newly_added} errors={result.errors}"
     )
     return result

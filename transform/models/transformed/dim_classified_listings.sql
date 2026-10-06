@@ -1,12 +1,40 @@
-with base as (
-    select
-        md5(fr.fb_listing_id) as listing_key,
-        md5(
-            coalesce(fc.product_brand, '') || '|' ||
-            coalesce(fc.product_model, '') || '|' ||
-            coalesce(fc.product_variant, '') || '|' ||
-            coalesce(cast(fc.storage_gb as text), '')
-        ) as product_key,
+{{
+    config(
+        materialized='incremental',
+        incremental_strategy='insert_overwrite',
+        unique_key='fb_listing_id',
+        partitioned_by=['category_key'],
+        s3_data_dir=var('s3_data_dir', target.s3_staging_dir ~ 'models/'),
+        format='parquet'
+    )
+}}
+
+WITH latest_raw AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (PARTITION BY fb_listing_id ORDER BY scraped_at DESC) AS _rn
+    FROM {{ source('fb_marketplace_greatdeals', 'fb_listings_raw') }}
+),
+
+latest_classified AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (PARTITION BY fb_listing_id ORDER BY classified_at DESC) AS _rn
+    FROM {{ source('fb_marketplace_greatdeals', 'fb_listings_classified') }}
+    {% if is_incremental() %}
+    WHERE classified_at > (SELECT MAX(classified_at) FROM {{ this }})
+    {% endif %}
+),
+
+base AS (
+    SELECT
+        to_hex(md5(to_utf8(fr.fb_listing_id)))    AS listing_key,
+        to_hex(md5(to_utf8(
+            COALESCE(fc.product_brand, '') || '|' ||
+            COALESCE(fc.product_model, '') || '|' ||
+            COALESCE(fc.product_variant, '') || '|' ||
+            COALESCE(CAST(fc.storage_gb AS varchar), '')
+        )))                                        AS product_key,
         fr.category_key,
         fr.search_query,
         fr.pipeline_run_id,
@@ -39,30 +67,11 @@ with base as (
         fc.notes,
         fc.confidence,
         fc.classified_at
-    from facebook.fb_listings_raw fr
-    left join facebook.fb_listings_classified as fc on fc.raw_listing_id = fr.id
-    where fr.valid_to is null
-    {% if is_incremental() %}
-      and fc.classified_at > (select max(classified_at) from {{ this }})
-    {% endif %}
+    FROM latest_raw AS fr
+    LEFT JOIN latest_classified AS fc
+        ON fc.fb_listing_id = fr.fb_listing_id AND fc._rn = 1
+    WHERE fr._rn = 1
 )
-select * 
-from base
 
-{{
-    config(
-        materialized='incremental',
-        unique_key='fb_listing_id',
-        incremental_strategy='delete+insert',
-        indexes=[
-            {'columns': ['fb_listing_id'], 'unique': True},
-            {'columns': ['classified_at']},
-            {'columns': ['category_key']},
-            {'columns': ['listing_type']},
-            {'columns': ['product_model']},
-            {'columns': ['category_key', 'is_relevant_listing']},
-            {'columns': ['category_key', 'product_model']},
-            {'columns': ['listed_at']},
-        ]
-    )
-}}
+SELECT *
+FROM base

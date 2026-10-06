@@ -11,7 +11,7 @@ variable "app_name" {
 }
 
 variable "apify_token_secret_arn" {
-  description = "ARN of an existing Secrets Manager secret containing the Apify API token (from another AWS project)"
+  description = "ARN of an existing Secrets Manager secret containing the Apify API token"
   type        = string
 }
 
@@ -21,31 +21,13 @@ variable "gemini_api_key" {
   sensitive   = true
 }
 
-variable "db_master_username" {
-  description = "Aurora master username"
-  type        = string
-  default     = "amir_ghahari"
-}
-
-variable "db_master_password" {
-  description = "Aurora master password (min 8 chars)"
-  type        = string
-  sensitive   = true
-}
-
-variable "db_name" {
-  description = "Aurora database name"
-  type        = string
-  default     = "fb_marketplace_greatdeals"
-}
-
 variable "github_owner" {
-  description = "GitHub username or organization (e.g. amirhesam)"
+  description = "GitHub username or organization"
   type        = string
 }
 
 variable "github_repo" {
-  description = "GitHub repository name, without the owner prefix (e.g. FB-MarketPlace-GreatDeals)"
+  description = "GitHub repository name, without the owner prefix"
   type        = string
 }
 
@@ -56,7 +38,7 @@ variable "github_branch" {
 }
 
 variable "category_configs" {
-  description = "List of config names to scrape on each run (YAML filename without .yaml). Example: [\"iphone\", \"macbook\"]."
+  description = "List of config names to scrape on each run (YAML filename without .yaml)"
   type        = list(string)
   default     = ["iphone"]
 }

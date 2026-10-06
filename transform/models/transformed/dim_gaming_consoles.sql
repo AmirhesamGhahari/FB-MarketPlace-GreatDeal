@@ -1,6 +1,5 @@
-select *
-from {{ ref('dim_classified_listings') }}
-where category_key = 'gaming_console'
-  --and is_relevant_listing = true
+{{ config(materialized='table') }}
 
-{{ config(materialized='view') }}
+SELECT *
+FROM {{ ref('dim_classified_listings') }}
+WHERE category_key = 'gaming_console'

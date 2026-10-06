@@ -1,10 +1,10 @@
-select
-    id as category_id,
+{{
+    config(materialized='table')
+}}
+
+SELECT
     category_key,
     category_name,
     product_type,
-    brand,
-    created_at
-from {{ source('public', 'categories') }}
-
-{{ config(materialized='view') }}
+    brand
+FROM {{ ref('categories') }}

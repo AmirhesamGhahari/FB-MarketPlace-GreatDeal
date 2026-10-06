@@ -36,7 +36,6 @@ resource "aws_iam_role_policy" "execution_secrets" {
       Effect = "Allow"
       Action = ["secretsmanager:GetSecretValue"]
       Resource = [
-        var.db_url_secret_arn,
         var.apify_token_secret_arn,
         var.gemini_api_key_secret_arn,
       ]
@@ -58,6 +57,55 @@ resource "aws_iam_role" "task" {
   })
 }
 
+resource "aws_iam_role_policy" "task_s3_athena" {
+  name = "s3-athena-glue-access"
+  role = aws_iam_role.task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:ListBucket",
+          "s3:GetBucketLocation",
+        ]
+        Resource = [
+          var.data_bucket_arn,
+          "${var.data_bucket_arn}/*",
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "athena:StartQueryExecution",
+          "athena:GetQueryExecution",
+          "athena:GetQueryResults",
+          "athena:StopQueryExecution",
+          "athena:ListWorkGroups",
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "glue:GetDatabase",
+          "glue:GetDatabases",
+          "glue:GetTable",
+          "glue:GetTables",
+          "glue:GetPartition",
+          "glue:GetPartitions",
+          "glue:BatchCreatePartition",
+          "glue:CreatePartition",
+        ]
+        Resource = "*"
+      },
+    ]
+  })
+}
 
 resource "aws_ecs_task_definition" "pipeline" {
   family                   = "${var.app_name}-pipeline"
@@ -81,19 +129,15 @@ resource "aws_ecs_task_definition" "pipeline" {
     # Default command shows help; Lambda always overrides this with the real subcommand
     command = ["--help"]
 
+    environment = [
+      { name = "S3_BUCKET",         value = var.data_bucket_name },
+      { name = "AWS_REGION",        value = var.region },
+      { name = "ATHENA_WORKGROUP",  value = var.athena_workgroup },
+    ]
+
     secrets = [
-      {
-        name      = "DATABASE_URL"
-        valueFrom = var.db_url_secret_arn
-      },
-      {
-        name      = "APIFY_API_TOKEN"
-        valueFrom = var.apify_token_secret_arn
-      },
-      {
-        name      = "GEMINI_API_KEY"
-        valueFrom = var.gemini_api_key_secret_arn
-      }
+      { name = "APIFY_API_TOKEN", valueFrom = var.apify_token_secret_arn },
+      { name = "GEMINI_API_KEY",  valueFrom = var.gemini_api_key_secret_arn },
     ]
 
     logConfiguration = {

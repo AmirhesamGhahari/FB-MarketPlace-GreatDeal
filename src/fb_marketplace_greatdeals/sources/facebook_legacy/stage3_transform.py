@@ -4,7 +4,6 @@ import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import urlparse
 
 from loguru import logger
 
@@ -18,27 +17,20 @@ class TransformResult:
 
 
 def run() -> TransformResult:
-    """Run dbt models to rebuild mart tables (dim_category, dim_product, fct_listings, fct_listing_history)."""
+    """Run dbt models to rebuild mart tables."""
     logger.info("[Transform] Starting dbt run")
 
-    url = urlparse(str(settings.database_url))
     env = {
         **os.environ,
-        "DBT_DB_HOST": url.hostname or "",
-        "DBT_DB_PORT": str(url.port or 5432),
-        "DBT_DB_NAME": (url.path or "").lstrip("/"),
-        "DBT_DB_USER": url.username or "",
-        "DBT_DB_PASSWORD": url.password or "",
+        "DBT_S3_STAGING_DIR": f"s3://{settings.s3_bucket}/athena-results/",
+        "DBT_REGION": settings.aws_region,
+        "DBT_DATABASE": "fb_marketplace_greatdeals",
+        "DBT_SCHEMA": "transformed",
+        "DBT_WORKGROUP": settings.athena_workgroup,
     }
 
     project_dir = str(Path.cwd() / "transform")
-
-    cmd = [
-        "dbt", "run",
-        "--project-dir", project_dir,
-        "--profiles-dir", project_dir,
-        "--no-use-colors",
-    ]
+    cmd = ["dbt", "run", "--project-dir", project_dir, "--profiles-dir", project_dir, "--no-use-colors"]
 
     logger.info(f"[Transform] dbt project: {project_dir}")
     proc = subprocess.run(cmd, env=env)

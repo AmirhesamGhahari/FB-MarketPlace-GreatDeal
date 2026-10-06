@@ -21,15 +21,6 @@ resource "aws_subnet" "public" {
   tags = { Name = "${var.app_name}-public-${count.index + 1}" }
 }
 
-# Private subnets — Aurora lives here (not reachable from internet)
-resource "aws_subnet" "private" {
-  count             = 2
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.${count.index + 10}.0/24"
-  availability_zone = "${var.region}${count.index == 0 ? "a" : "b"}"
-
-  tags = { Name = "${var.app_name}-private-${count.index + 1}" }
-}
 
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
@@ -64,34 +55,3 @@ resource "aws_security_group" "ecs_tasks" {
   tags = { Name = "${var.app_name}-ecs-tasks-sg" }
 }
 
-# Security group for Aurora — only accepts connections from ECS tasks
-resource "aws_security_group" "aurora" {
-  name        = "${var.app_name}-aurora"
-  description = "Aurora PostgreSQL access from ECS tasks only"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ecs_tasks.id]
-    description     = "PostgreSQL from ECS tasks"
-  }
-
-  ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    cidr_blocks      = ["209.171.14.63/32", "173.33.70.59/32", "136.226.76.209/32", "209.171.14.50/32", "136.226.130.119/32", "209.171.14.62/32"]
-    description     = "PostgreSQL from my laptop"
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = { Name = "${var.app_name}-aurora-sg" }
-}

@@ -1,10 +1,7 @@
 sources:
-  - name: public
-    tables:
-      - name: categories
-
-  - name: facebook
-    schema: facebook
+  - name: fb_marketplace_greatdeals
+    database: fb_marketplace_greatdeals
+    schema: fb_marketplace_greatdeals
     tables:
       - name: fb_listings_raw
       - name: fb_listings_classified
@@ -23,17 +20,15 @@ models:
               values: ['smartphone', 'laptop', 'tablet', 'gaming_console', 'smartwatch', 'earbuds', 'smart_ring', 'case', 'accessory', 'parts', 'box_only', 'buyer_post', 'multiple_items', 'other']
 
   - name: dim_categories
-    description: "Lookup table of all product categories."
+    description: "Lookup table of all product categories, seeded from seeds/categories.csv."
     columns:
       - name: category_key
         tests: [unique, not_null]
-      - name: category_id
-        tests: [unique, not_null]
 
   - name: dim_product_stats
-    description: "Aggregated market value and deal stats per product (category + brand + model + variant + storage). Only relevant listings included."
+    description: "Aggregated market value and deal stats per product model. Only relevant device listings included."
     columns:
-      - name: product_key
+      - name: product_model
         tests: [unique, not_null]
 
   - name: dim_iphones

@@ -6,6 +6,7 @@ Commands:
     run-facebook from-file --config iphone --file sample_data/data.json
     run-facebook classify
     run-facebook classify --config iphone
+    run-facebook transform
 """
 
 from __future__ import annotations
@@ -22,10 +23,8 @@ from loguru import logger
 from rich.console import Console
 from rich.rule import Rule
 from rich.table import Table
-from sqlalchemy import text
 
 from fb_marketplace_greatdeals.config import settings
-from fb_marketplace_greatdeals.db.engine import SessionLocal
 from fb_marketplace_greatdeals.sources.facebook_legacy.scraper import ApifyRunner
 from fb_marketplace_greatdeals.sources.facebook_legacy.stage1 import run as run_stage1
 from fb_marketplace_greatdeals.sources.facebook_legacy.stage1 import run_from_records as run_stage1_from_records
@@ -40,13 +39,6 @@ logger.add(sys.stderr, format="<level>{level: <8}</level> | {message}", level="I
 _CONFIGS_DIR = Path.cwd() / "configs"
 
 
-def _run_migrations() -> None:
-    from alembic import command as alembic_command
-    from alembic.config import Config
-    cfg = Config("alembic.ini")
-    alembic_command.upgrade(cfg, "head")
-
-
 # ── Config helpers ────────────────────────────────────────────────────────────
 
 
@@ -58,30 +50,6 @@ def _load_config(config_name: str) -> dict:
         )
     with open(config_path) as fh:
         return yaml.safe_load(fh)
-
-
-def _resolve_category(config: dict) -> uuid.UUID:
-    with SessionLocal() as session:
-        session.execute(
-            text("""
-                INSERT INTO categories (id, category_key, category_name, product_type, brand)
-                VALUES (:id, :category_key, :category_name, :product_type, :brand)
-                ON CONFLICT (category_key) DO NOTHING
-            """),
-            {
-                "id": str(uuid.uuid4()),
-                "category_key": config["category_key"],
-                "category_name": config["category_name"],
-                "product_type": config.get("product_type"),
-                "brand": config.get("brand"),
-            },
-        )
-        session.commit()
-        category_id = session.execute(
-            text("SELECT id FROM categories WHERE category_key = :key"),
-            {"key": config["category_key"]},
-        ).scalar()
-    return category_id
 
 
 def _build_run_input(config: dict, mode: str) -> dict:
@@ -134,9 +102,7 @@ def _print_scrape_result(title: str, result, elapsed: float) -> None:
     table.add_row("Run ID", str(result.run_id))
     table.add_row("Status", result.status)
     table.add_row("Total records", str(result.total))
-    table.add_row("[green]✓ Newly added[/green]", f"[green]{result.newly_added}[/green]")
-    table.add_row("[cyan]~ Changed version[/cyan]", f"[cyan]{result.change_added}[/cyan]")
-    table.add_row("[dim]– Skipped[/dim]", f"[dim]{result.skipped}[/dim]")
+    table.add_row("[green]✓ Written to S3[/green]", f"[green]{result.newly_added}[/green]")
     table.add_row("[red]✗ Errors[/red]", f"[red]{result.errors}[/red]")
     console.print(table)
     console.print(f"  [dim]Elapsed: {elapsed:.1f}s[/dim]")
@@ -164,7 +130,6 @@ def _print_classify_result(title: str, result, elapsed: float) -> None:
 @click.group()
 def cli() -> None:
     """FB Marketplace Great Deals — scrape and classify product listings."""
-    _run_migrations()
 
 
 # ── from-apify ────────────────────────────────────────────────────────────────
@@ -188,39 +153,36 @@ def from_apify(config_name: str, mode: str, stage: str) -> None:
     console.print()
     total_start = time.monotonic()
 
-    config      = _load_config(config_name)
-    legacy_cfg  = config.get("sources", {}).get("facebook_legacy", {})
+    config = _load_config(config_name)
+    legacy_cfg = config.get("sources", {}).get("facebook_legacy", {})
+    category_key = config["category_key"]
 
     if not legacy_cfg.get("enabled", False):
         console.print(f"[yellow]facebook_legacy is disabled for {config_name!r} — skipping.[/yellow]")
         return
 
-    category_id = _resolve_category(config)
-
     if stage in ("scrape", "all"):
-        run_input    = _build_run_input(config, mode)
-        run_cfg      = legacy_cfg[f"{mode}_run"]
-        timeout_secs  = run_cfg.get("actor_timeout_secs", 7200)
+        run_input = _build_run_input(config, mode)
+        run_cfg = legacy_cfg[f"{mode}_run"]
+        timeout_secs = run_cfg.get("actor_timeout_secs", 7200)
         memory_mbytes = run_cfg.get("actor_memory_mb", 2048)
-        runner        = ApifyRunner(settings.apify_api_token, legacy_cfg["actor_id"])
+        runner = ApifyRunner(settings.apify_api_token, legacy_cfg["actor_id"])
 
         logger.info(f"[Apify] Fetching: {run_input['location']!r}")
         all_records = runner.run(run_input, timeout_secs=timeout_secs, memory_mbytes=memory_mbytes)
 
-        source_label = f"{config_name}:{mode}"
-        t0      = time.monotonic()
+        t0 = time.monotonic()
         result1 = run_stage1_from_records(
             all_records,
-            source=source_label,
-            category_id=category_id,
-            category_key=config["category_key"],
+            source=f"{config_name}:{mode}",
+            category_key=category_key,
             mode=mode,
         )
         _print_scrape_result("STAGE 1 — Fetch & Extract", result1, time.monotonic() - t0)
 
     if stage in ("classify", "all"):
-        t0      = time.monotonic()
-        result2 = run_classify(category_id=category_id, category_key=config["category_key"])
+        t0 = time.monotonic()
+        result2 = run_classify(category_key=category_key)
         _print_classify_result("STAGE 2 — AI Classify", result2, time.monotonic() - t0)
 
     console.print(Rule(f"[dim]Done in {time.monotonic() - total_start:.1f}s[/dim]"))
@@ -248,21 +210,17 @@ def from_file(config_name: str, source_file: Path, stage: str) -> None:
     console.print()
     total_start = time.monotonic()
 
-    config      = _load_config(config_name)
-    category_id = _resolve_category(config)
+    config = _load_config(config_name)
+    category_key = config["category_key"]
 
     if stage in ("scrape", "all"):
-        t0      = time.monotonic()
-        result1 = run_stage1(
-            source_file,
-            category_id=category_id,
-            category_key=config["category_key"],
-        )
+        t0 = time.monotonic()
+        result1 = run_stage1(source_file, category_key=category_key)
         _print_scrape_result("STAGE 1 — Extract & Load", result1, time.monotonic() - t0)
 
     if stage in ("classify", "all"):
-        t0      = time.monotonic()
-        result2 = run_classify(category_id=category_id, category_key=config["category_key"])
+        t0 = time.monotonic()
+        result2 = run_classify(category_key=category_key)
         _print_classify_result("STAGE 2 — AI Classify", result2, time.monotonic() - t0)
 
     console.print(Rule(f"[dim]Done in {time.monotonic() - total_start:.1f}s[/dim]"))
@@ -282,22 +240,23 @@ def classify_cmd(config_name: Optional[str]) -> None:
     console.print()
     t0 = time.monotonic()
 
-    category_id  = None
     category_key = None
     if config_name:
-        config       = _load_config(config_name)
-        category_id  = _resolve_category(config)
+        config = _load_config(config_name)
         category_key = config["category_key"]
 
-    result = run_classify(category_id=category_id, category_key=category_key)
+    result = run_classify(category_key=category_key)
     _print_classify_result("STAGE 2 — AI Classify", result, time.monotonic() - t0)
     console.print(Rule(f"[dim]Done in {time.monotonic() - t0:.1f}s[/dim]"))
     console.print()
 
 
+# ── transform ─────────────────────────────────────────────────────────────────
+
+
 @cli.command("transform")
 def transform_cmd() -> None:
-    """Rebuild mart tables by running dbt models (dim_category, dim_product, fct_listings, fct_listing_history)."""
+    """Rebuild mart tables by running dbt models."""
     console.print()
     t0 = time.monotonic()
 

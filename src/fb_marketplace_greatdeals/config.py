@@ -1,4 +1,3 @@
-from pydantic import PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,7 +8,9 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    database_url: PostgresDsn
+    s3_bucket: str = ""
+    aws_region: str = "ca-central-1"
+    athena_workgroup: str = "fb-marketplace-greatdeals"
     apify_api_token: str = ""
     gemini_api_key: str = ""
 

@@ -9,25 +9,27 @@ module "ecr" {
   app_name = var.app_name
 }
 
-module "aurora" {
-  source             = "./modules/aurora"
-  app_name           = var.app_name
-  public_subnet_ids  = module.networking.public_subnet_ids
-  aurora_sg_id       = module.networking.aurora_sg_id
-  db_master_username = var.db_master_username
-  db_master_password = var.db_master_password
-  db_name            = var.db_name
+module "s3" {
+  source   = "./modules/s3"
+  app_name = var.app_name
+}
+
+module "glue" {
+  source      = "./modules/glue"
+  app_name    = var.app_name
+  bucket_name = module.s3.bucket_name
+}
+
+module "athena" {
+  source         = "./modules/athena"
+  app_name       = var.app_name
+  results_bucket = module.s3.bucket_name
 }
 
 module "secrets" {
-  source             = "./modules/secrets"
-  app_name           = var.app_name
-  db_master_username = var.db_master_username
-  db_master_password = var.db_master_password
-  aurora_endpoint    = module.aurora.cluster_endpoint
-  aurora_port        = module.aurora.cluster_port
-  db_name            = var.db_name
-  gemini_api_key     = var.gemini_api_key
+  source         = "./modules/secrets"
+  app_name       = var.app_name
+  gemini_api_key = var.gemini_api_key
 }
 
 module "ecs" {
@@ -35,9 +37,11 @@ module "ecs" {
   app_name                  = var.app_name
   region                    = var.region
   ecr_repository_url        = module.ecr.repository_url
-  db_url_secret_arn         = module.secrets.db_url_secret_arn
   apify_token_secret_arn    = var.apify_token_secret_arn
   gemini_api_key_secret_arn = module.secrets.gemini_api_key_secret_arn
+  data_bucket_name          = module.s3.bucket_name
+  data_bucket_arn           = module.s3.bucket_arn
+  athena_workgroup          = module.athena.workgroup_name
 }
 
 module "scheduler" {

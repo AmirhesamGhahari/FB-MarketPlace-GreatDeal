@@ -1,0 +1,10 @@
+category_key,category_name,product_type,brand
+iphone,iPhone,smartphone,Apple
+macbook,MacBook,laptop,Apple
+ipad,iPad,tablet,Apple
+samsung_galaxy,Samsung Galaxy,smartphone,Samsung
+gaming_console,Gaming Console,gaming_console,
+apple_watch,Apple Watch,smartwatch,Apple
+airpods,AirPods,earbuds,Apple
+windows_laptop,Windows Laptop,laptop,
+smart_rings,Smart Rings,smart_ring,
