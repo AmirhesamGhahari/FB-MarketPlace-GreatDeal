@@ -1,6 +1,7 @@
 with listings as (
     select
-        l.category_key,
+        l.fb_listing_id,
+        l.listing_url,
         l.product_model,
         l.listed_at::date as listed_date,
         l.price,
@@ -19,13 +20,12 @@ with listings as (
 ),
 dates as (
     select
-        p.category_key,
         p.product_model,
         gs::date as stat_date
     from (
-        select category_key, product_model, min(listed_date) as first_date
+        select product_model, min(listed_date) as first_date
         from listings
-        group by category_key, product_model
+        group by product_model
     ) as p
     cross join lateral generate_series(
         p.first_date::timestamp,
@@ -35,7 +35,6 @@ dates as (
 ),
 daily as (
     select
-        d.category_key,
         d.product_model,
         d.stat_date,
         count(l.price) as n,
@@ -44,15 +43,12 @@ daily as (
         coalesce(sum(l.price) filter (where l.deal_score >= 8), 0) as sum_price_deal
     from dates as d
     left join listings as l
-        on l.category_key = d.category_key
-        and l.product_model = d.product_model
-        and l.listed_date = d.stat_date
-    group by d.category_key, d.product_model, d.stat_date
+        on l.product_model = d.product_model and l.listed_date = d.stat_date
+    group by d.product_model, d.stat_date
 ),
 
 windowed as (
     select
-        category_key,
         product_model,
         stat_date,
         sum(n) over w_cum as listings_cumulative,
@@ -77,10 +73,10 @@ windowed as (
         round(sum_price_deal / nullif(n_deal, 0), 2) as deal8_avg_price_1d
     from daily
     window
-        w_cum as (partition by category_key, product_model order by stat_date rows between unbounded preceding and current row),
-        w30 as (partition by category_key, product_model order by stat_date rows between 29 preceding and current row),
-        w7 as (partition by category_key, product_model order by stat_date rows between 6 preceding and current row),
-        w3 as (partition by category_key, product_model order by stat_date rows between 2 preceding and current row)
+        w_cum as (partition by product_model order by stat_date rows between unbounded preceding and current row),
+        w30 as (partition by product_model order by stat_date rows between 29 preceding and current row),
+        w7 as (partition by product_model order by stat_date rows between 6 preceding and current row),
+        w3 as (partition by product_model order by stat_date rows between 2 preceding and current row)
 ){% if is_incremental() %},
 rebuild_from as (
     select
@@ -97,56 +93,60 @@ rebuild_from as (
 ){% endif %}
 select
     t.*,
-    lo30.lowest_5_prices_30d,
-    lo7.lowest_5_prices_7d,
-    lo3.lowest_5_prices_3d,
-    lo1.lowest_5_prices_1d
+    lo30.lowest_5_deals_30d,
+    lo7.lowest_5_deals_7d,
+    lo3.lowest_5_deals_3d,
+    lo1.lowest_5_deals_1d
 from windowed as t
 left join lateral (
-    select array_agg(x.price order by x.price) as lowest_5_prices_30d
+    select jsonb_agg(
+               jsonb_build_object('listing_id', x.fb_listing_id, 'url', x.listing_url, 'price', x.price)
+               order by x.price, x.fb_listing_id
+           ) as lowest_5_deals_30d
     from (
-        select l.price
+        select l.fb_listing_id, l.listing_url, l.price
         from listings as l
-        where l.category_key = t.category_key
-            and l.product_model = t.product_model
-            and l.listed_date between t.stat_date - 29 and t.stat_date
-        order by l.price
+        where l.product_model = t.product_model and l.listed_date between t.stat_date - 29 and t.stat_date
+        order by l.price, l.fb_listing_id
         limit 5
     ) as x
 ) as lo30 on true
 left join lateral (
-    select array_agg(x.price order by x.price) as lowest_5_prices_7d
+    select jsonb_agg(
+               jsonb_build_object('listing_id', x.fb_listing_id, 'url', x.listing_url, 'price', x.price)
+               order by x.price, x.fb_listing_id
+           ) as lowest_5_deals_7d
     from (
-        select l.price
+        select l.fb_listing_id, l.listing_url, l.price
         from listings as l
-        where l.category_key = t.category_key
-            and l.product_model = t.product_model
-            and l.listed_date between t.stat_date - 6 and t.stat_date
-        order by l.price
+        where l.product_model = t.product_model and l.listed_date between t.stat_date - 6 and t.stat_date
+        order by l.price, l.fb_listing_id
         limit 5
     ) as x
 ) as lo7 on true
 left join lateral (
-    select array_agg(x.price order by x.price) as lowest_5_prices_3d
+    select jsonb_agg(
+               jsonb_build_object('listing_id', x.fb_listing_id, 'url', x.listing_url, 'price', x.price)
+               order by x.price, x.fb_listing_id
+           ) as lowest_5_deals_3d
     from (
-        select l.price
+        select l.fb_listing_id, l.listing_url, l.price
         from listings as l
-        where l.category_key = t.category_key
-            and l.product_model = t.product_model
-            and l.listed_date between t.stat_date - 2 and t.stat_date
-        order by l.price
+        where l.product_model = t.product_model and l.listed_date between t.stat_date - 2 and t.stat_date
+        order by l.price, l.fb_listing_id
         limit 5
     ) as x
 ) as lo3 on true
 left join lateral (
-    select array_agg(x.price order by x.price) as lowest_5_prices_1d
+    select jsonb_agg(
+               jsonb_build_object('listing_id', x.fb_listing_id, 'url', x.listing_url, 'price', x.price)
+               order by x.price, x.fb_listing_id
+           ) as lowest_5_deals_1d
     from (
-        select l.price
+        select l.fb_listing_id, l.listing_url, l.price
         from listings as l
-        where l.category_key = t.category_key
-            and l.product_model = t.product_model
-            and l.listed_date = t.stat_date
-        order by l.price
+        where l.product_model = t.product_model and l.listed_date = t.stat_date
+        order by l.price, l.fb_listing_id
         limit 5
     ) as x
 ) as lo1 on true
@@ -157,12 +157,11 @@ where t.stat_date >= (select start_date from rebuild_from)
 {{
     config(
         materialized='incremental',
-        unique_key=['category_key', 'product_model', 'stat_date'],
+        unique_key=['product_model', 'stat_date'],
         incremental_strategy='delete+insert',
         indexes=[
-            {'columns': ['category_key', 'product_model', 'stat_date'], 'unique': True},
-            {'columns': ['product_model', 'stat_date']},
-            {'columns': ['category_key']},
+            {'columns': ['product_model', 'stat_date'], 'unique': True},
+            {'columns': ['product_model']},
             {'columns': ['stat_date']},
         ]
     )

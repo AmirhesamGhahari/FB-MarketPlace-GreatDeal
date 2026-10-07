@@ -37,7 +37,7 @@ models:
   - name: dim_product_stats
     description: "Aggregated market value and deal stats per product (category + brand + model + variant + storage). Only relevant listings included."
     columns:
-      - name: product_key
+      - name: product_model
         tests: [unique, not_null]
 
   - name: dim_iphones
@@ -105,10 +105,8 @@ models:
         tests: [unique, not_null]
 
   - name: fct_products_daily
-    description: "One row per category_key, product_model and stat_date (listed_at date), one row per day from the product's first listing date through today. Cumulative and rolling 30d/7d/3d/1d listing counts and average prices (windows include stat_date), the same for deal_score >= 8 (deal8_ prefix), and the 5 lowest prices per rolling window. Listings with implausible prices are excluded."
+    description: "One row per product_model and stat_date (listed_at date), one row per day from the product's first listing date through today. Cumulative and rolling 30d/7d/3d/1d listing counts and average prices (windows include stat_date), the same for deal_score >= 8 (deal8_ prefix), and the 5 lowest-priced listings per rolling window (lowest_5_deals_*, a jsonb array of {listing_id, url, price}, cheapest first). Listings with implausible prices are excluded."
     columns:
-      - name: category_key
-        tests: [not_null]
       - name: product_model
         tests: [not_null]
       - name: stat_date
