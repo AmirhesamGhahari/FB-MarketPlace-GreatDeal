@@ -1,5 +1,6 @@
 with base as (
     select
+        fr.id as raw_listing_id,
         md5(fr.fb_listing_id) as listing_key,
         md5(
             coalesce(fc.product_brand, '') || '|' ||
@@ -40,10 +41,13 @@ with base as (
         fc.confidence,
         fc.classified_at
     from facebook.fb_listings_raw fr
-    left join facebook.fb_listings_classified as fc on fc.raw_listing_id = fr.id
+    inner join facebook.fb_listings_classified as fc on fc.raw_listing_id = fr.id
     where fr.valid_to is null
     {% if is_incremental() %}
-      and fc.classified_at > (select max(classified_at) from {{ this }})
+      and (
+        not exists (select 1 from {{ this }} as t where t.raw_listing_id = fr.id)
+        or fc.classified_at > (select max(classified_at) - interval '1 day' from {{ this }})
+      )
     {% endif %}
 )
 select * 
@@ -56,6 +60,7 @@ from base
         incremental_strategy='delete+insert',
         indexes=[
             {'columns': ['fb_listing_id'], 'unique': True},
+            {'columns': ['raw_listing_id'], 'unique': True},
             {'columns': ['classified_at']},
             {'columns': ['category_key']},
             {'columns': ['listing_type']},

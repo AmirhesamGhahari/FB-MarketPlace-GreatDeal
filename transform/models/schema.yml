@@ -15,6 +15,10 @@ models:
     columns:
       - name: fb_listing_id
         tests: [unique, not_null]
+      - name: raw_listing_id
+        tests: [unique, not_null]
+      - name: classified_at
+        tests: [not_null]
       - name: category_key
         tests: [not_null]
       - name: listing_type
@@ -100,10 +104,12 @@ models:
       - name: fb_listing_id
         tests: [unique, not_null]
 
-  - name: fct_daily_stats_by_product
-    description: "Daily aggregated listing stats grouped by category, product model, condition, and listing type. Only relevant listings included."
+  - name: fct_products_daily
+    description: "One row per category_key, product_model and stat_date (listed_at date), one row per day from the product's first listing date through today. Cumulative and rolling 30d/7d/3d/1d listing counts and average prices (windows include stat_date), the same for deal_score >= 8 (deal8_ prefix), and the 5 lowest prices per rolling window. Listings with implausible prices are excluded."
     columns:
-      - name: listing_date
-        tests: [not_null]
       - name: category_key
+        tests: [not_null]
+      - name: product_model
+        tests: [not_null]
+      - name: stat_date
         tests: [not_null]
