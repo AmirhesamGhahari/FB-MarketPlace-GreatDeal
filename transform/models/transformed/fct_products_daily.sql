@@ -10,6 +10,7 @@ with listings as (
         and l.is_relevant_listing is true
         and l.product_model is not null
         and l.listed_at is not null
+        and l.listed_at::date >= '2026-08-01'::date
         and l.price > 0
         and (
             l.estimated_market_value is null
