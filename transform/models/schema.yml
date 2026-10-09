@@ -105,7 +105,7 @@ models:
         tests: [unique, not_null]
 
   - name: fct_products_daily
-    description: "One row per product_model and stat_date (listed_at date), one row per day from the product's first listing date through today. Cumulative and rolling 30d/7d/3d/1d listing counts and average prices (windows include stat_date), the same for deal_score >= 8 (deal8_ prefix), and the 5 lowest-priced listings per rolling window (lowest_5_deals_*, a jsonb array of {listing_id, url, price}, cheapest first). Also tenth_cheapest_price_7d (10th cheapest price in the 7 days ending stat_date, null if fewer than 10 listings) and cutoff_price_cheapest_10pct_30d (highest price in the cheapest decile over 30 days). The deal8_lowest_5_deals_*, deal8_tenth_cheapest_price_7d and deal8_cutoff_price_cheapest_10pct_30d columns repeat these using only listings with deal_score >= 8. Listings with implausible prices are excluded."
+    description: "One row per product_model and stat_date (listed_at date), one row per day from the product's first listing date through today. Cumulative and rolling 30d/7d/3d/1d listing counts and average prices (windows include stat_date), the same for deal_score >= 8 (deal8_ prefix), and the 5 lowest-priced listings per rolling window (lowest_5_deals_*, a jsonb array of {listing_id, url, price}, cheapest first). Also tenth_cheapest_price_7d (10th cheapest price in the 7 days ending stat_date, null if fewer than 10 listings) and cutoff_price_cheapest_10pct_30d (highest price in the cheapest decile over 30 days). The deal8_lowest_5_deals_*, deal8_tenth_cheapest_price_7d and deal8_cutoff_price_cheapest_10pct_30d columns repeat these using only listings with deal_score >= 8. tenth_cheapest_price_30d and cutoff_price_cheapest_10pct_7d (and their deal8_ versions) are the 30-day 10th cheapest price and the 7-day cheapest-decile cutoff. Listings with implausible prices are excluded."
     columns:
       - name: product_model
         tests: [not_null]
@@ -113,7 +113,9 @@ models:
         tests: [not_null]
 
   - name: fct_deal_candidates
-    description: "Append-only evaluation log. Each classified listing is evaluated once, when it first appears in dim_classified_listings, against its product's benchmarks from the day before it was listed. Four rule columns (hit_tenth_cheapest_7d, hit_cheapest_decile_30d, deal8_hit_tenth_cheapest_7d, deal8_hit_cheapest_decile_30d) are kept side by side for comparison. skip_reason (old_record, outlier, no_benchmark, insufficient_history, stale_benchmark) is set when the listing must not be alerted on. Never full-refreshed (full_refresh=false). Read by the notify stage."
+    description: "One row per fb_listing_id: the evaluation of the listing's latest version. A listing is evaluated when it first appears in dim_classified_listings, and evaluated again (the row is replaced) when it gets a new version or is re-classified, always against its product's benchmarks from the day before it was listed. Eight rule columns are kept side by side for comparison: hit_tenth_cheapest_7d/30d and hit_cheapest_decile_7d/30d, plus the same four with the deal8_ prefix (benchmark built from score >= 8 listings, listing's own score must be >= 8). skip_reason (old_record, outlier, no_benchmark, insufficient_history, stale_benchmark) is set when the listing must not be alerted on. Never full-refreshed (full_refresh=false). Read by the notify stage."
     columns:
+      - name: fb_listing_id
+        tests: [unique, not_null]
       - name: raw_listing_id
         tests: [unique, not_null]

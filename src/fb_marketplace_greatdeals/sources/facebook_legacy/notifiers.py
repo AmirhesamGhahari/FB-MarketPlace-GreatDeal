@@ -11,8 +11,12 @@ Deal = Mapping[str, Any]
 # Rule column -> label shown in the email
 RULE_LABELS = {
     "hit_tenth_cheapest_7d": "10th-cheapest 7d",
+    "hit_tenth_cheapest_30d": "10th-cheapest 30d",
+    "hit_cheapest_decile_7d": "cheapest-10% 7d",
     "hit_cheapest_decile_30d": "cheapest-10% 30d",
     "deal8_hit_tenth_cheapest_7d": "score8 10th-cheapest 7d",
+    "deal8_hit_tenth_cheapest_30d": "score8 10th-cheapest 30d",
+    "deal8_hit_cheapest_decile_7d": "score8 cheapest-10% 7d",
     "deal8_hit_cheapest_decile_30d": "score8 cheapest-10% 30d",
 }
 
@@ -30,15 +34,22 @@ def build_email(deals: Sequence[Deal]) -> tuple[str, str]:
     blocks = []
     for deal in deals:
         title = deal["title"] or deal["product_model"] or deal["fb_listing_id"]
+        price_line = f"  Price: {_money(deal['price'])}"
+        if deal["previous_price"] is not None:
+            price_line += f" (dropped from {_money(deal['previous_price'])})"
+        price_line += f" (market {_money(deal['estimated_market_value'])}, score {deal['deal_score']})"
         blocks.append(
             f"{title}\n"
-            f"  Price: {_money(deal['price'])} "
-            f"(market {_money(deal['estimated_market_value'])}, score {deal['deal_score']})\n"
+            f"{price_line}\n"
             f"  Rules hit: {_rules(deal)}\n"
-            f"  Benchmarks: 10th cheapest 7d {_money(deal['tenth_cheapest_price_7d'])}, "
-            f"cheapest-10% cutoff 30d {_money(deal['cutoff_price_cheapest_10pct_30d'])}\n"
-            f"  Score 8+ benchmarks: 10th cheapest 7d {_money(deal['deal8_tenth_cheapest_price_7d'])}, "
-            f"cheapest-10% cutoff 30d {_money(deal['deal8_cutoff_price_cheapest_10pct_30d'])}\n"
+            f"  Benchmarks: 10th cheapest 7d {_money(deal['tenth_cheapest_price_7d'])} / "
+            f"30d {_money(deal['tenth_cheapest_price_30d'])}, "
+            f"cheapest-10% cutoff 7d {_money(deal['cutoff_price_cheapest_10pct_7d'])} / "
+            f"30d {_money(deal['cutoff_price_cheapest_10pct_30d'])}\n"
+            f"  Score 8+ benchmarks: 10th cheapest 7d {_money(deal['deal8_tenth_cheapest_price_7d'])} / "
+            f"30d {_money(deal['deal8_tenth_cheapest_price_30d'])}, "
+            f"cheapest-10% cutoff 7d {_money(deal['deal8_cutoff_price_cheapest_10pct_7d'])} / "
+            f"30d {_money(deal['deal8_cutoff_price_cheapest_10pct_30d'])}\n"
             f"  {deal['condition'] or ''} {deal['location_city'] or ''}\n"
             f"  {deal['listing_url'] or ''}"
         )

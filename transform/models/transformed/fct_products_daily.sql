@@ -87,8 +87,8 @@ rebuild_from as (
     from {{ ref('dim_classified_listings') }} as l
     where l.listed_at is not null
         and (
-            l.scraped_at >= current_timestamp - interval '{{ var('lookback_days', 3) }} days'
-            or l.classified_at >= current_timestamp - interval '{{ var('lookback_days', 3) }} days'
+            l.scraped_at >= current_timestamp - interval '{{ var('lookback_days', 2) }} days'
+            or l.classified_at >= current_timestamp - interval '{{ var('lookback_days', 2) }} days'
         )
 ){% endif %}
 select
@@ -97,14 +97,18 @@ select
     lo7.lowest_5_deals_7d,
     lo3.lowest_5_deals_3d,
     lo1.lowest_5_deals_1d,
-    tenth.tenth_cheapest_price_7d,
-    dec30.cutoff_price_cheapest_10pct_30d,
     d8lo30.deal8_lowest_5_deals_30d,
     d8lo7.deal8_lowest_5_deals_7d,
     d8lo3.deal8_lowest_5_deals_3d,
     d8lo1.deal8_lowest_5_deals_1d,
+    tenth.tenth_cheapest_price_7d,
+    dec30.cutoff_price_cheapest_10pct_30d,
     d8tenth.deal8_tenth_cheapest_price_7d,
-    d8dec30.deal8_cutoff_price_cheapest_10pct_30d
+    d8dec30.deal8_cutoff_price_cheapest_10pct_30d,
+    tenth30.tenth_cheapest_price_30d,
+    dec7.cutoff_price_cheapest_10pct_7d,
+    d8tenth30.deal8_tenth_cheapest_price_30d,
+    d8dec7.deal8_cutoff_price_cheapest_10pct_7d
 from windowed as t
 left join lateral (
     select l.price as tenth_cheapest_price_7d
@@ -253,12 +257,49 @@ left join lateral (
     ) as x
     where x.decile = 1
 ) as d8dec30 on true
+-- 30-day 10th cheapest and 7-day cheapest-decile cutoff, for all listings and for score >= 8
+left join lateral (
+    select l.price as tenth_cheapest_price_30d
+    from listings as l
+    where l.product_model = t.product_model and l.listed_date between t.stat_date - 29 and t.stat_date
+    order by l.price, l.fb_listing_id
+    offset 9
+    limit 1
+) as tenth30 on true
+left join lateral (
+    select
+        max(x.price) as cutoff_price_cheapest_10pct_7d
+    from (
+        select l.price, ntile(10) over (order by l.price) as decile
+        from listings as l
+        where l.product_model = t.product_model and l.listed_date between t.stat_date - 6 and t.stat_date
+    ) as x
+    where x.decile = 1
+) as dec7 on true
+left join lateral (
+    select l.price as deal8_tenth_cheapest_price_30d
+    from listings as l
+    where l.product_model = t.product_model and l.listed_date between t.stat_date - 29 and t.stat_date
+        and l.deal_score >= 8
+    order by l.price, l.fb_listing_id
+    offset 9
+    limit 1
+) as d8tenth30 on true
+left join lateral (
+    select
+        max(x.price) as deal8_cutoff_price_cheapest_10pct_7d
+    from (
+        select l.price, ntile(10) over (order by l.price) as decile
+        from listings as l
+        where l.product_model = t.product_model and l.listed_date between t.stat_date - 6 and t.stat_date
+            and l.deal_score >= 8
+    ) as x
+    where x.decile = 1
+) as d8dec7 on true
 {% if is_incremental() %}
 where t.stat_date >= (select start_date from rebuild_from)
 {% endif %}
 
--- Indexes: (product_model, stat_date) serves the benchmark join and latest-row lookups per
--- product; stat_date serves the incremental delete and date-range scans.
 {{
     config(
         materialized='incremental',

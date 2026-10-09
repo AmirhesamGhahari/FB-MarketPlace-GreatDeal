@@ -43,15 +43,23 @@ with base as (
     from facebook.fb_listings_raw fr
     inner join facebook.fb_listings_classified as fc on fc.raw_listing_id = fr.id
     where fr.valid_to is null
-    {% if is_incremental() %}
-      and (
-        not exists (select 1 from {{ this }} as t where t.raw_listing_id = fr.id)
-        or fc.classified_at > (select max(classified_at) - interval '1 day' from {{ this }})
-      )
-    {% endif %}
+),
+
+-- The raw table keeps one current row per (category, listing), so the same Facebook listing can
+-- be current under several categories. Keep one row per fb_listing_id: prefer a relevant
+-- classification, then the most recently scraped, then the highest raw id.
+latest as (
+    select distinct on (fb_listing_id) *
+    from base
+    order by fb_listing_id, is_relevant_listing desc nulls last, scraped_at desc, raw_listing_id desc
 )
-select * 
-from base
+
+select *
+from latest
+{% if is_incremental() %}
+where not exists (select 1 from {{ this }} as t where t.raw_listing_id = latest.raw_listing_id)
+   or latest.classified_at > (select max(classified_at) - interval '1 day' from {{ this }})
+{% endif %}
 
 {{
     config(

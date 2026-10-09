@@ -11,7 +11,7 @@ target-path: "target"
 clean-targets: ["target", "dbt_packages"]
 
 vars:
-  lookback_days: 3
+  lookback_days: 2
 
 models:
   fb_marketplace:
