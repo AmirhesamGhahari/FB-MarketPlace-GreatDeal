@@ -34,15 +34,18 @@ This is a fully serverless, event-driven scraping pipeline on AWS. There is no a
 Resources only run when a scrape job is triggered.
 
 ```
-EventBridge (cron, every 12h)
+EventBridge (cron, every 3h)
        |
        v
   Step Functions ──> Lambda (TaskProducer)
        |               reads CATEGORY_CONFIGS + DynamoDB mode (initial|periodic)
        |               returns task list for each config
        v
-  ECS Fargate Task (one per category config, sequential)
+  ECS Fargate Task (one per category config, 3 at a time)
   Python pipeline: Apify scrape → Stage 1 CDC → Gemini classify → Aurora
+       |
+       v
+  dbt transform (once) → notify (deal rules → one SNS email digest)
        |
        |──── reads secrets from ──>  Secrets Manager (DATABASE_URL, APIFY_API_TOKEN, GEMINI_API_KEY)
        |
@@ -62,7 +65,8 @@ GitHub push to main
 - Aurora lives in **private subnets** only — only ECS tasks can connect, enforced by security group.
 - Docker images are tagged with both a **short commit SHA** and `latest`. Everything is ARM64 (Graviton).
 - **DynamoDB tracks initial/periodic mode** per config — first successful run switches a config to periodic mode automatically. Reset by deleting the DynamoDB item.
-- **Scheduling**: EventBridge fires every 12h. Step Functions runs the task sequentially (one ECS task per category). The 1-hour ECS timeout covers a full Apify + Gemini classification run.
+- **Scheduling**: EventBridge fires every 3h. Step Functions runs up to 3 ECS tasks at once (one per category config), then dbt once, then the notify step. The per-config ECS timeout is 5h; keep a full run well under 3h or executions will overlap.
+- **Deal alerts**: the notify step publishes one digest to the `deal-alerts` SNS topic (email). After `terraform apply`, click the confirmation link in the SNS subscription email.
 
 ---
 
@@ -517,12 +521,12 @@ environment {
 
 ```hcl
 resource "aws_scheduler_schedule" "dispatcher" {
-  schedule_expression          = "cron(0 5,17 * * ? *)"
+  schedule_expression          = "cron(0 */3 * * ? *)"
   schedule_expression_timezone = "America/Toronto"
 }
 ```
 
-Fires at 05:00 and 17:00 America/Toronto every day. Step Functions then invokes the Lambda, which builds the task list and runs each ECS task sequentially.
+Fires every 3 hours (00:00, 03:00, ... America/Toronto). Step Functions then invokes the Lambda, which builds the task list and runs the ECS tasks 3 at a time.
 
 ---
 

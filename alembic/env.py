@@ -3,14 +3,14 @@ from logging.config import fileConfig
 from pathlib import Path
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import engine_from_config, pool, text
 
 # Ensure src/ is on the path so fb_marketplace_greatdeals can be imported by Alembic.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from fb_marketplace_greatdeals.config import settings
 from fb_marketplace_greatdeals.db.base import Base
-from fb_marketplace_greatdeals.db.models import pipeline_tables, category, fb_listing_raw, fb_listing_classified  # noqa: F401 — registers models with Base.metadata
+from fb_marketplace_greatdeals.db.models import pipeline_tables, category, fb_listing_raw, fb_listing_classified, deal_alerts  # noqa: F401 — registers models with Base.metadata
 
 config = context.config
 
@@ -64,6 +64,9 @@ def run_migrations_online() -> None:
             include_name=_include_name,
         )
         with context.begin_transaction():
+            # Several ECS tasks start at once and each runs `upgrade head`; serialise them
+            # so a pending migration is applied once and the others then see it as done.
+            connection.execute(text("SELECT pg_advisory_xact_lock(727274)"))
             context.run_migrations()
 
 

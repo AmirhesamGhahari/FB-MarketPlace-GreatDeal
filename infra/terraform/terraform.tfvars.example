@@ -13,3 +13,6 @@ github_repo   = "FB-MarketPlace-GreatDeal"
 github_branch = "main"
 
 category_configs = ["iphone", "macbook"]
+
+# Deal alert emails go here (confirm the SNS subscription email after apply).
+alert_email = "your-real-email@example.com"
