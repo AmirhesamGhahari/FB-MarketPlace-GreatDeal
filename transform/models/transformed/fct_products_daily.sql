@@ -96,8 +96,34 @@ select
     lo30.lowest_5_deals_30d,
     lo7.lowest_5_deals_7d,
     lo3.lowest_5_deals_3d,
-    lo1.lowest_5_deals_1d
+    lo1.lowest_5_deals_1d,
+    tenth.tenth_cheapest_price_7d,
+    dec30.cutoff_price_cheapest_10pct_30d,
+    d8lo30.deal8_lowest_5_deals_30d,
+    d8lo7.deal8_lowest_5_deals_7d,
+    d8lo3.deal8_lowest_5_deals_3d,
+    d8lo1.deal8_lowest_5_deals_1d,
+    d8tenth.deal8_tenth_cheapest_price_7d,
+    d8dec30.deal8_cutoff_price_cheapest_10pct_30d
 from windowed as t
+left join lateral (
+    select l.price as tenth_cheapest_price_7d
+    from listings as l
+    where l.product_model = t.product_model and l.listed_date between t.stat_date - 6 and t.stat_date
+    order by l.price, l.fb_listing_id
+    offset 9
+    limit 1
+) as tenth on true
+left join lateral (
+    select
+        max(x.price) as cutoff_price_cheapest_10pct_30d
+    from (
+        select l.price, ntile(10) over (order by l.price) as decile
+        from listings as l
+        where l.product_model = t.product_model and l.listed_date between t.stat_date - 29 and t.stat_date
+    ) as x
+    where x.decile = 1
+) as dec30 on true
 left join lateral (
     select jsonb_agg(
                jsonb_build_object('listing_id', x.fb_listing_id, 'url', x.listing_url, 'price', x.price)
@@ -150,10 +176,89 @@ left join lateral (
         limit 5
     ) as x
 ) as lo1 on true
+-- same metrics again, built only from listings with deal_score >= 8
+left join lateral (
+    select jsonb_agg(
+               jsonb_build_object('listing_id', x.fb_listing_id, 'url', x.listing_url, 'price', x.price)
+               order by x.price, x.fb_listing_id
+           ) as deal8_lowest_5_deals_30d
+    from (
+        select l.fb_listing_id, l.listing_url, l.price
+        from listings as l
+        where l.product_model = t.product_model and l.listed_date between t.stat_date - 29 and t.stat_date
+            and l.deal_score >= 8
+        order by l.price, l.fb_listing_id
+        limit 5
+    ) as x
+) as d8lo30 on true
+left join lateral (
+    select jsonb_agg(
+               jsonb_build_object('listing_id', x.fb_listing_id, 'url', x.listing_url, 'price', x.price)
+               order by x.price, x.fb_listing_id
+           ) as deal8_lowest_5_deals_7d
+    from (
+        select l.fb_listing_id, l.listing_url, l.price
+        from listings as l
+        where l.product_model = t.product_model and l.listed_date between t.stat_date - 6 and t.stat_date
+            and l.deal_score >= 8
+        order by l.price, l.fb_listing_id
+        limit 5
+    ) as x
+) as d8lo7 on true
+left join lateral (
+    select jsonb_agg(
+               jsonb_build_object('listing_id', x.fb_listing_id, 'url', x.listing_url, 'price', x.price)
+               order by x.price, x.fb_listing_id
+           ) as deal8_lowest_5_deals_3d
+    from (
+        select l.fb_listing_id, l.listing_url, l.price
+        from listings as l
+        where l.product_model = t.product_model and l.listed_date between t.stat_date - 2 and t.stat_date
+            and l.deal_score >= 8
+        order by l.price, l.fb_listing_id
+        limit 5
+    ) as x
+) as d8lo3 on true
+left join lateral (
+    select jsonb_agg(
+               jsonb_build_object('listing_id', x.fb_listing_id, 'url', x.listing_url, 'price', x.price)
+               order by x.price, x.fb_listing_id
+           ) as deal8_lowest_5_deals_1d
+    from (
+        select l.fb_listing_id, l.listing_url, l.price
+        from listings as l
+        where l.product_model = t.product_model and l.listed_date = t.stat_date
+            and l.deal_score >= 8
+        order by l.price, l.fb_listing_id
+        limit 5
+    ) as x
+) as d8lo1 on true
+left join lateral (
+    select l.price as deal8_tenth_cheapest_price_7d
+    from listings as l
+    where l.product_model = t.product_model and l.listed_date between t.stat_date - 6 and t.stat_date
+        and l.deal_score >= 8
+    order by l.price, l.fb_listing_id
+    offset 9
+    limit 1
+) as d8tenth on true
+left join lateral (
+    select
+        max(x.price) as deal8_cutoff_price_cheapest_10pct_30d
+    from (
+        select l.price, ntile(10) over (order by l.price) as decile
+        from listings as l
+        where l.product_model = t.product_model and l.listed_date between t.stat_date - 29 and t.stat_date
+            and l.deal_score >= 8
+    ) as x
+    where x.decile = 1
+) as d8dec30 on true
 {% if is_incremental() %}
 where t.stat_date >= (select start_date from rebuild_from)
 {% endif %}
 
+-- Indexes: (product_model, stat_date) serves the benchmark join and latest-row lookups per
+-- product; stat_date serves the incremental delete and date-range scans.
 {{
     config(
         materialized='incremental',
@@ -161,7 +266,6 @@ where t.stat_date >= (select start_date from rebuild_from)
         incremental_strategy='delete+insert',
         indexes=[
             {'columns': ['product_model', 'stat_date'], 'unique': True},
-            {'columns': ['product_model']},
             {'columns': ['stat_date']},
         ]
     )
