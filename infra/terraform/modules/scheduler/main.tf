@@ -267,8 +267,7 @@ resource "aws_sfn_state_machine" "dispatcher" {
           }
         }
         ResultPath = null
-        Next       = "RunNotify"
-        Catch      = [{ ErrorEquals = ["States.ALL"], ResultPath = null, Next = "RunNotify" }]
+        Next = "RunNotify"
       }
 
       RunNotify = {
