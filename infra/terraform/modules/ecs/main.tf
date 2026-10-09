@@ -58,6 +58,20 @@ resource "aws_iam_role" "task" {
   })
 }
 
+# The notify stage publishes the deal digest email through this SNS topic.
+resource "aws_iam_role_policy" "task_sns_publish" {
+  name = "deal-alerts-publish"
+  role = aws_iam_role.task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["sns:Publish"]
+      Resource = [var.deal_alerts_topic_arn]
+    }]
+  })
+}
 
 resource "aws_ecs_task_definition" "pipeline" {
   family                   = "${var.app_name}-pipeline"
@@ -94,6 +108,11 @@ resource "aws_ecs_task_definition" "pipeline" {
         name      = "GEMINI_API_KEY"
         valueFrom = var.gemini_api_key_secret_arn
       }
+    ]
+
+    environment = [
+      { name = "DEAL_ALERTS_TOPIC_ARN", value = var.deal_alerts_topic_arn },
+      { name = "AWS_DEFAULT_REGION", value = var.region },
     ]
 
     logConfiguration = {

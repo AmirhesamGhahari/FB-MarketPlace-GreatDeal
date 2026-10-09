@@ -30,6 +30,12 @@ module "secrets" {
   gemini_api_key     = var.gemini_api_key
 }
 
+module "notifications" {
+  source      = "./modules/notifications"
+  app_name    = var.app_name
+  alert_email = var.alert_email
+}
+
 module "ecs" {
   source                    = "./modules/ecs"
   app_name                  = var.app_name
@@ -38,6 +44,7 @@ module "ecs" {
   db_url_secret_arn         = module.secrets.db_url_secret_arn
   apify_token_secret_arn    = var.apify_token_secret_arn
   gemini_api_key_secret_arn = module.secrets.gemini_api_key_secret_arn
+  deal_alerts_topic_arn     = module.notifications.deal_alerts_topic_arn
 }
 
 module "scheduler" {

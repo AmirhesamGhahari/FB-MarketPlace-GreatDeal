@@ -60,3 +60,8 @@ variable "category_configs" {
   type        = list(string)
   default     = ["iphone"]
 }
+
+variable "alert_email" {
+  description = "Email address for deal alert emails (the SNS subscription must be confirmed by clicking the link AWS emails)"
+  type        = string
+}

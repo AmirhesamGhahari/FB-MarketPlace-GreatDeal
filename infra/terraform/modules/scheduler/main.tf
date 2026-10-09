@@ -205,15 +205,6 @@ locals {
   }
 }
 
-# ── State machine ──────────────────────────────────────────────────────────────
-#
-# Flow: EventBridge → SFN
-#   TaskProducer (Lambda) — reads DynamoDB mode per config, returns task list
-#   RunFBLegacy (Map, MaxConcurrency=1) — for each config:
-#     LaunchFL       — ECS runTask.sync: Fargate runs pipeline, SFN waits via EventBridge
-#     SetPeriodicFL  — DynamoDB UpdateItem: marks mode=periodic after first success
-#     EndFL          — terminal Pass
-#
 resource "aws_sfn_state_machine" "dispatcher" {
   name     = "${var.app_name}-dispatcher"
   role_arn = aws_iam_role.sfn.arn
@@ -247,7 +238,7 @@ resource "aws_sfn_state_machine" "dispatcher" {
       RunFBLegacy = {
         Type           = "Map"
         ItemsPath      = "$.tasks.facebook_legacy"
-        MaxConcurrency = 1
+        MaxConcurrency = 3
         Parameters     = { "task.$" = "$$.Map.Item.Value" }
         Iterator       = local.task_iterator_fl
         Next           = "RunTransform"
@@ -257,7 +248,7 @@ resource "aws_sfn_state_machine" "dispatcher" {
         Type           = "Task"
         Resource       = "arn:aws:states:::ecs:runTask.sync"
         TimeoutSeconds = 1800
-        Parameters     = {
+        Parameters = {
           LaunchType     = "FARGATE"
           Cluster        = var.ecs_cluster_arn
           TaskDefinition = var.task_family
@@ -276,11 +267,38 @@ resource "aws_sfn_state_machine" "dispatcher" {
           }
         }
         ResultPath = null
-        Next       = "EndTransform"
-        Catch      = [{ ErrorEquals = ["States.ALL"], ResultPath = null, Next = "EndTransform" }]
+        Next       = "RunNotify"
+        Catch      = [{ ErrorEquals = ["States.ALL"], ResultPath = null, Next = "RunNotify" }]
       }
 
-      EndTransform = { Type = "Pass", End = true }
+      RunNotify = {
+        Type           = "Task"
+        Resource       = "arn:aws:states:::ecs:runTask.sync"
+        TimeoutSeconds = 900
+        Parameters = {
+          LaunchType     = "FARGATE"
+          Cluster        = var.ecs_cluster_arn
+          TaskDefinition = var.task_family
+          NetworkConfiguration = {
+            AwsvpcConfiguration = {
+              Subnets        = [var.public_subnet_ids[0]]
+              SecurityGroups = [var.ecs_task_sg_id]
+              AssignPublicIp = "ENABLED"
+            }
+          }
+          Overrides = {
+            ContainerOverrides = [{
+              Name    = "pipeline"
+              Command = ["run-facebook", "notify"]
+            }]
+          }
+        }
+        ResultPath = null
+        Next       = "EndNotify"
+        Catch      = [{ ErrorEquals = ["States.ALL"], ResultPath = null, Next = "EndNotify" }]
+      }
+
+      EndNotify = { Type = "Pass", End = true }
     }
   })
 
@@ -321,7 +339,7 @@ resource "aws_scheduler_schedule" "dispatcher" {
 
   flexible_time_window { mode = "OFF" }
 
-  schedule_expression          = "cron(0 5,17 * * ? *)"
+  schedule_expression          = "cron(0 */4 * * ? *)"
   schedule_expression_timezone = "America/Toronto"
 
   target {
