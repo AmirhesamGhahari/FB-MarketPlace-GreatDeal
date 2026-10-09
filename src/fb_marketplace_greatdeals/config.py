@@ -13,5 +13,7 @@ class Settings(BaseSettings):
     apify_api_token: str = ""
     gemini_api_key: str = ""
 
+    deal_alerts_topic_arn: str = ""
+
 
 settings = Settings()

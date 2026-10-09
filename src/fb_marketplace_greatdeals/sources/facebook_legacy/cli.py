@@ -6,6 +6,8 @@ Commands:
     run-facebook from-file --config iphone --file sample_data/data.json
     run-facebook classify
     run-facebook classify --config iphone
+    run-facebook transform
+    run-facebook notify [--dry-run]
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ from fb_marketplace_greatdeals.sources.facebook_legacy.stage1 import run as run_
 from fb_marketplace_greatdeals.sources.facebook_legacy.stage1 import run_from_records as run_stage1_from_records
 from fb_marketplace_greatdeals.sources.facebook_legacy.stage2_classify import run as run_classify
 from fb_marketplace_greatdeals.sources.facebook_legacy.stage3_transform import run as run_transform
+from fb_marketplace_greatdeals.sources.facebook_legacy.stage4_notify import run as run_notify
 
 console = Console()
 
@@ -316,6 +319,32 @@ def transform_cmd() -> None:
 
     if result.returncode != 0:
         raise SystemExit(result.returncode)
+
+
+@cli.command("notify")
+@click.option("--dry-run", is_flag=True, help="Print the email that would be sent; write and send nothing.")
+def notify_cmd(dry_run: bool) -> None:
+    """Add passing deal candidates to deal_alerts and send one email digest."""
+    console.print()
+    t0 = time.monotonic()
+
+    result = run_notify(dry_run=dry_run)
+
+    console.print(Rule("[bold cyan]STAGE 4 — Deal Notify[/bold cyan]"))
+    table = Table(show_header=False, box=None, padding=(0, 2))
+    table.add_column(style="dim", width=26)
+    table.add_column()
+    table.add_row("Status", result.status)
+    table.add_row("New alerts", str(result.new_alerts))
+    table.add_row("Listings in email" if not dry_run else "Listings that would be emailed", str(result.emailed))
+    if result.error:
+        table.add_row("Error", result.error)
+    console.print(table)
+    console.print(Rule(f"[dim]Done in {time.monotonic() - t0:.1f}s[/dim]"))
+    console.print()
+
+    if result.status != "completed":
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
