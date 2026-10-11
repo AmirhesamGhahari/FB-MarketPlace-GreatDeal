@@ -91,7 +91,7 @@ def _unsent_alerts(session) -> list[dict]:
     return deals
 
 
-def run(dry_run: bool = True) -> NotifyResult:
+def run(dry_run: bool = False) -> NotifyResult:
     result = NotifyResult()
 
     if not dry_run and not settings.deal_alerts_topic_arn:
