@@ -36,8 +36,8 @@ sources:
         - "Toronto, Ontario"
       use_deduplication: true
       fetch_detailed_items: true
-      listings_per_search: 70
+      listings_per_search: 50
       days_listed: "7"
       filter_keywords: "airpods"
       actor_timeout_secs: 3600
-      actor_memory_mb: 2048
+      actor_memory_mb: 1024

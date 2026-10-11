@@ -8,6 +8,10 @@ from fb_marketplace_greatdeals.config import settings
 
 Deal = Mapping[str, Any]
 
+# Max listings per email, and max characters of a listing title shown in it
+MAX_LISTINGS_PER_EMAIL = 100
+TITLE_MAX_CHARS = 90
+
 # Rule column -> label shown in the email
 RULE_LABELS = {
     "hit_tenth_cheapest_7d": "10th-cheapest 7d",
@@ -29,11 +33,18 @@ def _rules(deal: Deal) -> str:
     return ", ".join(label for column, label in RULE_LABELS.items() if deal[column])
 
 
-def build_email(deals: Sequence[Deal]) -> tuple[str, str]:
+def _short(text: str) -> str:
+    """First TITLE_MAX_CHARS characters of a title."""
+    return text if len(text) <= TITLE_MAX_CHARS else text[:TITLE_MAX_CHARS] + "..."
+
+
+def build_email(deals: Sequence[Deal], part: int = 1, parts: int = 1) -> tuple[str, str]:
     subject = f"FB Deals: {len(deals)} new"
+    if parts > 1:
+        subject += f" (email {part} of {parts})"
     blocks = []
     for deal in deals:
-        title = deal["title"] or deal["product_model"] or deal["fb_listing_id"]
+        title = _short(deal["title"] or deal["product_model"] or deal["fb_listing_id"])
         price_line = f"  Price: {_money(deal['price'])}"
         if deal["previous_price"] is not None:
             price_line += f" (dropped from {_money(deal['previous_price'])})"
@@ -56,11 +67,11 @@ def build_email(deals: Sequence[Deal]) -> tuple[str, str]:
     return subject, "\n\n".join(blocks)
 
 
-def send_email(deals: Sequence[Deal]) -> str:
-    """Publish one digest and return the SNS MessageId. Raises on failure so the caller leaves the listings unsent."""
+def send_email(deals: Sequence[Deal], part: int = 1, parts: int = 1) -> str:
+    """Publish one email and return the SNS MessageId. Raises on failure so the caller leaves the listings unsent."""
     import boto3
 
-    subject, body = build_email(deals)
+    subject, body = build_email(deals, part, parts)
     response = boto3.client("sns").publish(
         TopicArn=settings.deal_alerts_topic_arn,
         Subject=subject[:100],

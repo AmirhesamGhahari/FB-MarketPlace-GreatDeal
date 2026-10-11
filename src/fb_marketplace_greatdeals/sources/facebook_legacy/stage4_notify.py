@@ -8,7 +8,11 @@ from sqlalchemy import text
 
 from fb_marketplace_greatdeals.config import settings
 from fb_marketplace_greatdeals.db.engine import SessionLocal
-from fb_marketplace_greatdeals.sources.facebook_legacy.notifiers import build_email, send_email
+from fb_marketplace_greatdeals.sources.facebook_legacy.notifiers import (
+    MAX_LISTINGS_PER_EMAIL,
+    build_email,
+    send_email,
+)
 
 _RULES = (
     "hit_tenth_cheapest_7d",
@@ -98,54 +102,60 @@ def run(dry_run: bool = True) -> NotifyResult:
         deals = _unsent_alerts(session)
         logger.info(f"[Notify] {result.new_alerts} new alert(s), {len(deals)} to email")
 
+        batches = [
+            deals[i:i + MAX_LISTINGS_PER_EMAIL] for i in range(0, len(deals), MAX_LISTINGS_PER_EMAIL)
+        ]
+
         if dry_run:
             session.rollback()
             result.emailed = len(deals)
-            if deals:
-                subject, body = build_email(deals)
+            for part, batch in enumerate(batches, start=1):
+                subject, body = build_email(batch, part, len(batches))
                 logger.info(f"[Notify] dry run, email would be:\nSubject: {subject}\n\n{body}")
             return result
 
         session.commit()
-        if not deals:
-            return result
 
-        try:
-            message_id = send_email(deals)
-        except Exception as exc:  # noqa: BLE001 — any send failure must leave the alerts unsent
-            logger.error(f"[Notify] email failed: {exc}")
+        # One email per batch of MAX_LISTINGS_PER_EMAIL listings. Each batch is logged and marked
+        # sent on its own, so if a later batch fails the earlier ones stay sent and the rest are
+        # retried on the next run.
+        for part, batch in enumerate(batches, start=1):
+            try:
+                message_id = send_email(batch, part, len(batches))
+            except Exception as exc:  # noqa: BLE001 — any send failure must leave the alerts unsent
+                logger.error(f"[Notify] email {part} of {len(batches)} failed: {exc}")
+                session.execute(
+                    text("""
+                        INSERT INTO facebook.notification_log (channel, status, listing_count, error)
+                        VALUES ('email', 'failed', :count, :error)
+                    """),
+                    {"count": len(batch), "error": str(exc)[:1000]},
+                )
+                session.commit()
+                result.status = "failed"
+                result.error = str(exc)
+                return result
+
+            # The log row and the alert updates commit together, so an alert is never marked
+            # sent without its log row (or the reverse).
+            log_id = session.execute(
+                text("""
+                    INSERT INTO facebook.notification_log (channel, status, listing_count, message_id)
+                    VALUES ('email', 'sent', :count, :message_id)
+                    RETURNING id
+                """),
+                {"count": len(batch), "message_id": message_id},
+            ).scalar_one()
             session.execute(
                 text("""
-                    INSERT INTO facebook.notification_log (channel, status, listing_count, error)
-                    VALUES ('email', 'failed', :count, :error)
+                    UPDATE facebook.deal_alerts
+                    SET email_sent_at = now(), email_notification_id = :log_id
+                    WHERE email_sent_at IS NULL AND fb_listing_id = ANY(:listing_ids)
                 """),
-                {"count": len(deals), "error": str(exc)[:1000]},
+                {"log_id": log_id, "listing_ids": [d["fb_listing_id"] for d in batch]},
             )
             session.commit()
-            result.status = "failed"
-            result.error = str(exc)
-            return result
-
-        # The log row and the alert updates commit together, so an alert is never marked
-        # sent without its log row (or the reverse).
-        log_id = session.execute(
-            text("""
-                INSERT INTO facebook.notification_log (channel, status, listing_count, message_id)
-                VALUES ('email', 'sent', :count, :message_id)
-                RETURNING id
-            """),
-            {"count": len(deals), "message_id": message_id},
-        ).scalar_one()
-        session.execute(
-            text("""
-                UPDATE facebook.deal_alerts
-                SET email_sent_at = now(), email_notification_id = :log_id
-                WHERE email_sent_at IS NULL AND fb_listing_id = ANY(:listing_ids)
-            """),
-            {"log_id": log_id, "listing_ids": [d["fb_listing_id"] for d in deals]},
-        )
-        session.commit()
-        result.emailed = len(deals)
-        logger.info(f"[Notify] emailed {len(deals)} listing(s)")
+            result.emailed += len(batch)
+            logger.info(f"[Notify] email {part} of {len(batches)}: sent {len(batch)} listing(s)")
 
     return result
