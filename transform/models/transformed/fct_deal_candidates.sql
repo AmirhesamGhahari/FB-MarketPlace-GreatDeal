@@ -53,57 +53,19 @@ select
     current_timestamp as evaluated_at,
     f.stat_date as benchmark_date,
     f.listings_30d,
-    f.listings_7d,
-    f.deal8_listings_30d,
-    f.deal8_listings_7d,
-    f.tenth_cheapest_price_7d,
-    f.tenth_cheapest_price_30d,
-    f.cutoff_price_cheapest_10pct_7d,
-    f.cutoff_price_cheapest_10pct_30d,
-    f.deal8_tenth_cheapest_price_7d,
-    f.deal8_tenth_cheapest_price_30d,
-    f.deal8_cutoff_price_cheapest_10pct_7d,
-    f.deal8_cutoff_price_cheapest_10pct_30d,
+    f.cutoff_price_cheapest_25pct_30d,
     coalesce(
-        f.listings_30d >= 10 and l.price <= f.tenth_cheapest_price_7d, 
+        f.listings_30d >= 10 and l.price < f.cutoff_price_cheapest_25pct_30d,
         false
-    ) as hit_tenth_cheapest_7d,
-    coalesce(
-        f.listings_30d >= 10 and l.price <= f.cutoff_price_cheapest_10pct_30d,
-        false
-    ) as hit_cheapest_decile_30d,
-    coalesce(
-        l.deal_score >= 8 and l.price <= f.deal8_tenth_cheapest_price_7d,
-        false
-    ) as deal8_hit_tenth_cheapest_7d,
-    coalesce(
-        l.deal_score >= 8
-            and f.deal8_listings_30d >= 10
-            and l.price <= f.deal8_cutoff_price_cheapest_10pct_30d,
-        false
-    ) as deal8_hit_cheapest_decile_30d,
-    coalesce(
-        f.listings_30d >= 10 and l.price <= f.tenth_cheapest_price_30d,
-        false
-    ) as hit_tenth_cheapest_30d,
-    coalesce(
-        f.listings_7d >= 10 and l.price <= f.cutoff_price_cheapest_10pct_7d,
-        false
-    ) as hit_cheapest_decile_7d,
-    coalesce(
-        l.deal_score >= 8 and l.price <= f.deal8_tenth_cheapest_price_30d,
-        false
-    ) as deal8_hit_tenth_cheapest_30d,
-    coalesce(
-        l.deal_score >= 8
-            and f.deal8_listings_7d >= 10
-            and l.price <= f.deal8_cutoff_price_cheapest_10pct_7d,
-        false
-    ) as deal8_hit_cheapest_decile_7d,
+    ) as hit_cheapest_25pct_30d,
     case
-        -- age of this version of the listing (when we scraped it), not of the listing itself, so a
-        -- price drop on an older listing is evaluated, while the existing backlog is skipped
+        -- first build: skip the existing backlog by listing age. Incremental runs: age of this version
+        -- of the listing (when we scraped it), so a price drop on an older listing is still evaluated
+        {% if is_incremental() -%}
         when l.scraped_at < current_timestamp - interval '{{ var('candidate_max_age_days', 2) }} days' then 'old_record'
+        {%- else -%}
+        when l.listed_at < current_timestamp - interval '{{ var('candidate_max_age_days', 2) }} days' then 'old_record'
+        {%- endif %}
         when not (
             l.price > 0
             and (

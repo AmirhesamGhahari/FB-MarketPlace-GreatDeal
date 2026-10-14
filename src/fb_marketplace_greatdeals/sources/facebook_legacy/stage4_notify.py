@@ -9,37 +9,21 @@ from sqlalchemy import text
 from fb_marketplace_greatdeals.config import settings
 from fb_marketplace_greatdeals.db.engine import SessionLocal
 from fb_marketplace_greatdeals.sources.facebook_legacy.notifiers import (
+    BENCHMARK_COLUMNS,
     MAX_LISTINGS_PER_EMAIL,
     build_email,
     send_email,
 )
 
-_RULES = (
-    "hit_tenth_cheapest_7d",
-    "hit_tenth_cheapest_30d",
-    "hit_cheapest_decile_7d",
-    "hit_cheapest_decile_30d",
-    "deal8_hit_tenth_cheapest_7d",
-    "deal8_hit_tenth_cheapest_30d",
-    "deal8_hit_cheapest_decile_7d",
-    "deal8_hit_cheapest_decile_30d",
-)
-_BENCHMARKS = (
-    "tenth_cheapest_price_7d", "tenth_cheapest_price_30d",
-    "cutoff_price_cheapest_10pct_7d", "cutoff_price_cheapest_10pct_30d",
-    "deal8_tenth_cheapest_price_7d", "deal8_tenth_cheapest_price_30d",
-    "deal8_cutoff_price_cheapest_10pct_7d", "deal8_cutoff_price_cheapest_10pct_30d",
-)
+_PASSED = "c.skip_reason IS NULL AND c.hit_cheapest_25pct_30d"
 
-_ANY_HIT = " OR ".join(f"c.{rule}" for rule in _RULES)
-_PASSED = f"c.skip_reason IS NULL AND ({_ANY_HIT})"
-
-_DEAL_COLUMNS = ", ".join(f"c.{col}" for col in (
-    "fb_listing_id", "listing_url", "title", "product_model", "price",
-    "deal_score", "estimated_market_value", "condition", "location_city",
-    *_BENCHMARKS,
-    *_RULES,
-))
+_DEAL_COLUMNS = ", ".join(
+    [f"c.{col}" for col in (
+        "fb_listing_id", "listing_url", "title", "product_model", "price",
+        "deal_score", "estimated_market_value", "condition", "location_city", "listed_at",
+    )]
+    + [f"f.{col}" for col in BENCHMARK_COLUMNS]
+)
 
 
 @dataclass
@@ -83,6 +67,8 @@ def _unsent_alerts(session) -> list[dict]:
                {_DEAL_COLUMNS}
         FROM facebook.deal_alerts a
         JOIN transformed.fct_deal_candidates c ON c.fb_listing_id = a.fb_listing_id
+        JOIN transformed.fct_products_daily f
+          ON f.product_model = c.product_model AND f.stat_date = c.benchmark_date
         WHERE a.email_sent_at IS NULL
         ORDER BY a.fb_listing_id, a.id DESC
     """)).mappings().all()

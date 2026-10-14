@@ -9,28 +9,24 @@ from fb_marketplace_greatdeals.config import settings
 Deal = Mapping[str, Any]
 
 # Max listings per email, and max characters of a listing title shown in it
-MAX_LISTINGS_PER_EMAIL = 100
+MAX_LISTINGS_PER_EMAIL = 50
 TITLE_MAX_CHARS = 90
 
-# Rule column -> label shown in the email
-RULE_LABELS = {
-    "hit_tenth_cheapest_7d": "10th-cheapest 7d",
-    "hit_tenth_cheapest_30d": "10th-cheapest 30d",
-    "hit_cheapest_decile_7d": "cheapest-10% 7d",
-    "hit_cheapest_decile_30d": "cheapest-10% 30d",
-    "deal8_hit_tenth_cheapest_7d": "score8 10th-cheapest 7d",
-    "deal8_hit_tenth_cheapest_30d": "score8 10th-cheapest 30d",
-    "deal8_hit_cheapest_decile_7d": "score8 cheapest-10% 7d",
-    "deal8_hit_cheapest_decile_30d": "score8 cheapest-10% 30d",
-}
+# fct_products_daily columns shown under each listing
+BENCHMARK_COLUMNS = (
+    "avg_market_value_30d",
+    *(f"{prefix}{metric}_{w}d"
+      for w in (30, 7, 3, 1)
+      for prefix, metric in (
+          ("", "listings"), ("", "avg_price"), ("", "cutoff_price_cheapest_25pct"), ("", "lowest_5_deals"),
+          ("deal8_", "listings"), ("deal8_", "avg_price"), ("deal8_", "cutoff_price_cheapest_25pct"),
+          ("good_condition_", "count"), ("good_condition_", "avg"),
+      )),
+)
 
 
 def _money(value: Any) -> str:
     return "n/a" if value is None else f"${float(value):,.0f}"
-
-
-def _rules(deal: Deal) -> str:
-    return ", ".join(label for column, label in RULE_LABELS.items() if deal[column])
 
 
 def _short(text: str) -> str:
@@ -49,19 +45,12 @@ def build_email(deals: Sequence[Deal], part: int = 1, parts: int = 1) -> tuple[s
         if deal["previous_price"] is not None:
             price_line += f" (dropped from {_money(deal['previous_price'])})"
         price_line += f" (market {_money(deal['estimated_market_value'])}, score {deal['deal_score']})"
+        benchmarks = "\n".join(f"    {col}: {deal[col]}" for col in BENCHMARK_COLUMNS)
         blocks.append(
             f"{title}\n"
             f"{price_line}\n"
-            f"  Rules hit: {_rules(deal)}\n"
-            f"  Benchmarks: 10th cheapest 7d {_money(deal['tenth_cheapest_price_7d'])} / "
-            f"30d {_money(deal['tenth_cheapest_price_30d'])}, "
-            f"cheapest-10% cutoff 7d {_money(deal['cutoff_price_cheapest_10pct_7d'])} / "
-            f"30d {_money(deal['cutoff_price_cheapest_10pct_30d'])}\n"
-            f"  Score 8+ benchmarks: 10th cheapest 7d {_money(deal['deal8_tenth_cheapest_price_7d'])} / "
-            f"30d {_money(deal['deal8_tenth_cheapest_price_30d'])}, "
-            f"cheapest-10% cutoff 7d {_money(deal['deal8_cutoff_price_cheapest_10pct_7d'])} / "
-            f"30d {_money(deal['deal8_cutoff_price_cheapest_10pct_30d'])}\n"
-            f"  {deal['condition'] or ''} {deal['location_city'] or ''}\n"
+            f"  {deal['product_model']} | {deal['condition'] or ''} | {deal['location_city'] or ''} | listed {deal['listed_at']}\n"
+            f"  Benchmarks:\n{benchmarks}\n"
             f"  {deal['listing_url'] or ''}"
         )
     return subject, "\n\n".join(blocks)
