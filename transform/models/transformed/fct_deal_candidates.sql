@@ -58,6 +58,10 @@ select
         f.listings_30d >= 10 and l.price < f.cutoff_price_cheapest_25pct_30d,
         false
     ) as hit_cheapest_25pct_30d,
+    exists (
+        select 1 from {{ ref('dim_toronto_area_cities') }} as c
+        where c.city_key = lower(trim(l.location_city))
+    ) as within_90km_toronto,
     case
         -- first build: skip the existing backlog by listing age. Incremental runs: age of this version
         -- of the listing (when we scraped it), so a price drop on an older listing is still evaluated

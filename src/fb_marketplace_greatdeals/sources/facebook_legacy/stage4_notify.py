@@ -15,7 +15,7 @@ from fb_marketplace_greatdeals.sources.facebook_legacy.notifiers import (
     send_email,
 )
 
-_PASSED = "c.skip_reason IS NULL AND c.hit_cheapest_25pct_30d"
+_PASSED = "c.skip_reason IS NULL AND c.hit_cheapest_25pct_30d AND c.within_90km_toronto"
 
 _DEAL_COLUMNS = ", ".join(
     [f"c.{col}" for col in (

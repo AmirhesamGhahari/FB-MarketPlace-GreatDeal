@@ -112,8 +112,14 @@ models:
       - name: stat_date
         tests: [not_null]
 
+  - name: dim_toronto_area_cities
+    description: "Cities from the listing data that are under 90 km (straight line) from downtown Toronto,. city_key is the lowercased city name, matched against location_city in fct_deal_candidates. Cities not listed are treated as too far."
+    columns:
+      - name: city_key
+        tests: [unique, not_null]
+
   - name: fct_deal_candidates
-    description: "One row per fb_listing_id: the evaluation of the listing's latest version. A listing is evaluated when it first appears in dim_classified_listings, and evaluated again (the row is replaced) when it gets a new version or is re-classified, against its product's benchmarks from the day before it was listed. hit_cheapest_25pct_30d is the alert rule: listings_30d >= 10 and price below cutoff_price_cheapest_25pct_30d. skip_reason (old_record, outlier, no_benchmark, insufficient_history, stale_benchmark) is set when the listing must not be alerted on; old_record means the listing was listed (first build) or this version was scraped (incremental runs) more than candidate_max_age_days ago. Never full-refreshed (full_refresh=false). Read by the notify stage."
+    description: "One row per fb_listing_id: the evaluation of the listing's latest version. A listing is evaluated when it first appears in dim_classified_listings, and evaluated again (the row is replaced) when it gets a new version or is re-classified, against its product's benchmarks from the day before it was listed. hit_cheapest_25pct_30d: listings_30d >= 10 and price below cutoff_price_cheapest_25pct_30d. within_90km_toronto: location_city is in dim_toronto_area_cities (cities under 90 km from Toronto). Alerts need both. skip_reason (old_record, outlier, no_benchmark, insufficient_history, stale_benchmark) is set when the listing must not be alerted on; old_record means the listing was listed (first build) or this version was scraped (incremental runs) more than candidate_max_age_days ago. Never full-refreshed (full_refresh=false). Read by the notify stage."
     columns:
       - name: fb_listing_id
         tests: [unique, not_null]

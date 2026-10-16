@@ -14,14 +14,10 @@ TITLE_MAX_CHARS = 90
 
 # fct_products_daily columns shown under each listing
 BENCHMARK_COLUMNS = (
-    "avg_market_value_30d",
-    *(f"{prefix}{metric}_{w}d"
-      for w in (30, 7, 3, 1)
-      for prefix, metric in (
-          ("", "listings"), ("", "avg_price"), ("", "cutoff_price_cheapest_25pct"), ("", "lowest_5_deals"),
-          ("deal8_", "listings"), ("deal8_", "avg_price"), ("deal8_", "cutoff_price_cheapest_25pct"),
-          ("good_condition_", "count"), ("good_condition_", "avg"),
-      )),
+    "listings_30d", "avg_price_30d", "cutoff_price_cheapest_25pct_30d",
+    "deal8_listings_30d", "deal8_avg_price_30d", "deal8_cutoff_price_cheapest_25pct_30d",
+    "good_condition_count_30d", "good_condition_avg_30d",
+    "listings_7d", "avg_price_7d", "cutoff_price_cheapest_25pct_7d",
 )
 
 
@@ -44,7 +40,7 @@ def build_email(deals: Sequence[Deal], part: int = 1, parts: int = 1) -> tuple[s
         price_line = f"  Price: {_money(deal['price'])}"
         if deal["previous_price"] is not None:
             price_line += f" (dropped from {_money(deal['previous_price'])})"
-        price_line += f" (market {_money(deal['estimated_market_value'])}, score {deal['deal_score']})"
+        price_line += f" (market {_money(deal['estimated_market_value'])})"
         benchmarks = "\n".join(f"    {col}: {deal[col]}" for col in BENCHMARK_COLUMNS)
         blocks.append(
             f"{title}\n"
