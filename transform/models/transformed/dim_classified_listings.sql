@@ -54,7 +54,12 @@ latest as (
     order by fb_listing_id, is_relevant_listing desc nulls last, scraped_at desc, raw_listing_id desc
 )
 
-select *
+select
+    latest.*,
+    -- listing text warns of a defect or lock; \y is a word boundary, so "unlocked" does not match "locked"
+    (lower(coalesce(latest.title, '') || ' ' || coalesce(latest.description, '')) ~
+        '(?<!not |no |never )\ycracked\y|(?<!not )\ylocked\y|for parts|parts only|parts or repair|read (the )?desc|for repair|needs? repair|to be repaired|repairs? needed|bidding'
+    ) as has_defect_keyword
 from latest
 {% if is_incremental() %}
 where not exists (select 1 from {{ this }} as t where t.raw_listing_id = latest.raw_listing_id)

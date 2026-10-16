@@ -11,6 +11,7 @@ with new_listings as (
         l.estimated_market_value,
         l.price_vs_market_pct,
         l.condition,
+        l.has_defect_keyword,
         l.location_city,
         l.listed_at,
         l.scraped_at,
@@ -55,7 +56,7 @@ select
     f.listings_30d,
     f.cutoff_price_cheapest_25pct_30d,
     coalesce(
-        f.listings_30d >= 10 and l.price < f.cutoff_price_cheapest_25pct_30d,
+        f.listings_30d >= 10 and l.price <= f.cutoff_price_cheapest_25pct_30d,
         false
     ) as hit_cheapest_25pct_30d,
     exists (
@@ -70,15 +71,11 @@ select
         {%- else -%}
         when l.listed_at < current_timestamp - interval '{{ var('candidate_max_age_days', 2) }} days' then 'old_record'
         {%- endif %}
-        when not (
-            l.price > 0
-            and (
-                l.estimated_market_value is null
-                or l.price between (0.20 * l.estimated_market_value) and (3.0 * l.estimated_market_value)
-            )
-        ) then 'outlier'
+        when l.condition = 'Poor' then 'poor_condition'
+        when l.has_defect_keyword then 'defect_keyword'
         when f.stat_date is null then 'no_benchmark'
         when f.listings_30d < 10 then 'insufficient_history'
+        when l.price < 0.3 * f.cutoff_price_cheapest_25pct_30d then 'too_cheap'
         when lb.max_stat_date < current_date - 2 then 'stale_benchmark'
     end as skip_reason
 from new_listings as l

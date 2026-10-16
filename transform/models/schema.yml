@@ -11,7 +11,7 @@ sources:
 
 models:
   - name: dim_classified_listings
-    description: "All current FB Marketplace listings joined with Gemini classifications. Base model — all category dims and fact tables read from here via ref()."
+    description: "All current FB Marketplace listings joined with Gemini classifications. Base model — all category dims and fact tables read from here via ref(). has_defect_keyword is true when the title or description warns of a defect or lock (cracked, locked, for parts, read description, for repair, bidding, ...)."
     columns:
       - name: fb_listing_id
         tests: [unique, not_null]
@@ -105,7 +105,7 @@ models:
         tests: [unique, not_null]
 
   - name: fct_products_daily
-    description: "One row per product_model and stat_date (listed_at date), one row per day from the product's first listing date through today. Cumulative and rolling 30d/7d/3d/1d listing counts and average prices (windows include stat_date), the same for deal_score >= 8 (deal8_ prefix), and for New / Like New listings (good_condition_count_*, good_condition_avg_*, rolling windows only). avg_market_value_30d is the average Gemini estimated_market_value. lowest_5_deals_* and deal8_lowest_5_deals_* hold the 5 cheapest listings per rolling window (jsonb array of {listing_id, url, price}, cheapest first). cutoff_price_cheapest_25pct_* and deal8_cutoff_price_cheapest_25pct_* are the 25th percentile price per rolling window, null unless the window has at least 10 listings in that group. Listings with implausible prices are excluded."
+    description: "Built only from comparable listings: relevant, price > 0, condition not Poor, no defect keyword, and price between 0.3x and 3x the product's median price. One row per product_model and stat_date (listed_at date), one row per day from the product's first listing date through today. Cumulative and rolling 30d/7d/3d/1d listing counts and average prices (windows include stat_date), the same for deal_score >= 8 (deal8_ prefix), and for New / Like New listings (good_condition_count_*, good_condition_avg_*, rolling windows only). avg_market_value_30d is the average Gemini estimated_market_value. lowest_5_deals_* and deal8_lowest_5_deals_* hold the 5 cheapest listings per rolling window (jsonb array of {listing_id, url, price}, cheapest first). cutoff_price_cheapest_25pct_* and deal8_cutoff_price_cheapest_25pct_* are the 25th percentile price per rolling window, null unless the window has at least 10 listings in that group. Listings with implausible prices are excluded."
     columns:
       - name: product_model
         tests: [not_null]
@@ -119,7 +119,7 @@ models:
         tests: [unique, not_null]
 
   - name: fct_deal_candidates
-    description: "One row per fb_listing_id: the evaluation of the listing's latest version. A listing is evaluated when it first appears in dim_classified_listings, and evaluated again (the row is replaced) when it gets a new version or is re-classified, against its product's benchmarks from the day before it was listed. hit_cheapest_25pct_30d: listings_30d >= 10 and price below cutoff_price_cheapest_25pct_30d. within_90km_toronto: location_city is in dim_toronto_area_cities (cities under 90 km from Toronto). Alerts need both. skip_reason (old_record, outlier, no_benchmark, insufficient_history, stale_benchmark) is set when the listing must not be alerted on; old_record means the listing was listed (first build) or this version was scraped (incremental runs) more than candidate_max_age_days ago. Never full-refreshed (full_refresh=false). Read by the notify stage."
+    description: "One row per fb_listing_id: the evaluation of the listing's latest version. A listing is evaluated when it first appears in dim_classified_listings, and evaluated again (the row is replaced) when it gets a new version or is re-classified, against its product's benchmarks from the day before it was listed. hit_cheapest_25pct_30d: listings_30d >= 10 and price <= cutoff_price_cheapest_25pct_30d. too_cheap means price < 0.3x the cutoff. within_90km_toronto: location_city is in dim_toronto_area_cities (cities under 90 km from Toronto). Alerts need both. skip_reason (old_record, poor_condition, defect_keyword, no_benchmark, insufficient_history, too_cheap, stale_benchmark) is set when the listing must not be alerted on; old_record means the listing was listed (first build) or this version was scraped (incremental runs) more than candidate_max_age_days ago. Never full-refreshed (full_refresh=false). Read by the notify stage."
     columns:
       - name: fb_listing_id
         tests: [unique, not_null]

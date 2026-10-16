@@ -1,4 +1,4 @@
-with listings as (
+with base_listings as (
     select
         l.fb_listing_id,
         l.listing_url,
@@ -15,10 +15,22 @@ with listings as (
         and l.listed_at is not null
         and l.listed_at::date >= '2026-08-01'::date
         and l.price > 0
-        and (
-            l.estimated_market_value is null
-            or l.price between (0.20 * l.estimated_market_value) and (3.0 * l.estimated_market_value)
-        )
+        -- listings that can't be compared fairly are kept out of every benchmark
+        and l.condition is distinct from 'Poor'
+        and not l.has_defect_keyword
+),
+
+-- median price per product over all listings; used only to drop extreme prices from the benchmarks
+model_median as (
+    select product_model, percentile_cont(0.5) within group (order by price) as median_price
+    from base_listings
+    group by product_model
+),
+listings as (
+    select b.*
+    from base_listings as b
+    inner join model_median as m on m.product_model = b.product_model
+    where b.price between (0.3 * m.median_price) and (3.0 * m.median_price)
 ),
 dates as (
     select
