@@ -33,15 +33,19 @@ def run() -> TransformResult:
 
     project_dir = str(Path.cwd() / "transform")
 
-    cmd = [
-        "dbt", "run",
+    dbt_args = [
         "--project-dir", project_dir,
         "--profiles-dir", project_dir,
         "--no-use-colors",
     ]
 
     logger.info(f"[Transform] dbt project: {project_dir}")
-    proc = subprocess.run(cmd, env=env)
+    proc = subprocess.run(["dbt", "seed", *dbt_args], env=env)
+    if proc.returncode != 0:
+        logger.info(f"[Transform] Finished — status=failed returncode={proc.returncode} (dbt seed)")
+        return TransformResult(status="failed", returncode=proc.returncode)
+
+    proc = subprocess.run(["dbt", "run", *dbt_args], env=env)
 
     status = "completed" if proc.returncode == 0 else "failed"
     logger.info(f"[Transform] Finished — status={status} returncode={proc.returncode}")

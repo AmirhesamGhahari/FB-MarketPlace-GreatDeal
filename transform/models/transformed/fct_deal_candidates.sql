@@ -73,6 +73,7 @@ select
         {%- endif %}
         when l.condition = 'Poor' then 'poor_condition'
         when l.has_defect_keyword then 'defect_keyword'
+        when bl.fb_listing_id is null then 'excluded_from_benchmark'
         when f.stat_date is null then 'no_benchmark'
         when f.listings_30d < 10 then 'insufficient_history'
         when l.price < 0.3 * f.cutoff_price_cheapest_25pct_30d then 'too_cheap'
@@ -80,6 +81,8 @@ select
     end as skip_reason
 from new_listings as l
 cross join latest_benchmark as lb
+left join {{ ref('benchmark_listings') }} as bl
+    on bl.fb_listing_id = l.fb_listing_id
 left join {{ ref('fct_products_daily') }} as f
     on f.product_model = l.product_model
     and f.stat_date = l.listed_at::date - 1

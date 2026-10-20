@@ -26,6 +26,14 @@ models:
           - accepted_values:
               values: ['smartphone', 'laptop', 'tablet', 'gaming_console', 'smartwatch', 'earbuds', 'smart_ring', 'case', 'accessory', 'parts', 'box_only', 'buyer_post', 'multiple_items', 'other']
 
+  - name: benchmark_listings
+    description: "Listings that count toward price benchmarks (price > 0, not Poor condition, no defect keyword, listed on/after benchmark_start_date, price within 0.3x-3x of the model median). Shared by fct_products_daily and the website serving models."
+    columns:
+      - name: fb_listing_id
+        tests: [unique, not_null]
+      - name: price
+        tests: [not_null]
+
   - name: dim_categories
     description: "Lookup table of all product categories."
     columns:
@@ -119,7 +127,7 @@ models:
         tests: [unique, not_null]
 
   - name: fct_deal_candidates
-    description: "One row per fb_listing_id: the evaluation of the listing's latest version. A listing is evaluated when it first appears in dim_classified_listings, and evaluated again (the row is replaced) when it gets a new version or is re-classified, against its product's benchmarks from the day before it was listed. hit_cheapest_25pct_30d: listings_30d >= 10 and price <= cutoff_price_cheapest_25pct_30d. too_cheap means price < 0.3x the cutoff. within_90km_toronto: location_city is in dim_toronto_area_cities (cities under 90 km from Toronto). Alerts need both. skip_reason (old_record, poor_condition, defect_keyword, no_benchmark, insufficient_history, too_cheap, stale_benchmark) is set when the listing must not be alerted on; old_record means the listing was listed (first build) or this version was scraped (incremental runs) more than candidate_max_age_days ago. Never full-refreshed (full_refresh=false). Read by the notify stage."
+    description: "One row per fb_listing_id: the evaluation of the listing's latest version. A listing is evaluated when it first appears in dim_classified_listings, and evaluated again (the row is replaced) when it gets a new version or is re-classified, against its product's benchmarks from the day before it was listed. hit_cheapest_25pct_30d: listings_30d >= 10 and price <= cutoff_price_cheapest_25pct_30d. too_cheap means price < 0.3x the cutoff. within_90km_toronto: location_city is in dim_toronto_area_cities (cities under 90 km from Toronto). Alerts need both. skip_reason (old_record, poor_condition, defect_keyword, excluded_from_benchmark, no_benchmark, insufficient_history, too_cheap, stale_benchmark) is set when the listing must not be alerted on; old_record means the listing was listed (first build) or this version was scraped (incremental runs) more than candidate_max_age_days ago. Never full-refreshed (full_refresh=false). Read by the notify stage."
     columns:
       - name: fb_listing_id
         tests: [unique, not_null]

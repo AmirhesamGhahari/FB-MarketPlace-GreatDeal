@@ -1,36 +1,14 @@
-with base_listings as (
+with listings as (
     select
-        l.fb_listing_id,
-        l.listing_url,
-        l.product_model,
-        l.listed_at::date as listed_date,
-        l.price,
-        l.deal_score,
-        l.condition,
-        l.estimated_market_value
-    from {{ ref('dim_classified_listings') }} as l
-    where l.listing_type in ('gaming_console', 'laptop', 'smartphone', 'smartwatch', 'smart_ring', 'tablet', 'earbuds')
-        and l.is_relevant_listing is true
-        and l.product_model is not null
-        and l.listed_at is not null
-        and l.listed_at::date >= '2026-08-01'::date
-        and l.price > 0
-        -- listings that can't be compared fairly are kept out of every benchmark
-        and l.condition is distinct from 'Poor'
-        and not l.has_defect_keyword
-),
-
--- median price per product over all listings; used only to drop extreme prices from the benchmarks
-model_median as (
-    select product_model, percentile_cont(0.5) within group (order by price) as median_price
-    from base_listings
-    group by product_model
-),
-listings as (
-    select b.*
-    from base_listings as b
-    inner join model_median as m on m.product_model = b.product_model
-    where b.price between (0.3 * m.median_price) and (3.0 * m.median_price)
+        fb_listing_id,
+        listing_url,
+        product_model,
+        listed_date,
+        price,
+        deal_score,
+        condition,
+        estimated_market_value
+    from {{ ref('benchmark_listings') }}
 ),
 dates as (
     select

@@ -12,6 +12,7 @@ clean-targets: ["target", "dbt_packages"]
 
 vars:
   lookback_days: 2
+  benchmark_start_date: '2026-08-01'
 
 models:
   fb_marketplace:
