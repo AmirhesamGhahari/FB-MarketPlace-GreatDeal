@@ -131,7 +131,7 @@ Known data caveats for these products:
 - **Generic "MacBook Air" bucket** (412 listings) is larger than M2 + M3 combined; Gemini could not identify the chip. M2/M3 pages therefore cover only part of the market. This is a classification-quality task for later, not an API problem.
 - **MacBook price depends on screen size, RAM, and storage.** The classified table has `storage_gb` but no RAM or screen size, so MacBook model-level averages mix configurations (M3 avg ≈ M4 avg is a hint). v1: model-level stats only (no storage breakdown, by decision); the mixing is accepted and labelled "all configurations". Adding RAM/screen size to the Gemini extraction is a later improvement.
 - **Thin windows:** the 25th-percentile cutoff requires ≥10 listings in the window. API and UI must return/render a clear "not enough data" state.
-- The mean is outlier-sensitive and shifts with the storage mix. **[DECIDED]** add a **median over the last 30 days only** (not cumulative) to `mart_product_summary` as `median_price_30d`, computed from `benchmark_listings` with the same 30-day window definition as the fct (`listed_date` between today-29 and today). A per-day rolling median for the chart is not in v1.
+- The mean is outlier-sensitive and shifts with the storage mix. ~~Median over the last 30 days~~ **[REVERSED 2026-10-20]**: the owner decided no median in v1; `mart_product_summary` carries only what `fct_products_daily` already provides.
 - **[DECIDED]** The generic "MacBook Air" bucket (chip unknown) is **left out of v1**: no catalog row, no page. Recovering those listings is a later re-classification task (Section 11.2).
 - The sample file is a single day; confirm that `fct_products_daily` holds full history before designing the charts.
 
@@ -173,7 +173,7 @@ Serving models are `fct_products_daily JOIN product_catalog ON product_model`, a
 | Model | Grain | Purpose |
 |---|---|---|
 | `dim_products` | one row per canonical product | Built from the catalog seed: `product_id`, `slug`, `display_name`, `category_key`, `brand`, `product_model` |
-| `mart_product_summary` | one row per product (all storage/colour variants together) | Current avg, median, 25th-percentile cutoff, cheapest, listing count for 7d and 30d; `data_as_of` |
+| `mart_product_summary` | one row per product (all storage/colour variants together) | Latest-day snapshot from the latest `fct_products_daily` row: listings and average (7d/30d), `deal_score >= 8` listings/averages, 25th-percentile cutoffs, lowest-5 lists, `as_of_date`, `updated_at`. No history, no median. |
 | `mart_product_daily` | product × day | Time series for charts (`fct_products_daily` joined to the catalog; same grain, no regrouping) |
 | `mart_product_listings` | one row per listing passing `benchmark_listings` | price, condition, storage, city, URL, `listed_at`; indexed on `(product_id, listed_at)` and `(product_id, price)`. No availability filtering in v1. |
 | `mart_top_deals` | one row per top deal | Cross-category deals for the homepage |
@@ -362,7 +362,7 @@ This validates networking, Data API, caching, and deployment. Widening to more p
 | 2026-10-19 | Serving sources: `dim_classified_listings`, `dim_categories`, `fct_products_daily`, catalog seed, plus `benchmark_listings` | Median and the listings table are computed from listings; everything else comes from the fct |
 | 2026-10-19 | Aurora left as is (public endpoint, IP-allowlisted security group) | Website API uses the Data API, so no network exposure change is needed |
 | 2026-10-19 | Working method: decide one step, build it, verify, then move on | Later decisions (domain, frontend, charts) made just in time |
-| 2026-10-19 | Add `median_price_30d` (last 30 days only, not cumulative) to the product summary | Computed from `benchmark_listings`; per-day rolling median deferred |
+| 2026-10-19 | ~~Add `median_price_30d` to the product summary~~ | Reversed 2026-10-20: no median in v1 |
 | 2026-10-19 | Generic "MacBook Air" (unknown chip) bucket excluded from v1 | No catalog row; revisit via re-classification |
 | 2026-10-19 | One product page per `product_model`, all storage/colour variants grouped; no storage or colour filters/breakdowns | Owner decision; keeps the fct's grain, avoids splitting thin MacBook data. Averages mix configurations and are labelled "all configurations". |
 
@@ -390,3 +390,18 @@ Add a pipeline step (e.g. a new Step Functions state after `RunTransform`, or pa
 - Median price and price vs. days-on-market charts
 - Add more categories/products by adding catalog rows
 - User accounts (watchlists, custom alert thresholds) if needed
+
+---
+
+## 12. Build log (what exists in the repo, newest last)
+
+| Date | Step | What was built | Verified? |
+|---|---|---|---|
+| 2026-10-19 | Catalog seed | `transform/seeds/product_catalog.csv` + minimal `seeds/schema.yml` (unique/not_null on `product_model`, `slug`) | Yes (seed + tests passed) |
+| 2026-10-19 | Shared filter | `models/transformed/benchmark_listings.sql` (table, wide columns, `benchmark_start_date` var in `dbt_project.yml`); `fct_products_daily` now reads it. Output-identical refactor checked by reading the SQL diff only, not by a build-and-compare. | Not run |
+| 2026-10-19 | Pipeline | `stage3_transform.py` runs `dbt seed` before `dbt run`; a seed failure stops the transform | Not run |
+| 2026-10-19 | Alerts | `fct_deal_candidates` left-joins `benchmark_listings`; new `skip_reason = 'excluded_from_benchmark'` (after poor/defect, before no_benchmark) | Not run |
+| 2026-10-20 | Serving schema | `macros/generate_schema_name.sql` (custom schema used verbatim) and a `serving` folder (`+schema: serving`, tables); `models/serving/dim_products.sql` (enabled catalog rows + `dim_categories`; slug is the key) | Not run |
+| 2026-10-20 | Product summary | `models/serving/mart_product_summary.sql`: one row per product from the latest `fct_products_daily` row (joined to `dim_products` first). Columns: slug, display_name, category_key, as_of_date, listings/avg 30d and 7d, deal8 listings/avg 30d and 7d, lowest-5 (all and deal8, 30d and 7d), 25th-percentile cutoffs 30d and 7d, updated_at. | Not run |
+
+Next up: `mart_product_daily` (per-product daily series for the charts), then `mart_product_listings`, then the read-only DB role and the API (Phases 2–4).

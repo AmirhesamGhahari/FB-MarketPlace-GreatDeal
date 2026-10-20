@@ -34,6 +34,18 @@ models:
       - name: price
         tests: [not_null]
 
+  - name: dim_products
+    description: "Serving layer: products that get a website page (enabled rows of product_catalog joined to dim_categories). One row per slug. Built in the serving schema."
+    columns:
+      - name: slug
+        tests: [unique, not_null]
+
+  - name: mart_product_summary
+    description: "Serving layer: one row per product with the latest-day rolling 7d/30d stats (listings, averages, deal_score >= 8 variants, 25th-percentile cutoffs, lowest 5 listings). Read from the latest fct_products_daily row; no history (charts use the daily table)."
+    columns:
+      - name: slug
+        tests: [unique, not_null]
+
   - name: dim_categories
     description: "Lookup table of all product categories."
     columns:
