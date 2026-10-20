@@ -46,6 +46,14 @@ models:
       - name: slug
         tests: [unique, not_null]
 
+  - name: mart_product_daily
+    description: "Serving layer: daily trend per product for the product-page charts, one row per product per day over the last chart_days days (today included, partial). Read from fct_products_daily. lowest_3_deals_7d is the first three entries of lowest_5_deals_7d."
+    columns:
+      - name: slug
+        tests: [not_null]
+      - name: stat_date
+        tests: [not_null]
+
   - name: dim_categories
     description: "Lookup table of all product categories."
     columns:

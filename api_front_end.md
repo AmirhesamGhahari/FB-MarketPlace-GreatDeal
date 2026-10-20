@@ -174,7 +174,7 @@ Serving models are `fct_products_daily JOIN product_catalog ON product_model`, a
 |---|---|---|
 | `dim_products` | one row per canonical product | Built from the catalog seed: `product_id`, `slug`, `display_name`, `category_key`, `brand`, `product_model` |
 | `mart_product_summary` | one row per product (all storage/colour variants together) | Latest-day snapshot from the latest `fct_products_daily` row: listings and average (7d/30d), `deal_score >= 8` listings/averages, 25th-percentile cutoffs, lowest-5 lists, `as_of_date`, `updated_at`. No history, no median. |
-| `mart_product_daily` | product × day | Time series for charts (`fct_products_daily` joined to the catalog; same grain, no regrouping) |
+| `mart_product_daily` | product × day, last 60 days (`chart_days` var), today included | Chart series from `fct_products_daily` joined to `dim_products`: listings/avg 1d, avg 3d/7d/30d, deal8 listings 1d and deal8 avg 7d/30d, `lowest_3_deals_7d` (JSON: listing_id, url, price), 25th-percentile cutoffs 30d/7d. One tall table, no per-metric JSON blobs. |
 | `mart_product_listings` | one row per listing passing `benchmark_listings` | price, condition, storage, city, URL, `listed_at`; indexed on `(product_id, listed_at)` and `(product_id, price)`. No availability filtering in v1. |
 | `mart_top_deals` | one row per top deal | Cross-category deals for the homepage |
 
@@ -243,7 +243,7 @@ Bonus (later): with `last_seen_at`, time-to-disappear approximates time-to-sell,
 | `GET /v1/categories` | Categories with product counts |
 | `GET /v1/categories/{key}/products` | Products with headline stats |
 | `GET /v1/products/{slug}` | Summary stats: 7d/30d average, 25th-percentile cutoff, cheapest |
-| `GET /v1/products/{slug}/series?window=30d` | Chart time series |
+| `GET /v1/products/{slug}/series` | All chart data for one product: one object per day for the last 60 days, one request feeds all five charts |
 | `GET /v1/products/{slug}/listings?window=7d&sort=price&page=1` | Paginated listings |
 | `GET /v1/deals/top` | Homepage deals |
 
@@ -362,6 +362,7 @@ This validates networking, Data API, caching, and deployment. Widening to more p
 | 2026-10-19 | Serving sources: `dim_classified_listings`, `dim_categories`, `fct_products_daily`, catalog seed, plus `benchmark_listings` | Median and the listings table are computed from listings; everything else comes from the fct |
 | 2026-10-19 | Aurora left as is (public endpoint, IP-allowlisted security group) | Website API uses the Data API, so no network exposure change is needed |
 | 2026-10-19 | Working method: decide one step, build it, verify, then move on | Later decisions (domain, frontend, charts) made just in time |
+| 2026-10-20 | Charts: 60-day window; one tall row per product per day; chart d = 3 cheapest listings of the last 7 days per day, with URLs; today's partial day kept (UI labels it "today so far"); one Lambda with a single `series` endpoint per product | Five charts: (a) listings and avg price per day, (b) 3/7/30-day averages, (c) deal8 listings and 7d/30d averages, (d) lowest 3 deals 7d with clickable URLs, (e) 25th-percentile cutoffs 30d/7d. Partial early windows and thin data passed through as is. |
 | 2026-10-19 | ~~Add `median_price_30d` to the product summary~~ | Reversed 2026-10-20: no median in v1 |
 | 2026-10-19 | Generic "MacBook Air" (unknown chip) bucket excluded from v1 | No catalog row; revisit via re-classification |
 | 2026-10-19 | One product page per `product_model`, all storage/colour variants grouped; no storage or colour filters/breakdowns | Owner decision; keeps the fct's grain, avoids splitting thin MacBook data. Averages mix configurations and are labelled "all configurations". |
@@ -403,5 +404,6 @@ Add a pipeline step (e.g. a new Step Functions state after `RunTransform`, or pa
 | 2026-10-19 | Alerts | `fct_deal_candidates` left-joins `benchmark_listings`; new `skip_reason = 'excluded_from_benchmark'` (after poor/defect, before no_benchmark) | Not run |
 | 2026-10-20 | Serving schema | `macros/generate_schema_name.sql` (custom schema used verbatim) and a `serving` folder (`+schema: serving`, tables); `models/serving/dim_products.sql` (enabled catalog rows + `dim_categories`; slug is the key) | Not run |
 | 2026-10-20 | Product summary | `models/serving/mart_product_summary.sql`: one row per product from the latest `fct_products_daily` row (joined to `dim_products` first). Columns: slug, display_name, category_key, as_of_date, listings/avg 30d and 7d, deal8 listings/avg 30d and 7d, lowest-5 (all and deal8, 30d and 7d), 25th-percentile cutoffs 30d and 7d, updated_at. | Not run |
+| 2026-10-20 | Daily series | `models/serving/mart_product_daily.sql` + `chart_days: 60` var: tall table, last 60 days, columns for charts a–e (see 5.1). | Not run |
 
-Next up: `mart_product_daily` (per-product daily series for the charts), then `mart_product_listings`, then the read-only DB role and the API (Phases 2–4).
+Next up: `mart_product_listings` (full listings list), then the read-only DB role and the API (Phases 2–4).
