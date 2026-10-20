@@ -54,6 +54,14 @@ models:
       - name: stat_date
         tests: [not_null]
 
+  - name: mart_product_listings
+    description: "Serving layer: listings behind a product page, one row per benchmark listing of an enabled product from the last listings_days days. days_ago = today minus listed date, so any 'last N days' filter is days_ago < N. avg_price_30d/7d come from mart_product_summary; price_diff_* = price minus that average (negative = cheaper than average)."
+    columns:
+      - name: slug
+        tests: [not_null]
+      - name: fb_listing_id
+        tests: [unique, not_null]
+
   - name: dim_categories
     description: "Lookup table of all product categories."
     columns:

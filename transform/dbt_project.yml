@@ -14,6 +14,7 @@ vars:
   lookback_days: 2
   benchmark_start_date: '2026-08-01'
   chart_days: 60
+  listings_days: 60
 
 models:
   fb_marketplace:
