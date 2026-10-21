@@ -1,3 +1,4 @@
+-- depends_on: {{ ref('dim_classified_listings') }}
 with listings as (
     select
         fb_listing_id,
@@ -94,8 +95,8 @@ rebuild_from as (
     from {{ ref('dim_classified_listings') }} as l
     where l.listed_at is not null
         and (
-            l.scraped_at >= current_timestamp - interval '{{ var('lookback_days', 2) }} days'
-            or l.classified_at >= current_timestamp - interval '{{ var('lookback_days', 2) }} days'
+            l.scraped_at >= current_timestamp - interval '{{ var('lookback_days', 3) }} days'
+            or l.classified_at >= current_timestamp - interval '{{ var('lookback_days', 3) }} days'
         )
 ){% endif %}
 select
