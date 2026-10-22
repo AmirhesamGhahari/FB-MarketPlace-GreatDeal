@@ -62,6 +62,14 @@ models:
       - name: fb_listing_id
         tests: [unique, not_null]
 
+  - name: mart_top_deals
+    description: "Serving layer: the top_deals_per_product cheapest listings per product from the last 30 days, ranked by gap below cutoff_price_cheapest_25pct_30d (largest gap = rank 1). Built from mart_product_listings; products without a 30d cutoff (fewer than 10 listings) have no rows."
+    columns:
+      - name: slug
+        tests: [not_null]
+      - name: deal_rank
+        tests: [not_null]
+
   - name: dim_categories
     description: "Lookup table of all product categories."
     columns:

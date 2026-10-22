@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 from dataclasses import dataclass
@@ -15,6 +16,21 @@ from fb_marketplace_greatdeals.config import settings
 class TransformResult:
     status: str
     returncode: int
+
+
+def _run_tests(dbt_args: list[str], env: dict[str, str], results_path: Path) -> None:
+    """Run dbt tests after the build. Tests only warn, so the outcome is logged and never changes the step status."""
+    subprocess.run(["dbt", "test", *dbt_args], env=env)
+    try:
+        results = json.loads(results_path.read_text())["results"]
+    except (OSError, ValueError, KeyError):
+        logger.warning("[Transform] dbt test results unavailable")
+        return
+    problems = sorted(r["unique_id"].split(".")[2] for r in results if r["status"] in ("warn", "fail", "error"))
+    if problems:
+        logger.warning(f"[Transform] dbt test: {len(problems)} warning(s): {', '.join(problems)}")
+    else:
+        logger.info(f"[Transform] dbt test: all {len(results)} tests passed")
 
 
 def run() -> TransformResult:
@@ -46,6 +62,9 @@ def run() -> TransformResult:
         return TransformResult(status="failed", returncode=proc.returncode)
 
     proc = subprocess.run(["dbt", "run", *dbt_args], env=env)
+
+    if proc.returncode == 0:
+        _run_tests(dbt_args, env, Path(project_dir) / "target" / "run_results.json")
 
     status = "completed" if proc.returncode == 0 else "failed"
     logger.info(f"[Transform] Finished — status={status} returncode={proc.returncode}")
