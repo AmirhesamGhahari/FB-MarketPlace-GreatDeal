@@ -185,7 +185,7 @@ Work items:
 - [ ] No sold/age/availability filter in v1 (**[DECIDED]**, see 5.1.1)
 - [ ] Add dbt tests: unique slugs, not-null keys, price sanity ranges, minimum listings per product page
 - [ ] Optional: a `product_page_payload (slug, payload jsonb)` table so the main product endpoint is a single primary-key lookup (decide after seeing real payload sizes)
-- [ ] Add the read-only Postgres role with `SELECT` on `serving` only
+- [x] **DONE (not yet applied)** Read-only Postgres role `web_serving_tables_reader` with `SELECT` on `serving` only (Alembic migration; password set in Phase 4)
 
 #### 5.1.2 Shared filter model `benchmark_listings`  **[DECIDED]**
 
@@ -410,5 +410,6 @@ Add a pipeline step (e.g. a new Step Functions state after `RunTransform`, or pa
 | 2026-10-20 | Listings | `models/serving/mart_product_listings.sql` + `listings_days: 60` var (see 5.1). | Not run |
 | 2026-10-22 | Top deals | `models/serving/mart_top_deals.sql` + `top_deals_per_product: 10` var + schema entry (see 5.1) | Not run |
 | 2026-10-22 | Serving tests | `transform/tests/serving_*.sql` (catalog coverage, min 10 listings, freshness <= 2 days, price 0-10,000, summary count = listings rows); project-wide `data_tests: +severity: warn`; `stage3_transform.py` runs `dbt test` after `dbt run`, logs a warning summary, never changes step status | Not run |
+| 2026-10-22 | Read-only role | `alembic/versions/c4e1a7d92f30_add_serving_reader_role.py`: role `web_serving_tables_reader` (LOGIN, no password yet), `CREATE SCHEMA IF NOT EXISTS serving`, USAGE + SELECT on existing tables, `ALTER DEFAULT PRIVILEGES` so dbt rebuilds keep SELECT. Password and Data API secret come in Phase 4. | Not run |
 
-Next up: read-only DB role (`web_serving_tables_reader`), then the API contract (Phase 2).
+Next up: apply and verify the migration, then the API contract (Phase 2).
