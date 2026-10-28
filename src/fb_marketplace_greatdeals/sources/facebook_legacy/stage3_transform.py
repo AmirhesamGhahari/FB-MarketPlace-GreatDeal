@@ -45,6 +45,8 @@ def run() -> TransformResult:
         "DBT_DB_NAME": (url.path or "").lstrip("/"),
         "DBT_DB_USER": url.username or "",
         "DBT_DB_PASSWORD": url.password or "",
+        # dbt's profile has no timezone option; libpq reads this, so current_date and ::date mean Toronto days
+        "PGOPTIONS": "-c timezone=America/Toronto",
     }
 
     project_dir = str(Path.cwd() / "transform")

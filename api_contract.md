@@ -15,7 +15,7 @@ Example values are illustrative.
 | Format | JSON, UTF-8. |
 | Field names | `snake_case`, same as the serving table columns. |
 | Prices | JSON numbers, CAD. Currency is stated here once and not repeated per row. These are **asking prices**, not sold prices. |
-| Dates | Timestamps: ISO 8601 in **Toronto time** (`America/Toronto`) with the UTC offset, `-04:00` in summer and `-05:00` in winter (`2026-10-23T10:02:11-04:00`). Calendar dates: `YYYY-MM-DD` (see note in Section 3 about how days are bucketed). |
+| Dates | Timestamps: ISO 8601 in **Toronto time** (`America/Toronto`) with the UTC offset, `-04:00` in summer and `-05:00` in winter (`2026-10-23T10:02:11-04:00`). Calendar dates: `YYYY-MM-DD` (Toronto calendar days; see Section 3). |
 | Missing values | `null`, never an empty string or `0`. The frontend decides how to render it ("Not enough data"). The 25th-percentile cutoff is `null` when the window has fewer than 10 listings. |
 | Slugs | Lowercase with hyphens (`iphone-16-pro-max`). Category keys are lowercase (`iphone`, `macbook`). |
 
@@ -298,7 +298,7 @@ Notes:
 
 ## 3. Notes and known inconsistencies (to revisit)
 
-- **Day bucketing timezone is not decided.** Timestamps are shown in Toronto time, but `stat_date`, `as_of_date` and `days_ago` come from dbt's `current_date` and `listed_at::date`, which use the timezone of dbt's database session (profiles.yml sets none, so probably the database default, likely UTC). Around the day boundary a listing posted in the evening in Toronto can land on the next day's bucket. See `api_front_end.md`, Section 11.5.
+- **Day bucketing uses Toronto time** (decided 2026-10-28; see `api_front_end.md`, Section 11.5): `stat_date`, `as_of_date` and `days_ago` come from dbt sessions set to `America/Toronto`, so a day is the Toronto calendar day. This applies once the full refresh of `fct_products_daily` has been run.
 
 - The lowest-N lists inside `products/{slug}` and `series` use the keys `listing_id` / `url`, while listing rows use `fb_listing_id` / `listing_url`. This comes from the existing `fct_products_daily` JSON and is kept as is for now.
 - Field sets are intentionally generous (flat, all columns). Remove fields that the frontend never uses once the pages are built.

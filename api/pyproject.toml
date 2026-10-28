@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fb-marketplace-api"
+version = "0.1.0"
+description = "FB Marketplace Great Deals - read-only website API (FastAPI on Lambda)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115,<1.0",
+    "mangum>=0.19",
+    "pydantic>=2.0,<3.0",
+    "pydantic-settings>=2.0,<3.0",
+    "sqlalchemy>=2.0,<3.0",
+    "psycopg[binary]>=3.1",
+    "tzdata",
+]
+
+[project.optional-dependencies]
+dev = [
+    "uvicorn[standard]>=0.30",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fb_marketplace_api"]
