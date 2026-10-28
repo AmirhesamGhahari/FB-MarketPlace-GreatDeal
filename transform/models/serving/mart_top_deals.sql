@@ -38,7 +38,8 @@ select
     condition,
     avg_price_30d,
     price_diff_30d,
-    cutoff_price_cheapest_25pct_30d
+    cutoff_price_cheapest_25pct_30d,
+    current_timestamp as updated_at
 from ranked
 where deal_rank <= {{ var('top_deals_per_product') }}
 

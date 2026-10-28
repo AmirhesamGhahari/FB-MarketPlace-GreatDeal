@@ -19,7 +19,8 @@ select
     ) as lowest_3_deals_7d,
     -- chart e: price under which the cheapest 25% of listings fall, over 30 and 7 days
     f.cutoff_price_cheapest_25pct_30d,
-    f.cutoff_price_cheapest_25pct_7d
+    f.cutoff_price_cheapest_25pct_7d,
+    current_timestamp as updated_at
 from {{ ref('dim_products') }} as p
 inner join {{ ref('fct_products_daily') }} as f on f.product_model = p.product_model
 where f.stat_date > current_date - {{ var('chart_days') }}
