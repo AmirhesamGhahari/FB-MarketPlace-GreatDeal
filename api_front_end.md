@@ -463,6 +463,7 @@ Related to 11.1 and 5.1.1. Today a listing that disappears from Facebook keeps `
 | 2026-10-23 | API skeleton (3a/3b) | `api/`: FastAPI app + Mangum handler, settings, one error format with request ids, `Cache-Control` middleware, repository layer (SQLAlchemy, direct connection) and `GET /v1/products/{slug}` | Unit tests were written and passed, then removed on 2026-10-28 (owner decision: no test module for now); not yet run against Aurora |
 | 2026-10-28 | dbt timezone | `PGOPTIONS` timezone entry in `stage3_transform.py` | Code only; rollout not run |
 | 2026-10-29 | Speed-up of `fct_products_daily` | `listings` CTE is now `as not materialized` (lookups use the `benchmark_listings` index); `benchmark_listings` runs `analyze` as a post-hook. Same results by design. | Not run; verify with the zero-diff comparison (scratch schema) and `EXPLAIN` |
+| 2026-10-29 | API endpoint 2: series | `GET /v1/products/{slug}/series` (`SeriesPoint`/`ProductSeries` schemas, `get_product_series` repository method with a shared `_query` helper, route in `routes/products.py`); empty result = 404 `product_not_found` | Checked with a throwaway fake-repository script (shape, Toronto time, null handling, 404); not yet run against Aurora. No test module by owner decision; manual checks later. |
 
 Next up: roll out the timezone change (11.5), run `GET /v1/products/{slug}` against Aurora from the laptop, then the other five endpoints one at a time (3c), the paused-database retry (3e).
 

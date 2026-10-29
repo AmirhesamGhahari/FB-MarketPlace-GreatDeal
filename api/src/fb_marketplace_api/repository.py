@@ -11,6 +11,7 @@ from typing import Any, Protocol
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.sql.elements import TextClause
 
 from fb_marketplace_api.errors import ApiError
 from fb_marketplace_api.settings import get_settings
@@ -29,10 +30,25 @@ PRODUCT_SUMMARY_SQL = text(
     """
 )
 
+PRODUCT_SERIES_SQL = text(
+    """
+    select stat_date, listings_1d, avg_price_1d, avg_price_3d, avg_price_7d, avg_price_30d,
+           deal8_listings_1d, deal8_avg_price_7d, deal8_avg_price_30d, lowest_3_deals_7d,
+           cutoff_price_cheapest_25pct_30d, cutoff_price_cheapest_25pct_7d,
+           updated_at
+    from serving.mart_product_daily
+    where slug = :slug
+    order by stat_date
+    """
+)
+
 
 class Repository(Protocol):
     def get_product_summary(self, slug: str) -> dict[str, Any] | None:
         """One summary row (including `updated_at`), or None for an unknown slug."""
+
+    def get_product_series(self, slug: str) -> list[dict[str, Any]]:
+        """Daily rows (including `updated_at`), oldest first; an empty list for an unknown slug."""
 
 
 @lru_cache
@@ -48,15 +64,19 @@ def _engine() -> Engine:
 
 
 class SqlAlchemyRepository:
-    def get_product_summary(self, slug: str) -> dict[str, Any] | None:
+    def _query(self, sql: TextClause, params: dict[str, Any]) -> list[dict[str, Any]]:
         try:
             with _engine().connect() as conn:
-                row = conn.execute(PRODUCT_SUMMARY_SQL, {"slug": slug}).mappings().first()
+                return [dict(row) for row in conn.execute(sql, params).mappings()]
         except OperationalError as exc:
             raise ApiError(503, "database_unavailable", "Database is unavailable.") from exc
-        if row is None:
-            return None
-        return dict(row)
+
+    def get_product_summary(self, slug: str) -> dict[str, Any] | None:
+        rows = self._query(PRODUCT_SUMMARY_SQL, {"slug": slug})
+        return rows[0] if rows else None
+
+    def get_product_series(self, slug: str) -> list[dict[str, Any]]:
+        return self._query(PRODUCT_SERIES_SQL, {"slug": slug})
 
 
 def get_repository() -> Repository:
