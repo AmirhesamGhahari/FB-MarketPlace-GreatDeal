@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import uuid
 from typing import Any
 
@@ -55,13 +56,12 @@ def install_error_handling(app: FastAPI) -> None:
         first = exc.errors()[0]
         parameter = ".".join(str(p) for p in first["loc"][1:]) or None
         details: dict[str, Any] = {"parameter": parameter}
-        allowed = (first.get("ctx") or {}).get("expected")
-        if allowed:
+        message = f"Invalid value for '{parameter}': {first['msg']}"
+        if first["type"] == "literal_error":
+            allowed = re.findall(r"'([^']*)'", (first.get("ctx") or {}).get("expected", ""))
             details["allowed"] = allowed
-        return _error_response(
-            request,
-            ApiError(422, "invalid_parameter", f"Invalid value for '{parameter}': {first['msg']}", details),
-        )
+            message = f"{parameter} must be one of: {', '.join(allowed)}"
+        return _error_response(request, ApiError(422, "invalid_parameter", message, details))
 
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:

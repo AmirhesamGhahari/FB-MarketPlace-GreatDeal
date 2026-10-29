@@ -214,12 +214,12 @@ Listings behind a product page, paginated. Every listing is a benchmark listing 
 |---|---|---|
 | `window` | `60d`, `30d`, `15d`, `7d`, `3d`, `1d` (filter: `days_ago < N`; `1d` means listed today so far, not the last 24 hours) | `30d` |
 | `sort` | `price_asc`, `price_desc`, `newest` | `price_asc` |
-| `page` | integer, 1 or higher | `1` |
+| `page` | integer from 1 to 30 | `1` |
 
-Page size is fixed at 20 (no `page_size` parameter). Any other value for `window` or `sort`, or a `page` that is not a positive integer, returns `422 invalid_parameter`.
+Page size is fixed at 20 (no `page_size` parameter). Any other value for `window` or `sort`, or a `page` outside 1 to 30, returns `422 invalid_parameter`. Because of the page cap, only the first 600 listings (30 pages of 20) of any sort order can be reached; `pagination.total_pages` stops at 30 so the frontend never links to a page that errors, while `total_items` stays the real count.
 
 - Errors: `product_not_found`, `invalid_parameter`
-- A page past the end returns `200` with `"data": []` (and the same `pagination` block).
+- A page past the end (but within 1 to 30) returns `200` with `"data": []` and the same `pagination` block. A known product with no listings in the window returns `200` with an empty `data` and `total_items: 0`, `total_pages: 0`. `data_as_of` is the build time of `mart_product_listings` (or of `dim_products` if the listings table is empty). `dim_products` is read only to tell an unknown slug from a product with no listings.
 
 Example: `GET /v1/products/iphone-16-pro-max/listings?window=7d&sort=price_asc&page=1`
 

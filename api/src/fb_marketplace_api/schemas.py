@@ -68,3 +68,35 @@ class ProductSeries(BaseModel):
 
     slug: str
     series: list[SeriesPoint]
+
+
+class ListingRow(BaseModel):
+    """One listing of a product page (a row of mart_product_listings, without slug and updated_at)."""
+
+    fb_listing_id: str
+    listing_url: str | None
+    title: str | None
+    price: float
+    condition: str | None
+    storage_gb: int | None
+    color: str | None
+    location_city: str | None
+    listed_at: TorontoDatetime
+    days_ago: int
+    avg_price_30d: float | None
+    avg_price_7d: float | None
+    price_diff_30d: float | None
+    price_diff_7d: float | None
+
+
+class Pagination(BaseModel):
+    page: int
+    page_size: int
+    total_items: int
+    total_pages: int
+
+
+class PagedEnvelope(Envelope[T], Generic[T]):
+    """Envelope for paginated lists: the usual data_as_of and data, plus a pagination block."""
+
+    pagination: Pagination
