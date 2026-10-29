@@ -42,6 +42,7 @@ where b.price between (0.3 * m.median_price) and (3.0 * m.median_price)
         indexes=[
             {'columns': ['fb_listing_id'], 'unique': True},
             {'columns': ['product_model', 'listed_date']},
-        ]
+        ],
+        post_hook='analyze {{ this }}',
     )
 }}

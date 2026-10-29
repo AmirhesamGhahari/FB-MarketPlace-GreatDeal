@@ -1,5 +1,6 @@
 -- depends_on: {{ ref('dim_classified_listings') }}
-with listings as (
+-- not materialized: let every lookup below use the index on benchmark_listings (product_model, listed_date)
+with listings as not materialized (
     select
         fb_listing_id,
         listing_url,
