@@ -82,6 +82,27 @@ LISTINGS_PAGE_SQL = {
     for sort, order_by in LISTING_ORDER_BY.items()
 }
 
+CATEGORIES_SQL = text(
+    """
+    select category_key, category_name, brand, count(*) as product_count, max(updated_at) as data_as_of
+    from serving.dim_products
+    group by category_key, category_name, brand
+    order by category_key
+    """
+)
+
+CATEGORY_PRODUCTS_SQL = text(
+    """
+    select p.slug, p.display_name, p.category_key, p.category_name,
+           s.listings_30d, s.avg_price_30d, s.avg_price_7d, s.cutoff_price_cheapest_25pct_30d,
+           p.updated_at as data_as_of
+    from serving.dim_products as p
+    left join serving.mart_product_summary as s on s.slug = p.slug
+    where p.category_key = :category_key
+    order by p.display_name
+    """
+)
+
 
 class Repository(Protocol):
     def get_product_summary(self, slug: str) -> dict[str, Any] | None:
@@ -94,6 +115,12 @@ class Repository(Protocol):
         self, slug: str, window_days: int, sort: ListingSort, page: int
     ) -> dict[str, Any] | None:
         """None for an unknown slug; otherwise {"data_as_of", "total_items", "page_size", "rows"} (rows may be empty)."""
+
+    def get_categories(self) -> dict[str, Any] | None:
+        """{"data_as_of", "rows"} with one row per catalog category; None if the catalog is empty."""
+
+    def get_category_products(self, category_key: str) -> dict[str, Any] | None:
+        """None for an unknown category; otherwise {"data_as_of", "category_key", "category_name", "rows"}."""
 
 
 @lru_cache
@@ -138,6 +165,24 @@ class SqlAlchemyRepository:
                 {"slug": slug, "days": window_days, "limit": PAGE_SIZE, "offset": offset},
             )
         return {"data_as_of": meta["data_as_of"], "total_items": total_items, "page_size": PAGE_SIZE, "rows": rows}
+
+    def get_categories(self) -> dict[str, Any] | None:
+        rows = self._query(CATEGORIES_SQL, {})
+        if not rows:
+            return None
+        return {"data_as_of": rows[0]["data_as_of"], "rows": rows}
+
+    def get_category_products(self, category_key: str) -> dict[str, Any] | None:
+        rows = self._query(CATEGORY_PRODUCTS_SQL, {"category_key": category_key})
+        if not rows:
+            return None
+        first = rows[0]
+        return {
+            "data_as_of": first["data_as_of"],
+            "category_key": first["category_key"],
+            "category_name": first["category_name"],
+            "rows": rows,
+        }
 
 
 def get_repository() -> Repository:

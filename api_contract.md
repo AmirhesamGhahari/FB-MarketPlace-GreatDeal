@@ -79,7 +79,8 @@ Set by the API on every response, so they work the same locally and behind any C
 
 Categories with their product counts.
 
-- Source: `serving.dim_products` (grouped by `category_key`)
+- Source: `serving.dim_products` (grouped by `category_key`). `dim_products` is the product catalog seed (enabled rows) joined to the category names, so categories and counts come from the catalog, including products that have no data yet.
+- `data_as_of`: build time of `dim_products`.
 - Parameters: none
 
 ```json
@@ -98,8 +99,9 @@ Ordered by `category_key`.
 
 The products in one category, with headline stats (one card per product on the category page).
 
-- Source: `serving.dim_products` (category name) and `serving.mart_product_summary` (stats); `data_as_of` is the older of the two tables' `updated_at`
-- Errors: `category_not_found`
+- Source: `serving.dim_products` (the catalog: which products are in the category) left-joined to `serving.mart_product_summary` (stats). `data_as_of` is the build time of `dim_products` (not of the stats in the cards).
+- A catalog product that has no data yet is still listed, with all four stats `null`. Its product page (`GET /v1/products/{slug}`) returns `404` until data exists, so the frontend should show "no data yet" and not link it.
+- Errors: `category_not_found` (a key that is not in the catalog)
 
 ```json
 {

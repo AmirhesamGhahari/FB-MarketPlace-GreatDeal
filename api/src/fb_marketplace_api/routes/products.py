@@ -19,7 +19,7 @@ from fb_marketplace_api.schemas import (
 
 router = APIRouter(prefix="/v1")
 
-MAX_PAGE = 30  # 30 pages x 20 = the first 600 listings of any sort order are reachable
+MAX_PAGE = 30
 
 
 @router.get("/products/{slug}", response_model=Envelope[ProductSummary])

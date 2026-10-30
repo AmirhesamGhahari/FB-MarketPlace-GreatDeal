@@ -100,3 +100,31 @@ class PagedEnvelope(Envelope[T], Generic[T]):
     """Envelope for paginated lists: the usual data_as_of and data, plus a pagination block."""
 
     pagination: Pagination
+
+
+class CategorySummary(BaseModel):
+    """GET /v1/categories: one category of the product catalog."""
+
+    category_key: str
+    category_name: str
+    brand: str | None
+    product_count: int
+
+
+class CategoryProductCard(BaseModel):
+    """One product card on a category page (headline stats from mart_product_summary; null if no data yet)."""
+
+    slug: str
+    display_name: str
+    listings_30d: int | None
+    avg_price_30d: float | None
+    avg_price_7d: float | None
+    cutoff_price_cheapest_25pct_30d: float | None
+
+
+class CategoryProducts(BaseModel):
+    """GET /v1/categories/{category_key}/products."""
+
+    category_key: str
+    category_name: str
+    products: list[CategoryProductCard]
