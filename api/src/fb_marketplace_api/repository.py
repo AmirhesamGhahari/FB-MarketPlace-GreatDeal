@@ -104,6 +104,25 @@ CATEGORY_PRODUCTS_SQL = text(
 )
 
 
+DEALS_META_SQL = text(
+    """
+    select
+        exists (select 1 from serving.dim_products where category_key = :category_key) as category_exists,
+        (select max(updated_at) from serving.mart_top_deals) as data_as_of
+    """
+)
+
+DEALS_BY_CATEGORY_SQL = text(
+    """
+    select slug, display_name, category_key, deal_rank, fb_listing_id, title, price, listing_url,
+           location_city, listed_at, condition, avg_price_30d, price_diff_30d, cutoff_price_cheapest_25pct_30d
+    from serving.mart_top_deals
+    where category_key = :category_key
+    order by display_name, slug, deal_rank
+    """
+)
+
+
 class Repository(Protocol):
     def get_product_summary(self, slug: str) -> dict[str, Any] | None:
         """One summary row (including `updated_at`), or None for an unknown slug."""
@@ -121,6 +140,10 @@ class Repository(Protocol):
 
     def get_category_products(self, category_key: str) -> dict[str, Any] | None:
         """None for an unknown category; otherwise {"data_as_of", "category_key", "category_name", "rows"}."""
+
+    def get_top_deals(self, category_key: str) -> dict[str, Any] | None:
+        """None if the category is not in the catalog; otherwise {"data_as_of", "rows"}: flat deal rows
+        ordered by product, then rank (rows may be empty)."""
 
 
 @lru_cache
@@ -183,6 +206,15 @@ class SqlAlchemyRepository:
             "category_name": first["category_name"],
             "rows": rows,
         }
+
+    def get_top_deals(self, category_key: str) -> dict[str, Any] | None:
+        meta = self._query(DEALS_META_SQL, {"category_key": category_key})[0]
+        if not meta["category_exists"]:
+            return None
+        if meta["data_as_of"] is None:
+            raise ApiError(503, "database_unavailable", "No deals data is available.")
+        rows = self._query(DEALS_BY_CATEGORY_SQL, {"category_key": category_key})
+        return {"data_as_of": meta["data_as_of"], "rows": rows}
 
 
 def get_repository() -> Repository:

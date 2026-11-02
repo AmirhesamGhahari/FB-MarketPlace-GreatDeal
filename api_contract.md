@@ -256,12 +256,16 @@ Notes:
 - `slug` is not repeated on each row (it is in the URL). No deal score, description or images (links out to Facebook only).
 - Tie-break when sorting: `price_*` sorts break ties by newest first; all sorts break remaining ties by `fb_listing_id`.
 
-### 2.6 `GET /v1/deals/top`
+### 2.6 `GET /v1/deals/{category_key}/top`
 
-The best current deals: up to 10 listings per product, grouped by product. A deal is ranked by how far its price is below the product's 30-day 25th-percentile cutoff (largest gap first), among listings from the last 30 days.
+The best current deals of one category (`iphone`, `macbook`, ...): up to 10 listings per product, grouped by product. A deal is ranked by how far its price is below the product's 30-day 25th-percentile cutoff (largest gap first), among listings from the last 30 days.
 
-- Source: `serving.mart_top_deals`
-- Parameters: none
+- Source: `serving.mart_top_deals`; the category is checked against `serving.dim_products` (the catalog)
+- Parameters: `category_key` in the path
+- `data_as_of`: build time of `mart_top_deals`.
+- Errors: `category_not_found` (a key that is not in the catalog) → `404`. If `mart_top_deals` has no rows at all (no deals for any category) there is no build time to report, so the response is `503 database_unavailable`.
+- A category in the catalog that has no deals, while other categories do, returns `200` with `"data": []`.
+- A homepage that shows deals across categories makes one request per category (the list comes from `GET /v1/categories`).
 
 ```json
 {
@@ -292,7 +296,7 @@ The best current deals: up to 10 listings per product, grouped by product. A dea
 ```
 
 Notes:
-- Products are ordered by `category_key`, then `display_name`; deals within a product by `deal_rank`.
+- Products are ordered by `display_name`; deals within a product by `deal_rank`.
 - A product with no deals (fewer than 10 listings in 30 days, so no cutoff) is **omitted** from `data`.
 - Deals are asking prices from listings whose availability is not verified (see `api_front_end.md`, Section 11.3).
 

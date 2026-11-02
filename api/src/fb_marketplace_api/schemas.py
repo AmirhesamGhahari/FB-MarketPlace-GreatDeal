@@ -128,3 +128,28 @@ class CategoryProducts(BaseModel):
     category_key: str
     category_name: str
     products: list[CategoryProductCard]
+
+
+class DealRow(BaseModel):
+    """One top deal (a row of mart_top_deals)."""
+
+    deal_rank: int
+    fb_listing_id: str
+    title: str | None
+    price: float
+    listing_url: str | None
+    location_city: str | None
+    listed_at: TorontoDatetime
+    condition: str | None
+    avg_price_30d: float | None
+    price_diff_30d: float | None
+    cutoff_price_cheapest_25pct_30d: float | None
+
+
+class ProductDeals(BaseModel):
+    """The top deals of one product."""
+
+    slug: str
+    display_name: str
+    category_key: str
+    deals: list[DealRow]

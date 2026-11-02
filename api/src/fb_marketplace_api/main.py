@@ -4,11 +4,12 @@ from fastapi import FastAPI
 from mangum import Mangum
 
 from fb_marketplace_api.errors import install_error_handling
-from fb_marketplace_api.routes import categories, products
+from fb_marketplace_api.routes import categories, deals, products
 
 app = FastAPI(title="FB Marketplace Great Deals API", version="1")
 install_error_handling(app)
 app.include_router(categories.router)
+app.include_router(deals.router)
 app.include_router(products.router)
 
 
