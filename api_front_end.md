@@ -1,7 +1,7 @@
 # API & Front End — Design and Development Guide
 
-Status: **PLANNING — nothing in this document has been implemented yet.**
-Last updated: 2026-10-23
+Status: **IN PROGRESS.** Phase 0 and Phase 1 code is written (dbt serving models, catalog seed, reader-role migration), and Phase 3 API code for all six endpoints is written. Rollouts and runs against Aurora (dbt serving build, timezone full refresh, Alembic migration, `uvicorn` checks) are owner-run and still pending; see the build log (Section 12) for "Not run" items. Phases 4 to 7 (infra, frontend, CI/CD, hardening) have not started.
+Last updated: 2026-11-02
 
 This is the working reference for adding a public website on top of the FB Marketplace Great Deals pipeline. It records what exists today, the architecture we chose, the reasoning, and the build order. Update the checklists and the "Decisions" section as work progresses.
 
@@ -289,7 +289,7 @@ Note: a failed `RunTransform` should also stop the Step Functions flow before th
 
   Keep all queries behind one small repository layer so the access method can be swapped later.
 - [ ] Local dev: run `uvicorn` against a dev DB; unit tests with fixture data
-- [ ] Handle the paused-DB case (retry with backoff; return a friendly error if still resuming)
+- [x] **DONE (not yet run against a sleeping cluster)** Handle the paused-DB case (retry with backoff; return a friendly error if still resuming), see the 2026-11-02 decision
 
 ### 5.4 Phase 4 — Infrastructure (new Terraform modules in `infra/terraform/modules/`)
 - [ ] `api`: Lambda, API Gateway HTTP API, IAM (Data API + read-only secret), throttling, reserved concurrency cap
@@ -396,6 +396,7 @@ This validates networking, Data API, caching, and deployment. Widening to more p
 | 2026-10-30 | Listings endpoint: two queries (meta + page), `page` capped at 30 (total_pages capped too), known product with no listings = 200 empty, unknown slug = 404 | Cap means 600 listings reachable per sort order; raise `MAX_PAGE` in `routes/products.py` if needed. `data_as_of` comes from `mart_product_listings` alone (falls back to `dim_products` only if that table is empty); `dim_products` is just the existence check |
 | 2026-10-30 | Category endpoints are catalog-based: categories, counts and product cards come from `serving.dim_products` (the catalog seed), products without data appear with null stats; unknown category = 404; `data_as_of` = `dim_products` build time (changed from the summary table's on 2026-10-30, to keep the SQL simple); order by `category_key` / `display_name` | The API role can only read `serving`, so it reads `dim_products` (the seed, enabled rows) instead of the seed table. A card for a product without data would link to a 404 page, so the frontend must handle null stats. |
 | 2026-10-30 | Deals: flat rows grouped into per-product objects in Python; `data_as_of` from `mart_top_deals` only; products without deals omitted; one endpoint, `GET /v1/deals/{category_key}/top` (no global `/v1/deals/top`); unknown category = 404; a category with no deals = 200 with `[]` while other categories have deals, 503 if the whole table is empty | Path chosen over `?category_key=` by the owner; the global route and the fallback timestamp were dropped on 2026-10-30. A path parameter is part of the CDN cache key automatically. The homepage makes one request per category. |
+| 2026-11-02 | Paused-database handling (3e): retry **connection** attempts inside the request up to 3 attempts with a fixed 4 s pause (worst case 23 s, under API Gateway's 30 s); query failures are not retried; if the budget runs out, `503 database_resuming` with `Retry-After: 15`; per-attempt `connect_timeout` lowered from 30 s to 5 s | Owner chose in-API retry (option B) over fail-fast (A) so most visitors see a slow page instead of an error. Every connection failure is labelled `database_resuming` (a truly down database looks the same after 20 s). Attempt count fixed instead of a time budget (simpler; same pattern as `MAX_RETRIES` in stage2). 4 attempts would need up to 32 s and break API Gateway's 30 s limit. |
 | 2026-10-26 | All API timestamps (`data_as_of`, later `listed_at`) are shown in Toronto time with the UTC offset, not UTC | Implemented once in `schemas.py` (`TorontoDatetime`); needs the `tzdata` package. Day bucketing in dbt is a separate, open decision (Section 11.5). |
 | 2026-10-23 | Listings endpoint stays parameterised (option A); the whole-list-per-product alternative (option B) and other caching ideas are parked for later | See 11.2 |
 | 2026-10-19 | ~~Add `median_price_30d` to the product summary~~ | Reversed 2026-10-20: no median in v1 |
@@ -471,7 +472,11 @@ Related to 11.1 and 5.1.1. Today a listing that disappears from Facebook keeps `
 | 2026-10-30 | API endpoints 4 and 5: categories | `GET /v1/categories` and `GET /v1/categories/{category_key}/products` in the new `routes/categories.py` (included in `main.py`); `CategorySummary`, `CategoryProductCard`, `CategoryProducts` schemas; `get_categories` and `get_category_products` repository methods | Checked with a throwaway fake-repository script; not yet run against Aurora |
 | 2026-10-30 | API endpoint 6: deals | `GET /v1/deals/{category_key}/top` in the new `routes/deals.py`; `DealRow`/`ProductDeals` schemas; `get_top_deals(category_key)` repository method (meta query + one deals query; grouping by product in Python) | Checked with a throwaway fake-repository script; not yet run against Aurora |
 
-Next up: roll out the timezone change (11.5), run `GET /v1/products/{slug}` against Aurora from the laptop, then the other five endpoints one at a time (3c), the paused-database retry (3e).
+| 2026-11-02 | Paused-DB retry (3e) | `repository.py`: `_connect_with_retry()` (3 connection attempts, fixed 4 s pause, failures logged with loguru, `database_resuming` + `Retry-After: 15`), `_query` uses it; `settings.py` `db_connect_timeout` default 30 to 5; `.env.example` updated | Not run; needs a sleeping cluster (3c) |
+| 2026-11-02 | API local env file | `api/.env.example` (`API_DATABASE_URL` for the read-only role, optional `API_DB_CONNECT_TIMEOUT`); owner copies to `api/.env` | n/a |
+
+Owner-run and pending (the owner does these later, not the assistant): roll out the timezone change (11.5, no code change needed; `PGOPTIONS` is already set in `stage3_transform.py`), build the serving tables, apply the Alembic migration and set the reader password, then run the six endpoints with `uvicorn` against Aurora (3c).
+Next design step: not chosen yet (candidates: Phase 4 infra, or Phase 5 frontend decisions).
 
 ### 11.5 Timezone of dbt day buckets  **[DECIDED 2026-10-28: option B, code done, rollout pending]**
 The API shows timestamps in Toronto time. dbt had no timezone: `transform/profiles.yml` cannot set one, so `current_date`, `listed_at::date` and therefore `stat_date`, `listed_date`, `days_ago` and the rolling windows used the database session default (probably UTC; check with `show timezone;`). A listing posted at 9 pm Toronto time on Oct 22 landed in Oct 23's bucket.

@@ -11,11 +11,11 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Direct Postgres connection used for local development, e.g.
+
     # postgresql+psycopg://web_serving_tables_reader:<password>@<aurora-host>:5432/<db>
     database_url: str = ""
-    # Seconds psycopg waits to connect; a paused Aurora cluster needs ~10-15 s to resume.
-    db_connect_timeout: int = 30
+    # Seconds psycopg waits for ONE connection attempt. A paused Aurora cluster needs ~10-15 s to resume; the
+    db_connect_timeout: int = 5
 
 
 def get_settings() -> Settings:

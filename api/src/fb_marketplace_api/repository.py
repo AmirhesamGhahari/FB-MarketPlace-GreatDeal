@@ -5,11 +5,13 @@ RDS Data API. Only the `serving` schema is queried.
 """
 from __future__ import annotations
 
+import time
 from functools import lru_cache
 from typing import Any, Literal, Protocol
 
+from loguru import logger
 from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.sql.elements import TextClause
 
@@ -158,10 +160,39 @@ def _engine() -> Engine:
     )
 
 
+# A paused Aurora cluster needs ~10-15 s to resume. Worst case (every attempt hangs for the full connect timeout):
+# 3 x 5 s + 2 x 4 s = 23 s, which stays under API Gateway's 30 s limit. Do not raise these without redoing that sum.
+CONNECT_MAX_ATTEMPTS = 3
+CONNECT_RETRY_DELAY_SECONDS = 4
+RESUMING_RETRY_AFTER_SECONDS = "15"
+
+
+def _connect_with_retry() -> Connection:
+    """Open a connection, retrying connection failures (not query failures).
+
+    OperationalError only says "could not connect"; it cannot tell a waking cluster from a down one (or a wrong
+    password or a blocked network). After the last attempt the failure is reported as `database_resuming` anyway,
+    and the real cause is logged so it can be found in the logs."""
+    for attempt in range(1, CONNECT_MAX_ATTEMPTS + 1):
+        try:
+            return _engine().connect()
+        except OperationalError as exc:
+            logger.warning(f"[DB] Connection attempt {attempt}/{CONNECT_MAX_ATTEMPTS} failed: {exc}")
+            if attempt == CONNECT_MAX_ATTEMPTS:
+                raise ApiError(
+                    503,
+                    "database_resuming",
+                    "The database is not reachable right now (it may be starting up). Please retry in a few seconds.",
+                    headers={"Retry-After": RESUMING_RETRY_AFTER_SECONDS},
+                ) from exc
+            time.sleep(CONNECT_RETRY_DELAY_SECONDS)
+
+
 class SqlAlchemyRepository:
     def _query(self, sql: TextClause, params: dict[str, Any]) -> list[dict[str, Any]]:
+        conn = _connect_with_retry()
         try:
-            with _engine().connect() as conn:
+            with conn:
                 return [dict(row) for row in conn.execute(sql, params).mappings()]
         except OperationalError as exc:
             raise ApiError(503, "database_unavailable", "Database is unavailable.") from exc
