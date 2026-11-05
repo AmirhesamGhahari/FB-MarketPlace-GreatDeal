@@ -83,7 +83,7 @@ resource "aws_security_group" "api_lambda" {
 # Security group for Aurora — accepts connections from ECS tasks, the API Lambda and a laptop allowlist
 resource "aws_security_group" "aurora" {
   name        = "${var.app_name}-aurora"
-  description = "Aurora PostgreSQL access from ECS tasks, the API Lambda and laptop IPs"
+  description = "Aurora PostgreSQL access from ECS tasks only"
   vpc_id      = aws_vpc.main.id
 
   ingress {
