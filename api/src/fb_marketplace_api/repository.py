@@ -1,7 +1,6 @@
 """All SQL lives here; endpoints only call these functions.
 
-Queries use named parameters (:slug) so the same SQL can run through SQLAlchemy locally and, later, through the
-RDS Data API. Only the `serving` schema is queried.
+Queries use named parameters (:slug), run through SQLAlchemy with psycopg. Only the `serving` schema is queried.
 """
 from __future__ import annotations
 
@@ -13,6 +12,7 @@ from loguru import logger
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.pool import NullPool
 from sqlalchemy.sql.elements import TextClause
 
 from fb_marketplace_api.errors import ApiError
@@ -153,9 +153,11 @@ def _engine() -> Engine:
     settings = get_settings()
     if not settings.database_url:
         raise ApiError(503, "database_unavailable", "Database is not configured.")
+    # NullPool: every request opens and closes its own connection, so a warm Lambda never holds an idle
+    # connection that would keep Aurora from auto-pausing.
     return create_engine(
         settings.database_url,
-        pool_pre_ping=True,
+        poolclass=NullPool,
         connect_args={"connect_timeout": settings.db_connect_timeout},
     )
 

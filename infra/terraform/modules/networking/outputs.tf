@@ -17,3 +17,7 @@ output "ecs_task_sg_id" {
 output "aurora_sg_id" {
   value = aws_security_group.aurora.id
 }
+
+output "api_lambda_sg_id" {
+  value = aws_security_group.api_lambda.id
+}

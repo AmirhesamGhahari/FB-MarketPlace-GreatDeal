@@ -33,6 +33,18 @@ variable "db_master_password" {
   sensitive   = true
 }
 
+variable "api_reader_password" {
+  description = "Password of the read-only Postgres role web_serving_tables_reader used by the website API (set the same value in the database with ALTER ROLE; see api_front_end.md, Phase 4b)"
+  type        = string
+  sensitive   = true
+}
+
+variable "api_reserved_concurrency" {
+  description = "Reserved Lambda concurrency for the website API; -1 = unreserved. Only raise it after the account's Lambda concurrency quota is increased above 10."
+  type        = number
+  default     = -1
+}
+
 variable "db_name" {
   description = "Aurora database name"
   type        = string

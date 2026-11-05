@@ -11,10 +11,9 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-
+    # Postgres connection used locally and on the Lambda, e.g.
     # postgresql+psycopg://web_serving_tables_reader:<password>@<aurora-host>:5432/<db>
     database_url: str = ""
-    # Seconds psycopg waits for ONE connection attempt. A paused Aurora cluster needs ~10-15 s to resume; the
     db_connect_timeout: int = 5
 
 

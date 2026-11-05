@@ -11,7 +11,7 @@ Example values are illustrative.
 | Topic | Rule |
 |---|---|
 | Method | Every endpoint is `GET` (read-only). Pagination is a query parameter on a `GET`, so each page is its own URL. |
-| Base path | `/v1`. Served under the same domain as the website (`/api/v1/...` at the CDN; the Lambda sees `/v1/...`). |
+| Base path | `/v1`. Served under the same domain as the website (`/api/v1/...` at the CDN; Mangum strips `/api` so the app sees `/v1/...`). |
 | Format | JSON, UTF-8. |
 | Field names | `snake_case`, same as the serving table columns. |
 | Prices | JSON numbers, CAD. Currency is stated here once and not repeated per row. These are **asking prices**, not sold prices. |
@@ -68,7 +68,7 @@ Set by the API on every response, so they work the same locally and behind any C
 
 | Response | `Cache-Control` |
 |---|---|
-| Successful `GET` (200) | `public, max-age=300, s-maxage=21600` (browser 5 min; CDN 6 hours; the CDN cache is purged after each pipeline run) |
+| Successful `GET` (200) | `public, max-age=120, s-maxage=21600, stale-if-error=86400` (browser 2 min; CDN 6 hours; the CDN cache is purged after each pipeline run; if the origin returns a 5xx or is unreachable, the CDN may serve an expired copy for up to 24 more hours) |
 | Any error | `no-store` (a temporary 503 must never be cached) |
 
 ---

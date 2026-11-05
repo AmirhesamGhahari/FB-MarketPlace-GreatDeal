@@ -9,7 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-CACHE_OK = "public, max-age=300, s-maxage=21600"
+CACHE_OK = "public, max-age=300, s-maxage=21600, stale-if-error=86400"
 CACHE_NONE = "no-store"
 
 

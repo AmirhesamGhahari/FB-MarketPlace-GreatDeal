@@ -49,3 +49,4 @@ infra/terraform/*.tfstate
 infra/terraform/*.tfstate.backup
 infra/terraform/terraform.tfvars
 infra/terraform/modules/scheduler/fanout.zip
+infra/terraform/modules/api/api.zip

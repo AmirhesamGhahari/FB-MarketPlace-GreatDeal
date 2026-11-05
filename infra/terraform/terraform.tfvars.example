@@ -6,6 +6,8 @@ db_master_username = "your_db_username"
 db_master_password = "REPLACE_ME_secure_password_min_8_chars"
 db_name            = "fb_marketplace_greatdeals"
 
+api_reader_password = "REPLACE_ME_reader_password"
+
 
 
 github_owner  = "your-github-username"

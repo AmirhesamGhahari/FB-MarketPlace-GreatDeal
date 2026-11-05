@@ -73,3 +73,30 @@ module "codepipeline" {
   task_role_arn      = module.ecs.task_role_arn
   task_family        = "${var.app_name}-pipeline"
 }
+
+module "api" {
+  source               = "./modules/api"
+  app_name             = var.app_name
+  package_dir          = "${path.module}/../../api/build/lambda"
+  subnet_ids           = module.networking.private_subnet_ids
+  security_group_id    = module.networking.api_lambda_sg_id
+  db_host              = module.aurora.cluster_endpoint
+  db_port              = module.aurora.cluster_port
+  db_name              = var.db_name
+  db_reader_password   = var.api_reader_password
+  reserved_concurrency = var.api_reserved_concurrency
+}
+
+module "web" {
+  source   = "./modules/web"
+  app_name = var.app_name
+}
+
+module "cdn" {
+  source                          = "./modules/cdn"
+  app_name                        = var.app_name
+  web_bucket_id                   = module.web.bucket_id
+  web_bucket_arn                  = module.web.bucket_arn
+  web_bucket_regional_domain_name = module.web.bucket_regional_domain_name
+  api_domain                      = module.api.api_domain
+}

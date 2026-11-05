@@ -18,5 +18,6 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-# AWS Lambda entry point (API Gateway -> Mangum -> FastAPI)
-handler = Mangum(app, lifespan="off")
+# AWS Lambda entry point (API Gateway -> Mangum -> FastAPI).
+# CloudFront serves the API under /api and forwards the full path; Mangum strips "/api" so routes stay /v1/...
+handler = Mangum(app, lifespan="off", api_gateway_base_path="/api")

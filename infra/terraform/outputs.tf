@@ -32,3 +32,27 @@ output "task_definition_arn" {
 output "fanout_lambda_arn" {
   value = module.scheduler.lambda_arn
 }
+
+output "api_url" {
+  description = "Website API Gateway endpoint (CloudFront will front it in Phase 4d)"
+  value       = module.api.api_url
+}
+
+output "api_lambda_name" {
+  value = module.api.function_name
+}
+
+output "site_url" {
+  description = "Public site address (frontend at /, API under /api)"
+  value       = "https://${module.cdn.domain_name}"
+}
+
+output "cloudfront_distribution_id" {
+  description = "Needed by the pipeline to invalidate the cache after each run (Phase 6)"
+  value       = module.cdn.distribution_id
+}
+
+output "web_bucket_name" {
+  description = "Frontend bucket (Phase 5/6 deploys files here)"
+  value       = module.web.bucket_id
+}

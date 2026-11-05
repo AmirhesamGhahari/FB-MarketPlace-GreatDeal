@@ -64,10 +64,26 @@ resource "aws_security_group" "ecs_tasks" {
   tags = { Name = "${var.app_name}-ecs-tasks-sg" }
 }
 
-# Security group for Aurora — only accepts connections from ECS tasks
+resource "aws_security_group" "api_lambda" {
+  name        = "${var.app_name}-api-lambda"
+  description = "Website API Lambda: PostgreSQL access inside the VPC"
+  vpc_id      = aws_vpc.main.id
+
+  egress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.main.cidr_block]
+    description = "PostgreSQL (Aurora) inside the VPC"
+  }
+
+  tags = { Name = "${var.app_name}-api-lambda-sg" }
+}
+
+# Security group for Aurora — accepts connections from ECS tasks, the API Lambda and a laptop allowlist
 resource "aws_security_group" "aurora" {
   name        = "${var.app_name}-aurora"
-  description = "Aurora PostgreSQL access from ECS tasks only"
+  description = "Aurora PostgreSQL access from ECS tasks, the API Lambda and laptop IPs"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -76,6 +92,14 @@ resource "aws_security_group" "aurora" {
     protocol        = "tcp"
     security_groups = [aws_security_group.ecs_tasks.id]
     description     = "PostgreSQL from ECS tasks"
+  }
+
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.api_lambda.id]
+    description     = "PostgreSQL from the website API Lambda"
   }
 
   ingress {
