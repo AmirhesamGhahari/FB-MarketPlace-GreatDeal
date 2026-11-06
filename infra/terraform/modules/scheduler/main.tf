@@ -14,8 +14,6 @@ resource "aws_dynamodb_table" "pipeline_state" {
     name = "pk"
     type = "S"
   }
-
-  tags = { App = var.app_name }
 }
 
 # ── Lambda: TaskProducer — reads DynamoDB mode, returns task list for SFN ─────

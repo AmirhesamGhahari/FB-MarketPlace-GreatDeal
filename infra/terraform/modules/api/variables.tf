@@ -52,13 +52,13 @@ variable "timeout" {
 }
 
 variable "reserved_concurrency" {
-  description = "Reserved concurrent executions for the API; -1 = unreserved. Needs a Lambda account quota above 10 (raise it first)."
+  description = "Reserved concurrent executions for the API (cap and guarantee); -1 = unreserved. AWS keeps 100 of the account quota unreserved."
   type        = number
   default     = -1
 }
 
 variable "throttle_rate_limit" {
-  description = "API Gateway steady-state requests per second. Kept low: the account-wide Lambda limit is 10 and is shared with the fanout Lambda."
+  description = "API Gateway steady-state requests per second. Kept low to protect Aurora (each running request holds one connection)."
   type        = number
   default     = 2
 }

@@ -87,6 +87,14 @@ module "api" {
   reserved_concurrency = var.api_reserved_concurrency
 }
 
+module "monitoring" {
+  source            = "./modules/monitoring"
+  app_name          = var.app_name
+  alert_email       = var.alert_email
+  api_function_name = module.api.function_name
+  api_id            = module.api.api_id
+}
+
 module "web" {
   source   = "./modules/web"
   app_name = var.app_name

@@ -3,6 +3,11 @@ output "api_url" {
   value       = aws_apigatewayv2_api.api.api_endpoint
 }
 
+output "api_id" {
+  description = "API Gateway HTTP API id (the ApiId dimension of its CloudWatch metrics)"
+  value       = aws_apigatewayv2_api.api.id
+}
+
 output "api_domain" {
   description = "API Gateway host name without https:// (the CloudFront origin domain)"
   value       = replace(aws_apigatewayv2_api.api.api_endpoint, "https://", "")

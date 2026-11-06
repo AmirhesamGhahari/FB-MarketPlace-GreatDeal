@@ -40,9 +40,9 @@ variable "api_reader_password" {
 }
 
 variable "api_reserved_concurrency" {
-  description = "Reserved Lambda concurrency for the website API; -1 = unreserved. Only raise it after the account's Lambda concurrency quota is increased above 10."
+  description = "Reserved Lambda concurrency for the website API (a cap and a guarantee; each running request holds one database connection); -1 = unreserved. The account quota is 1000 (AWS keeps 100 unreserved), so values up to 900 are possible."
   type        = number
-  default     = -1
+  default     = 10
 }
 
 variable "db_name" {

@@ -3,24 +3,16 @@ variable "app_name" {
 }
 
 variable "alert_email" {
-  type = string
-}
-
-variable "ecs_cluster_arn" {
-  type = string
-}
-
-variable "lambda_function_name" {
-  description = "Plan-builder Lambda function name (alarms on Lambda errors prevent Step Functions from receiving a run plan)"
+  description = "Address that receives the alarm emails (AWS sends one confirmation email that must be clicked once)"
   type        = string
 }
 
-variable "sfn_state_machine_arn" {
-  description = "Step Functions dispatcher state machine ARN — used for execution failure and timeout alarms"
+variable "api_function_name" {
+  description = "Website API Lambda function name (dimension of the Lambda alarms)"
   type        = string
 }
 
-variable "log_group_name" {
-  description = "ECS task CloudWatch log group name — used for log metric filters"
+variable "api_id" {
+  description = "Website API Gateway HTTP API id (dimension of the API Gateway alarms)"
   type        = string
 }
