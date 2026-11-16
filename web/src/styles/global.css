@@ -1,0 +1,28 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter"; /* Inter, bundled into the site (self-hosted: no request to Google Fonts) */
+
+/* Design tokens: Tailwind turns each --color-* / --font-* below into utility classes (bg-brand-600, text-good, font-sans, ...). */
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+
+  /* Brand: blue accent for links, buttons and highlights */
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+
+  /* Meaning colours, used only for price signals: cheaper than average = good, pricier = bad */
+  --color-good: #15803d;
+  --color-good-bg: #dcfce7;
+  --color-bad: #b91c1c;
+  --color-bad-bg: #fee2e2;
+}
+
+@layer base {
+  html {
+    @apply bg-white text-slate-900 antialiased;
+  }
+  a {
+    @apply text-brand-600 hover:text-brand-700 underline-offset-4 hover:underline;
+  }
+}

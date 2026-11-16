@@ -1,6 +1,6 @@
 # API Contract (v1)
 
-Status: **DRAFT for review, 2026-10-23.** Nothing in this document is implemented yet. It is the agreement between the API (Phase 3) and the frontend (Phase 5). Design decisions and their reasons are in `api_front_end.md` (Section 5.2 and the decision log); this file only specifies the shapes.
+Status: **DRAFT for review, 2026-10-23; listings section revised 2026-11-09 (new `/listings/all` endpoint, window 60d removed, default 15d): code updated and checked locally; `mart_product_listings` (now 30 days) must be rebuilt and the Lambda redeployed.** Everything else was implemented in Phase 3. It is the agreement between the API (Phase 3) and the frontend (Phase 5). Design decisions and their reasons are in `api_front_end.md` (Section 5.2 and the decision log); this file only specifies the shapes.
 
 Example values are illustrative.
 
@@ -32,7 +32,7 @@ Every successful response:
 
 - `data_as_of` is the **oldest** `updated_at` of the serving tables the endpoint reads (a failed dbt model can leave one table older than the others). It is when the data was built, not when the request was made.
 - `data` is an object, or an array where an endpoint says so.
-- The paginated listings endpoint adds a sibling `pagination` object (Section 2.5).
+- The paginated listings endpoint adds a sibling `pagination` object (Section 2.5). The whole-list endpoint (Section 2.5.1) has no `pagination`.
 
 ### 1.2 Errors
 
@@ -42,8 +42,8 @@ Every error uses one shape and a matching HTTP status:
 {
   "error": {
     "code": "invalid_parameter",
-    "message": "window must be one of: 60d, 30d, 15d, 7d, 3d, 1d",
-    "details": { "parameter": "window", "allowed": ["60d", "30d", "15d", "7d", "3d", "1d"] },
+    "message": "window must be one of: 30d, 15d, 7d, 3d, 1d",
+    "details": { "parameter": "window", "allowed": ["30d", "15d", "7d", "3d", "1d"] },
     "request_id": "abc123"
   }
 }
@@ -207,14 +207,14 @@ Notes:
 
 ### 2.5 `GET /v1/products/{slug}/listings`
 
-Listings behind a product page, paginated. Every listing is a benchmark listing (condition not Poor, no defect keyword, price within the product's normal range).
+Listings behind a product page, paginated. Every listing is a benchmark listing (condition not Poor, no defect keyword, price within the product's normal range). The listings table holds the **last 30 days** only. The website's product page uses the whole-list endpoint (Section 2.5.1); this one stays for callers that want server-side filtering and paging.
 
 - Source: `serving.mart_product_listings`
 - Parameters:
 
 | Parameter | Allowed values | Default |
 |---|---|---|
-| `window` | `60d`, `30d`, `15d`, `7d`, `3d`, `1d` (filter: `days_ago < N`; `1d` means listed today so far, not the last 24 hours) | `30d` |
+| `window` | `30d`, `15d`, `7d`, `3d`, `1d` (filter: `days_ago < N`; `1d` means listed today so far, not the last 24 hours) | `15d` |
 | `sort` | `price_asc`, `price_desc`, `newest` | `price_asc` |
 | `page` | integer from 1 to 30 | `1` |
 
@@ -255,6 +255,42 @@ Notes:
 - `condition`, `storage_gb`, `color` and `location_city` can be `null` when the listing did not provide them.
 - `slug` is not repeated on each row (it is in the URL). No deal score, description or images (links out to Facebook only).
 - Tie-break when sorting: `price_*` sorts break ties by newest first; all sorts break remaining ties by `fb_listing_id`.
+
+### 2.5.1 `GET /v1/products/{slug}/listings/all`
+
+The whole list of one product's listings from the last 30 days in a single response, for the product page: the browser filters by window, sorts and pages it itself, so there is one URL per product (easy to cache) and no further requests when the visitor clicks.
+
+- Source: `serving.mart_product_listings` (same rows, same fields as Section 2.5)
+- Parameters: none (the slug is in the path)
+- Order: `newest` (`listed_at` descending, ties by `fb_listing_id`); the frontend re-sorts as needed
+- No `pagination` block, no page cap: every row is returned (about 800 rows for the busiest product; estimated 40 KB gzipped, to be measured)
+- `days_ago` is on each row, so the frontend applies any "last N days" window (`days_ago < N`) itself
+- Errors: `product_not_found`. A known product with no listings returns `200` with `"data": []`.
+- `data_as_of`: same rule as Section 2.5.
+
+```json
+{
+  "data_as_of": "2026-10-23T10:02:11-04:00",
+  "data": [
+    {
+      "fb_listing_id": "123456789",
+      "listing_url": "https://www.facebook.com/marketplace/item/123456789",
+      "title": "iPhone 16 Pro Max 256GB",
+      "price": 900.0,
+      "condition": "Like New",
+      "storage_gb": 256,
+      "color": "Black Titanium",
+      "location_city": "Toronto",
+      "listed_at": "2026-10-22T14:30:00-04:00",
+      "days_ago": 1,
+      "avg_price_30d": 1135.0,
+      "avg_price_7d": 1120.5,
+      "price_diff_30d": -235.0,
+      "price_diff_7d": -220.5
+    }
+  ]
+}
+```
 
 ### 2.6 `GET /v1/deals/{category_key}/top`
 
@@ -308,4 +344,5 @@ Notes:
 
 - The lowest-N lists inside `products/{slug}` and `series` use the keys `listing_id` / `url`, while listing rows use `fb_listing_id` / `listing_url`. This comes from the existing `fct_products_daily` JSON and is kept as is for now.
 - Field sets are intentionally generous (flat, all columns). Remove fields that the frontend never uses once the pages are built.
-- Response sizes: `series` is up to 60 small objects; `listings` returns 20 rows per request.
+- Response sizes: `series` is up to 60 small objects; `listings` returns 20 rows per request; `listings/all` returns every row of the last 30 days (about 800 for the busiest product).
+- With a 30-day listings table the busiest product can exceed the 600-row page cap of `listings` (30 pages of 20); `listings/all` has no cap.

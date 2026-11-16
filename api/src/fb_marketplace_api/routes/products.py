@@ -46,11 +46,25 @@ def get_product_series(
     return Envelope(data_as_of=rows[0]["updated_at"], data=ProductSeries(slug=slug, series=points))
 
 
+@router.get("/products/{slug}/listings/all", response_model=Envelope[list[ListingRow]])
+def get_product_listings_all(
+    slug: Annotated[str, Path(max_length=100)],
+    repo: Annotated[Repository, Depends(get_repository)],
+) -> Envelope[list[ListingRow]]:
+    result = repo.get_product_listings_all(slug)
+    if result is None:
+        raise ApiError(404, "product_not_found", f"No product with slug '{slug}'.")
+    return Envelope(
+        data_as_of=result["data_as_of"],
+        data=[ListingRow.model_validate(row) for row in result["rows"]],
+    )
+
+
 @router.get("/products/{slug}/listings", response_model=PagedEnvelope[list[ListingRow]])
 def get_product_listings(
     slug: Annotated[str, Path(max_length=100)],
     repo: Annotated[Repository, Depends(get_repository)],
-    window: Window = "30d",
+    window: Window = "15d",
     sort: ListingSort = "price_asc",
     page: Annotated[int, Query(ge=1, le=MAX_PAGE)] = 1,
 ) -> PagedEnvelope[list[ListingRow]]:

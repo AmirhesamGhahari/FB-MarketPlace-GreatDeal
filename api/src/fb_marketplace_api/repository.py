@@ -44,8 +44,8 @@ PRODUCT_SERIES_SQL = text(
     """
 )
 
-Window = Literal["60d", "30d", "15d", "7d", "3d", "1d"]
-WINDOW_DAYS = {"60d": 60, "30d": 30, "15d": 15, "7d": 7, "3d": 3, "1d": 1}
+Window = Literal["30d", "15d", "7d", "3d", "1d"]
+WINDOW_DAYS = {"30d": 30, "15d": 15, "7d": 7, "3d": 3, "1d": 1}
 ListingSort = Literal["price_asc", "price_desc", "newest"]
 PAGE_SIZE = 20
 
@@ -83,6 +83,17 @@ LISTINGS_PAGE_SQL = {
     )
     for sort, order_by in LISTING_ORDER_BY.items()
 }
+
+# Whole list of one product: every row of mart_product_listings (the table already holds only the last 30 days).
+LISTINGS_ALL_SQL = text(
+    f"""
+    select fb_listing_id, listing_url, title, price, condition, storage_gb, color, location_city,
+           listed_at, days_ago, avg_price_30d, avg_price_7d, price_diff_30d, price_diff_7d
+    from serving.mart_product_listings
+    where slug = :slug
+    order by {LISTING_ORDER_BY["newest"]}
+    """
+)
 
 CATEGORIES_SQL = text(
     """
@@ -136,6 +147,9 @@ class Repository(Protocol):
         self, slug: str, window_days: int, sort: ListingSort, page: int
     ) -> dict[str, Any] | None:
         """None for an unknown slug; otherwise {"data_as_of", "total_items", "page_size", "rows"} (rows may be empty)."""
+
+    def get_product_listings_all(self, slug: str) -> dict[str, Any] | None:
+        """None for an unknown slug; otherwise {"data_as_of", "rows"}: every listing, newest first (rows may be empty)."""
 
     def get_categories(self) -> dict[str, Any] | None:
         """{"data_as_of", "rows"} with one row per catalog category; None if the catalog is empty."""
@@ -221,6 +235,14 @@ class SqlAlchemyRepository:
                 {"slug": slug, "days": window_days, "limit": PAGE_SIZE, "offset": offset},
             )
         return {"data_as_of": meta["data_as_of"], "total_items": total_items, "page_size": PAGE_SIZE, "rows": rows}
+
+    def get_product_listings_all(self, slug: str) -> dict[str, Any] | None:
+        # The meta query is shared with the paged endpoint; its day filter only affects total_items, which is unused here.
+        meta = self._query(LISTINGS_META_SQL, {"slug": slug, "days": WINDOW_DAYS["30d"]})[0]
+        if not meta["product_exists"]:
+            return None
+        rows = self._query(LISTINGS_ALL_SQL, {"slug": slug})
+        return {"data_as_of": meta["data_as_of"], "rows": rows}
 
     def get_categories(self) -> dict[str, Any] | None:
         rows = self._query(CATEGORIES_SQL, {})
