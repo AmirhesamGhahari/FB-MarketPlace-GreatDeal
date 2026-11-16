@@ -1,0 +1,74 @@
+---
+import Base from "../../layouts/Base.astro";
+import Breadcrumb from "../../components/Breadcrumb.astro";
+import DealRow from "../../components/DealRow.astro";
+import ProductCard from "../../components/ProductCard.astro";
+import { getCategories, getCategoryProducts, getTopDeals } from "../../lib/api";
+import { formatDateTime } from "../../lib/format";
+
+// One page per category, built from this single file: /iphone/, /macbook/, ...
+export async function getStaticPaths() {
+  const categories = (await getCategories()).data;
+  return categories.map((category) => ({ params: { category: category.category_key } }));
+}
+
+const DEALS_PER_PRODUCT = 3;
+
+const { category: categoryKey } = Astro.params;
+const { data: category } = await getCategoryProducts(categoryKey!);
+const { data: dealGroups, data_as_of } = await getTopDeals(categoryKey!);
+
+// The deals of one product (the API groups them per product; products without deals are missing from the answer).
+const dealsFor = (slug: string) => dealGroups.find((group) => group.slug === slug)?.deals.slice(0, DEALS_PER_PRODUCT) ?? [];
+const productsWithDeals = category.products.filter((product) => dealsFor(product.slug).length > 0);
+
+const name = category.category_name;
+const title = `Used ${name} Prices in Canada`;
+const description =
+  `Compare used ${name} prices in Canada: average asking prices, the cheapest 25% cutoff and the best current deals ` +
+  `for ${category.products.length} models, from Facebook Marketplace listings.`;
+---
+
+<Base title={title} description={description}>
+  <Breadcrumb items={[{ label: "Home", href: "/" }, { label: name }]} />
+
+  <h1 class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
+  <div class="mt-3 max-w-3xl space-y-3 text-lg text-slate-600">
+    <p>
+      See what people are really asking for used {name} models on Facebook Marketplace. For every model below you get
+      the 30-day and 7-day average asking price, the price that the cheapest 25% of listings fall under, and the best
+      current deals.
+    </p>
+    <p>
+      Use the "cheapest 25% under" figure as a yardstick: a listing priced below it is cheaper than about three quarters
+      of the comparable listings. All prices are asking prices in Canadian dollars from public listings, updated after
+      each data refresh ({formatDateTime(data_as_of)}).
+    </p>
+  </div>
+
+  <section class="mt-10" aria-labelledby="models-heading">
+    <h2 id="models-heading" class="text-xl font-semibold tracking-tight">{name} models</h2>
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      {category.products.map((card) => <ProductCard card={card} categoryKey={category.category_key} />)}
+    </div>
+  </section>
+
+  {
+    productsWithDeals.length > 0 && (
+      <section class="mt-12" aria-labelledby="deals-heading">
+        <h2 id="deals-heading" class="text-xl font-semibold tracking-tight">Best current deals</h2>
+        <p class="mt-1 text-slate-500">
+          The cheapest recent listings per model, compared with the 30-day average. Availability is not verified.
+        </p>
+        {productsWithDeals.map((product) => (
+          <div class="mt-6">
+            <h3 class="text-lg font-semibold tracking-tight">{product.display_name}</h3>
+            <ul class="mt-3 divide-y divide-slate-200 rounded-xl border border-slate-200">
+              {dealsFor(product.slug).map((deal) => <DealRow deal={deal} />)}
+            </ul>
+          </div>
+        ))}
+      </section>
+    )
+  }
+</Base>

@@ -1,0 +1,60 @@
+---
+import StatCard from "../../components/StatCard.astro";
+import Base from "../../layouts/Base.astro";
+import { getCategories, getCategoryProducts, getProduct } from "../../lib/api";
+import { formatDateTime, money, moneyShort } from "../../lib/format";
+
+// Runs once at build time: lists every page this file must produce, as /{category}/{slug}/.
+export async function getStaticPaths() {
+  const categories = (await getCategories()).data;
+  const paths = [];
+  for (const category of categories) {
+    const { products } = (await getCategoryProducts(category.category_key)).data;
+    for (const product of products) {
+      // A catalog product without data has null stats and no product page yet (the API would answer 404).
+      if (product.avg_price_30d === null) continue;
+      paths.push({ params: { category: category.category_key, slug: product.slug } });
+    }
+  }
+  return paths;
+}
+
+const { slug } = Astro.params;
+const { data: product, data_as_of } = await getProduct(slug!);
+
+// Kept short: Google shows about 60 characters of a title (the site name is appended by the layout).
+const title = `${product.display_name} Price in Canada (${moneyShort(product.avg_price_30d)} avg)`;
+const description =
+  `${product.display_name} asking prices on Facebook Marketplace in Canada: ` +
+  `30-day average ${money(product.avg_price_30d)}, cheapest 25% under ${money(product.cutoff_price_cheapest_25pct_30d)}, ` +
+  `from ${product.listings_30d ?? 0} listings.`;
+---
+
+<Base title={title} description={description}>
+  <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">{product.display_name}</h1>
+  <p class="mt-2 text-slate-500">
+    Asking prices on Facebook Marketplace, all configurations · Updated {formatDateTime(data_as_of)}
+  </p>
+
+  <section class="mt-8 grid gap-4 sm:grid-cols-3" aria-label="Price statistics">
+    <StatCard label="30-day average" value={money(product.avg_price_30d)} note={`${product.listings_30d ?? 0} listings`} />
+    <StatCard label="7-day average" value={money(product.avg_price_7d)} note={`${product.listings_7d ?? 0} listings`} />
+    <StatCard
+      label="Cheapest 25% under"
+      value={money(product.cutoff_price_cheapest_25pct_30d)}
+      note="30-day price cutoff"
+    />
+  </section>
+
+  <section class="mt-10">
+    <h2 class="text-xl font-semibold tracking-tight">Cheapest listings (30 days)</h2>
+    <ol class="mt-4 divide-y divide-slate-200 rounded-xl border border-slate-200">
+      {(product.lowest_5_deals_30d ?? []).map((deal) => (
+        <li class="flex items-center justify-between px-5 py-3">
+          <span class="font-medium">{money(deal.price)}</span>
+          {deal.url && <a href={deal.url} rel="nofollow noopener" class="text-sm">View on Facebook</a>}
+        </li>
+      ))}
+    </ol>
+  </section>
+</Base>

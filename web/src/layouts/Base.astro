@@ -1,0 +1,61 @@
+---
+// Shared page frame: every page passes its own title and description, and gets the same <head> tags (SEO basics),
+// header and footer.
+import "../styles/global.css";
+import { SITE_NAME, SITE_TAGLINE } from "../lib/site";
+
+interface Props {
+  title: string; // page-specific part; the site name is appended
+  description: string;
+  noindex?: boolean; // true for pages Google should not list (for example the full-listings pages)
+}
+
+const { title, description, noindex = false } = Astro.props;
+const fullTitle = `${title} | ${SITE_NAME}`;
+
+// The canonical URL tells Google which address is the "official" one for this page. Needs `site` in astro.config.mjs.
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+
+    <!-- Open Graph: the title/description shown when a link is shared on Facebook, Slack, iMessage, ... -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+  </head>
+  <body class="flex min-h-screen flex-col font-sans">
+    <header class="border-b border-slate-200">
+      <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
+        <a href="/" class="text-lg font-semibold tracking-tight text-slate-900 no-underline hover:no-underline">
+          {SITE_NAME}
+        </a>
+        <p class="hidden text-sm text-slate-500 sm:block">{SITE_TAGLINE}</p>
+      </div>
+    </header>
+
+    <main class="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+      <slot />
+    </main>
+
+    <footer class="border-t border-slate-200 bg-slate-50">
+      <div class="mx-auto max-w-5xl px-4 py-6 text-sm text-slate-500">
+        <p>
+          Prices are asking prices from Facebook Marketplace listings, not sold prices, and availability is not
+          verified. {SITE_NAME} is not affiliated with Facebook, Meta or Apple.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

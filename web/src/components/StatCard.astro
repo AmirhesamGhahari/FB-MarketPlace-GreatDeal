@@ -1,0 +1,16 @@
+---
+// One headline number with a label and an optional note, used in rows of stat cards.
+interface Props {
+  label: string;
+  value: string;
+  note?: string;
+}
+
+const { label, value, note } = Astro.props;
+---
+
+<div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+  <p class="text-sm font-medium text-slate-500">{label}</p>
+  <p class="mt-2 text-3xl font-semibold tracking-tight">{value}</p>
+  {note && <p class="mt-1 text-sm text-slate-500">{note}</p>}
+</div>

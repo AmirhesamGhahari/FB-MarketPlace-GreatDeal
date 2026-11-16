@@ -1,0 +1,25 @@
+---
+// One top deal: title, price, how far below the average it is, where and when it was listed, and a link to Facebook.
+import type { Deal } from "../lib/api";
+import { formatDate, money } from "../lib/format";
+import PriceBadge from "./PriceBadge.astro";
+
+interface Props {
+  deal: Deal;
+}
+
+const { deal } = Astro.props;
+const details = [deal.location_city, deal.condition && deal.condition !== "Unknown" ? deal.condition : null, `Listed ${formatDate(deal.listed_at)}`];
+---
+
+<li class="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+  <div class="min-w-0">
+    <p class="truncate font-medium text-slate-900">{deal.title ?? "Untitled listing"}</p>
+    <p class="mt-0.5 text-sm text-slate-500">{details.filter(Boolean).join(" · ")}</p>
+  </div>
+  <div class="flex shrink-0 items-center gap-3">
+    <PriceBadge diff={deal.price_diff_30d} />
+    <span class="text-lg font-semibold">{money(deal.price)}</span>
+    {deal.listing_url && <a href={deal.listing_url} rel="nofollow noopener" class="text-sm">View on Facebook</a>}
+  </div>
+</li>

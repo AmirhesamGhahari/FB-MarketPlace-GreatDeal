@@ -1,0 +1,19 @@
+---
+// Green pill for "cheaper than average", red for "pricier", grey for equal. Shows nothing when the difference is unknown.
+import { formatPriceDiff } from "../lib/format";
+
+interface Props {
+  diff: number | null; // price minus the average (negative = cheaper)
+}
+
+const { diff } = Astro.props;
+const style = diff === null ? "" : diff < 0 ? "bg-good-bg text-good" : diff > 0 ? "bg-bad-bg text-bad" : "bg-slate-100 text-slate-600";
+---
+
+{
+  diff !== null && (
+    <span class={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${style}`}>
+      {formatPriceDiff(diff)} vs avg
+    </span>
+  )
+}
