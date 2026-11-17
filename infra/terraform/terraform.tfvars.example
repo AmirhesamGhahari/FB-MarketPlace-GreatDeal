@@ -8,7 +8,7 @@ db_name            = "fb_marketplace_greatdeals"
 
 api_reader_password = "REPLACE_ME_reader_password"
 
-
+apify_api_token = "REPLACE_ME_apify_api_token"
 
 github_owner  = "your-github-username"
 github_repo   = "FB-MarketPlace-GreatDeal"

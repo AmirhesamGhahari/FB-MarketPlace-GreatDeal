@@ -768,7 +768,7 @@ networking
     |       |
     |       └──> secrets  (needs aurora_endpoint, aurora_port)
     |               |
-    |               └──> ecs  (needs db_url_secret_arn, apify_token_secret_arn)
+    |               └──> ecs  (needs db_url_secret_arn, apify_token_secret_arn, gemini_api_key_secret_arn)
     |
     └──> ecs        (also needs public_subnet_ids, ecs_task_sg_id)
 

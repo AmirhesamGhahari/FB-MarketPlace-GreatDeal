@@ -27,3 +27,8 @@ variable "gemini_api_key" {
   type      = string
   sensitive = true
 }
+
+variable "apify_api_token" {
+  type      = string
+  sensitive = true
+}

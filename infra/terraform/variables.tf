@@ -10,9 +10,10 @@ variable "app_name" {
   default     = "fb-marketplace-greatdeals"
 }
 
-variable "apify_token_secret_arn" {
-  description = "ARN of an existing Secrets Manager secret containing the Apify API token (from another AWS project)"
+variable "apify_api_token" {
+  description = "Apify API token for this project (stored by the secrets module in its own Secrets Manager secret)"
   type        = string
+  sensitive   = true
 }
 
 variable "gemini_api_key" {
