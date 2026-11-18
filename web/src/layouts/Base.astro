@@ -2,7 +2,9 @@
 // Shared page frame: every page passes its own title and description, and gets the same <head> tags (SEO basics),
 // header and footer.
 import "../styles/global.css";
-import { SITE_NAME, SITE_TAGLINE } from "../lib/site";
+import SiteFooter from "../components/SiteFooter.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import { SITE_NAME } from "../lib/site";
 
 interface Props {
   title: string; // page-specific part; the site name is appended
@@ -36,26 +38,12 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
     <meta property="og:url" content={canonical} />
   </head>
   <body class="flex min-h-screen flex-col font-sans">
-    <header class="border-b border-slate-200">
-      <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-        <a href="/" class="text-lg font-semibold tracking-tight text-slate-900 no-underline hover:no-underline">
-          {SITE_NAME}
-        </a>
-        <p class="hidden text-sm text-slate-500 sm:block">{SITE_TAGLINE}</p>
-      </div>
-    </header>
+    <SiteHeader />
 
-    <main class="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+    <main id="main" class="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
       <slot />
     </main>
 
-    <footer class="border-t border-slate-200 bg-slate-50">
-      <div class="mx-auto max-w-5xl px-4 py-6 text-sm text-slate-500">
-        <p>
-          Prices are asking prices from Facebook Marketplace listings, not sold prices, and availability is not
-          verified. {SITE_NAME} is not affiliated with Facebook, Meta or Apple.
-        </p>
-      </div>
-    </footer>
+    <SiteFooter />
   </body>
 </html>

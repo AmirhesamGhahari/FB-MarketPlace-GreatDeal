@@ -1,0 +1,220 @@
+---
+// The top bar. Desktop (lg and wider): menus open on hover or keyboard focus, using only CSS. Smaller screens: a button opens
+// a slide-in drawer (the small script at the bottom toggles it). Both read the same catalog, so a new product shows up in
+// the menus after the next build.
+import { getCatalog, hasData } from "../lib/catalog";
+import { NAV_LINKS, NAV_SECTIONS, SITE_NAME } from "../lib/site";
+
+const { categories } = await getCatalog();
+// A product without data has no page yet, so it stays out of the menus.
+const menus = categories.map((category) => ({ ...category, products: category.products.filter(hasData) }));
+const [productsSection, ...hubSections] = NAV_SECTIONS;
+
+const topLink =
+  "flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-slate-700 no-underline hover:bg-slate-100 hover:text-slate-900 hover:no-underline";
+const panel = "absolute left-0 top-full hidden pt-2 group-hover:block group-focus-within:block";
+const menuLink =
+  "block px-4 py-2 text-sm text-slate-700 no-underline hover:bg-brand-50 hover:text-brand-700 hover:no-underline";
+const flyoutLink =
+  "block rounded-md px-2 py-2 text-sm text-slate-700 no-underline hover:bg-brand-50 hover:text-brand-700 hover:no-underline";
+const drawerRow = "flex cursor-pointer list-none items-center justify-between px-3 py-3 text-base font-medium text-slate-900";
+---
+
+<a
+  href="#main"
+  class="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:shadow"
+>
+  Skip to content
+</a>
+
+<header class="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
+  <div class="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
+    <a href="/" class="text-lg font-semibold tracking-tight text-slate-900 no-underline hover:no-underline">
+      {SITE_NAME}
+    </a>
+
+    <nav aria-label="Main" class="hidden items-center gap-1 lg:flex">
+      <!-- Products: two panes. Each category <li> is its own hover group; its product list is an absolutely positioned
+           pane over the right half of the panel, so moving the mouse from the category into the pane keeps it open. -->
+      <div class="group relative">
+        <a href={productsSection.base} class={topLink}>{productsSection.label} <span aria-hidden="true">▾</span></a>
+        <div class={panel}>
+          <div class="relative flex min-h-64 w-[34rem] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+            <ul class="w-56 shrink-0 border-r border-slate-100 py-2">
+              {
+                menus.map((category) => (
+                  <li class="group/cat">
+                    <a
+                      href={`/${category.category_key}/`}
+                      class="flex items-center justify-between px-4 py-2 text-sm font-medium text-slate-800 no-underline hover:no-underline group-hover/cat:bg-brand-50 group-hover/cat:text-brand-700 group-focus-within/cat:bg-brand-50"
+                    >
+                      {category.category_name} <span aria-hidden="true">›</span>
+                    </a>
+                    <div class="absolute inset-y-0 left-56 right-0 hidden overflow-y-auto bg-white p-4 group-hover/cat:block group-focus-within/cat:block">
+                      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{category.category_name}</p>
+                      <ul class="mt-2">
+                        {category.products.map((product) => (
+                          <li>
+                            <a href={`/${category.category_key}/${product.slug}/`} class={flyoutLink}>
+                              {product.display_name}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                      <a href={`/${category.category_key}/`} class="mt-3 inline-block px-2 text-sm font-medium">
+                        All {category.category_name} →
+                      </a>
+                    </div>
+                  </li>
+                ))
+              }
+            </ul>
+            <p class="p-4 text-sm text-slate-500">
+              Hover a category to see its products. <a href={productsSection.base}>View all categories</a>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- The other sections: a short list of categories, each leading to that section's hub page for the category -->
+      {
+        hubSections.map((section) => (
+          <div class="group relative">
+            <a href={section.base} class={topLink}>
+              {section.label} <span aria-hidden="true">▾</span>
+            </a>
+            <div class={panel}>
+              <ul class="w-56 rounded-xl border border-slate-200 bg-white py-2 shadow-lg">
+                {menus.map((category) => (
+                  <li>
+                    <a href={`${section.base}${category.category_key}/`} class={menuLink}>
+                      {category.category_name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ))
+      }
+
+      {NAV_LINKS.map((link) => <a href={link.href} class={topLink}>{link.label}</a>)}
+    </nav>
+
+    <button
+      id="menu-open"
+      type="button"
+      class="rounded-md p-2 text-slate-700 hover:bg-slate-100 lg:hidden"
+      aria-label="Open menu"
+      aria-expanded="false"
+      aria-controls="drawer"
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M4 6h16M4 12h16M4 18h16"></path>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- Mobile drawer. Closed: invisible (so Tab cannot reach it). The script sets data-open on this element and the classes
+     marked group-data-[open]/drawer change when it is present. The sections are <details>: tap to expand, no JavaScript. -->
+<div
+  id="drawer"
+  class="group/drawer invisible fixed inset-0 z-50 transition-[visibility] duration-300 data-[open]:visible lg:hidden"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Menu"
+>
+  <div id="drawer-backdrop" class="absolute inset-0 bg-slate-900/40 opacity-0 transition-opacity duration-300 group-data-[open]/drawer:opacity-100"></div>
+  <div class="absolute inset-y-0 right-0 flex w-80 max-w-[85vw] translate-x-full flex-col overflow-y-auto bg-white shadow-xl transition-transform duration-300 group-data-[open]/drawer:translate-x-0">
+    <div class="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4">
+      <span class="text-lg font-semibold tracking-tight">{SITE_NAME}</span>
+      <button id="menu-close" type="button" class="rounded-md p-2 text-slate-700 hover:bg-slate-100" aria-label="Close menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18"></path>
+        </svg>
+      </button>
+    </div>
+
+    <nav aria-label="Mobile" class="p-2">
+      <details class="border-b border-slate-100">
+        <summary class={drawerRow}>{productsSection.label} <span aria-hidden="true">▾</span></summary>
+        <div class="pb-2 pl-3">
+          {
+            menus.map((category) => (
+              <details>
+                <summary class="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm font-medium text-slate-800">
+                  {category.category_name} <span aria-hidden="true">▾</span>
+                </summary>
+                <ul class="pb-2 pl-3">
+                  {category.products.map((product) => (
+                    <li>
+                      <a href={`/${category.category_key}/${product.slug}/`} class={menuLink}>
+                        {product.display_name}
+                      </a>
+                    </li>
+                  ))}
+                  <li>
+                    <a href={`/${category.category_key}/`} class={menuLink + " font-medium"}>
+                      All {category.category_name} →
+                    </a>
+                  </li>
+                </ul>
+              </details>
+            ))
+          }
+          <a href={productsSection.base} class={menuLink + " font-medium"}>All categories →</a>
+        </div>
+      </details>
+
+      {
+        hubSections.map((section) => (
+          <details class="border-b border-slate-100">
+            <summary class={drawerRow}>
+              {section.label} <span aria-hidden="true">▾</span>
+            </summary>
+            <ul class="pb-2 pl-3">
+              {menus.map((category) => (
+                <li>
+                  <a href={`${section.base}${category.category_key}/`} class={menuLink}>
+                    {category.category_name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </details>
+        ))
+      }
+
+      {
+        NAV_LINKS.map((link) => (
+          <a href={link.href} class="block px-3 py-3 text-base font-medium text-slate-900 no-underline hover:no-underline">
+            {link.label}
+          </a>
+        ))
+      }
+    </nav>
+  </div>
+</div>
+
+<script>
+  // Opens and closes the mobile drawer. Escape and a click on the dark backdrop also close it.
+  const drawer = document.getElementById("drawer")!;
+  const openButton = document.getElementById("menu-open")!;
+  const closeButton = document.getElementById("menu-close")!;
+  const backdrop = document.getElementById("drawer-backdrop")!;
+
+  function setOpen(open: boolean) {
+    drawer.toggleAttribute("data-open", open);
+    openButton.setAttribute("aria-expanded", String(open));
+    document.body.classList.toggle("overflow-hidden", open); // stop the page behind from scrolling
+    (open ? closeButton : openButton).focus();
+  }
+
+  openButton.addEventListener("click", () => setOpen(true));
+  closeButton.addEventListener("click", () => setOpen(false));
+  backdrop.addEventListener("click", () => setOpen(false));
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && drawer.hasAttribute("data-open")) setOpen(false);
+  });
+</script>
