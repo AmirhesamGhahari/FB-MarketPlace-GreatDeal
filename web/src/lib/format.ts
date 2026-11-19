@@ -5,6 +5,11 @@ export function money(value: number | null): string {
   return value === null ? "Not enough data" : `$${Math.round(value).toLocaleString("en-CA")} CAD`;
 }
 
+// A count with thousands separators, or text when the API has no number.
+export function count(value: number | null): string {
+  return value === null ? "Not enough data" : value.toLocaleString("en-CA");
+}
+
 // Same without the currency suffix, for page titles where every character counts (Google cuts titles near 60).
 export function moneyShort(value: number | null): string {
   return value === null ? "n/a" : `$${Math.round(value).toLocaleString("en-CA")}`;

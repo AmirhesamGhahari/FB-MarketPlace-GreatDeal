@@ -1,0 +1,43 @@
+---
+// The newest days of the series as a plain table (real text in the page for readers and search engines).
+import type { SeriesPoint } from "../lib/api";
+import { count, formatShortDate, money } from "../lib/format";
+
+interface Props {
+  rows: SeriesPoint[]; // oldest first, as the API sends them
+  days?: number;
+}
+
+const { rows, days = 14 } = Astro.props;
+const newestFirst = rows.slice(-days).reverse();
+const lastDate = rows[rows.length - 1]?.stat_date;
+const head = "px-4 py-2 font-medium";
+---
+
+<div class="overflow-x-auto rounded-xl border border-slate-200">
+  <table class="w-full text-left text-sm">
+    <thead class="bg-slate-50 text-slate-500">
+      <tr>
+        <th class={head}>Day</th>
+        <th class={`${head} text-right`}>Daily average</th>
+        <th class={`${head} text-right`}>7-day average</th>
+        <th class={`${head} text-right`}>Listings</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100 tabular-nums">
+      {
+        newestFirst.map((row) => (
+          <tr>
+            <td class="px-4 py-2 text-slate-700">
+              {formatShortDate(row.stat_date)}
+              {row.stat_date === lastDate && <span class="text-slate-400"> (today so far)</span>}
+            </td>
+            <td class="px-4 py-2 text-right">{money(row.avg_price_1d)}</td>
+            <td class="px-4 py-2 text-right">{money(row.avg_price_7d)}</td>
+            <td class="px-4 py-2 text-right">{count(row.listings_1d)}</td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>

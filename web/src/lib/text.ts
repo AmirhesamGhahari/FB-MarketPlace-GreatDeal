@@ -1,7 +1,7 @@
 // Turns numbers into plain sentences (neutral and factual, no buying advice). Every helper returns null when a number it
 // needs is missing, so the page simply leaves that sentence out instead of printing "null".
-import type { ProductSummary } from "./api";
-import { money } from "./format";
+import type { ProductSummary, SeriesPoint } from "./api";
+import { formatShortDate, money } from "./format";
 
 const plural = (n: number, one: string, many: string) => `${n.toLocaleString("en-CA")} ${n === 1 ? one : many}`;
 
@@ -43,4 +43,37 @@ export function productSummary(p: ProductSummary): string {
   ]
     .filter((sentence) => sentence !== null)
     .join(" ");
+}
+
+// "The 7-day average asking price went down from $1,150 to $1,088 over the last 30 days (-5%)."
+function changeSentence(what: string, from: number | null, to: number | null, days: number): string | null {
+  const diff = percentDiff(to, from);
+  if (diff === null || from === null || to === null) return null;
+  const pct = Math.round(Math.abs(diff));
+  if (pct === 0) return `${what} stayed at about ${money(to)} over the last ${days} days.`;
+  return `${what} went ${diff < 0 ? "down" : "up"} from ${money(from)} to ${money(to)} over the last ${days} days (${diff < 0 ? "-" : "+"}${pct}%).`;
+}
+
+// Four short facts for the top of the market-insights page, from the last 30 days of the series. Missing numbers drop a point.
+export function insightPoints(series: SeriesPoint[]): string[] {
+  const window = series.slice(-30);
+  const first = window[0];
+  const last = window[window.length - 1];
+  if (!first || !last) return [];
+
+  // Today is only partly over, so it cannot be "the quietest day".
+  const fullDays = window.slice(0, -1).filter((day) => day.listings_1d !== null);
+  const busiest = fullDays.reduce<SeriesPoint | null>((best, day) => (!best || day.listings_1d! > best.listings_1d! ? day : best), null);
+  const quietest = fullDays.reduce<SeriesPoint | null>((low, day) => (!low || day.listings_1d! < low.listings_1d! ? day : low), null);
+  const activity =
+    busiest && quietest
+      ? `The busiest day had ${plural(busiest.listings_1d!, "listing", "listings")} (${formatShortDate(busiest.stat_date)}) and the quietest had ${plural(quietest.listings_1d!, "listing", "listings")} (${formatShortDate(quietest.stat_date)}).`
+      : null;
+
+  return [
+    changeSentence("The 7-day average asking price", first.avg_price_7d, last.avg_price_7d, window.length),
+    changeSentence("The price that the cheapest 25% of listings fall under", first.cutoff_price_cheapest_25pct_30d, last.cutoff_price_cheapest_25pct_30d, window.length),
+    activity,
+    changeSentence("The 7-day average of high-scoring listings (deal score 8 or more)", first.deal8_avg_price_7d, last.deal8_avg_price_7d, window.length),
+  ].filter((point) => point !== null);
 }

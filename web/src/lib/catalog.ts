@@ -1,6 +1,6 @@
 // The list of categories and products, fetched once per build and shared by every page (menus, hubs, sitemap, search).
 // A module runs once and its variables stay alive for the whole build, so the first call fetches and the rest reuse it.
-import { getCategories, getCategoryProducts, type CategoryProductCard } from "./api";
+import { getCategories, getCategoryProducts, getTopDeals, type CategoryProductCard } from "./api";
 
 export type CatalogCategory = {
   category_key: string;
@@ -33,3 +33,24 @@ export function getCatalog(): Promise<Catalog> {
 
 // A catalog product without data has null stats and no product page (the API answers 404 for it).
 export const hasData = (product: CategoryProductCard) => product.avg_price_30d !== null;
+
+// The top deals of a category, fetched once per category and build: every product page of the category needs them.
+const dealsCache = new Map<string, ReturnType<typeof getTopDeals>>();
+export function getCategoryDeals(categoryKey: string) {
+  let deals = dealsCache.get(categoryKey);
+  if (!deals) {
+    deals = getTopDeals(categoryKey);
+    dealsCache.set(categoryKey, deals);
+  }
+  return deals;
+}
+
+// Every product page of the site as getStaticPaths entries: /{category}/{slug}/ and its section pages share this list.
+export async function getProductPaths() {
+  const { categories } = await getCatalog();
+  return categories.flatMap((category) =>
+    category.products
+      .filter(hasData)
+      .map((product) => ({ params: { category: category.category_key, slug: product.slug } })),
+  );
+}

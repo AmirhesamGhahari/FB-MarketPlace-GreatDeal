@@ -1,0 +1,88 @@
+---
+// A product's market-insights page: /{category}/{slug}/market-insights/. All charts with a period filter, plus its own text.
+import Breadcrumb from "../../../../components/Breadcrumb.astro";
+import ProductCharts from "../../../../components/charts/ProductCharts";
+import DailyTable from "../../../../components/DailyTable.astro";
+import Disclosure from "../../../../components/Disclosure.astro";
+import LastUpdated from "../../../../components/LastUpdated.astro";
+import ProductTabs from "../../../../components/ProductTabs.astro";
+import SectionHeading from "../../../../components/SectionHeading.astro";
+import Base from "../../../../layouts/Base.astro";
+import { getProduct, getSeries } from "../../../../lib/api";
+import { getCatalog, getProductPaths } from "../../../../lib/catalog";
+import { insightPoints } from "../../../../lib/text";
+
+export async function getStaticPaths() {
+  return getProductPaths();
+}
+
+const { category: categoryKey, slug } = Astro.params;
+const category = (await getCatalog()).categories.find((c) => c.category_key === categoryKey)!;
+const { data: product } = await getProduct(slug!);
+const { data: seriesData, data_as_of } = await getSeries(slug!);
+const series = seriesData.series;
+
+const points = insightPoints(series);
+const pagePath = `/${categoryKey}/${slug}/`;
+const name = product.display_name;
+const title = `${name} Price History in Canada`;
+// About 155 characters is what Google shows of a description, so it is the name plus the first takeaway.
+const description = `${name} price history in Canada: ${points[0] ?? "daily and 7-day average asking prices and listings per day."}`;
+---
+
+<Base title={title} description={description}>
+  <Breadcrumb
+    items={[
+      { label: "Home", href: "/" },
+      { label: category.category_name, href: `/${categoryKey}/` },
+      { label: name, href: pagePath },
+      { label: "Market insights" },
+    ]}
+  />
+  <h1 class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">Used {name} Price History in Canada</h1>
+  <p class="mt-2 text-slate-500">
+    Asking prices on Facebook Marketplace, all configurations · <LastUpdated iso={data_as_of} />
+  </p>
+  <div class="mt-6">
+    <ProductTabs categoryKey={categoryKey!} slug={slug!} current="market-insights" />
+  </div>
+
+  <p class="mt-6 max-w-3xl text-slate-600">
+    See how asking prices and the number of listings for the used {name} have changed on Facebook Marketplace in Canada.
+    Choose a period to zoom in or out. Every chart has a table with the exact numbers.
+  </p>
+
+  {
+    points.length > 0 && (
+      <section class="mt-8">
+        <SectionHeading title="Key takeaways" id="takeaways" />
+        <ul class="mt-3 max-w-3xl list-disc space-y-1 pl-5 text-slate-600">
+          {points.map((point) => <li>{point}</li>)}
+        </ul>
+      </section>
+    )
+  }
+
+  <section class="mt-10">
+    <SectionHeading title="Charts" id="charts" />
+    <div class="mt-4">
+      <ProductCharts client:visible series={series} />
+    </div>
+  </section>
+
+  <section class="mt-10">
+    <SectionHeading title="Daily numbers" id="daily" subtitle="The last 14 days, newest first." />
+    <div class="mt-4">
+      <DailyTable rows={series} />
+    </div>
+  </section>
+
+  <p class="mt-8 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+    <a href={pagePath}>← Back to the {name} overview</a>
+    <a href={`${pagePath}top-deals/`}>See the best deals right now →</a>
+  </p>
+
+  <div class="mt-8">
+    <Disclosure />
+  </div>
+</Base>

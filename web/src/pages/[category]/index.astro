@@ -3,8 +3,7 @@ import Base from "../../layouts/Base.astro";
 import Breadcrumb from "../../components/Breadcrumb.astro";
 import DealRow from "../../components/DealRow.astro";
 import ProductCard from "../../components/ProductCard.astro";
-import { getTopDeals } from "../../lib/api";
-import { getCatalog } from "../../lib/catalog";
+import { getCatalog, getCategoryDeals } from "../../lib/catalog";
 import { formatDateTime } from "../../lib/format";
 
 // One page per category, built from this single file: /iphone/, /macbook/, ...
@@ -17,7 +16,7 @@ const DEALS_PER_PRODUCT = 3;
 
 const { category: categoryKey } = Astro.params;
 const category = (await getCatalog()).categories.find((c) => c.category_key === categoryKey)!;
-const { data: dealGroups, data_as_of } = await getTopDeals(categoryKey!);
+const { data: dealGroups, data_as_of } = await getCategoryDeals(categoryKey!);
 
 // The deals of one product (the API groups them per product; products without deals are missing from the answer).
 const dealsFor = (slug: string) => dealGroups.find((group) => group.slug === slug)?.deals.slice(0, DEALS_PER_PRODUCT) ?? [];
