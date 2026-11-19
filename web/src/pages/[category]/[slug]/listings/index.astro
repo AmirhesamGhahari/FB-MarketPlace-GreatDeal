@@ -7,8 +7,7 @@ import ListingsTable from "../../../../components/listings/ListingsTable";
 import ProductTabs from "../../../../components/ProductTabs.astro";
 import StatCard from "../../../../components/StatCard.astro";
 import Base from "../../../../layouts/Base.astro";
-import { getProduct } from "../../../../lib/api";
-import { getCatalog, getProductPaths } from "../../../../lib/catalog";
+import { getCatalog, getProductPaths, getProductSummary } from "../../../../lib/catalog";
 import { count, money } from "../../../../lib/format";
 
 export async function getStaticPaths() {
@@ -17,7 +16,7 @@ export async function getStaticPaths() {
 
 const { category: categoryKey, slug } = Astro.params;
 const category = (await getCatalog()).categories.find((c) => c.category_key === categoryKey)!;
-const { data: product, data_as_of } = await getProduct(slug!);
+const { data: product, data_as_of } = await getProductSummary(slug!);
 const name = product.display_name;
 const pagePath = `/${categoryKey}/${slug}/`;
 ---

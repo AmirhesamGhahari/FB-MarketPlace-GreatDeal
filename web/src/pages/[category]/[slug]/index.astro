@@ -9,8 +9,7 @@ import ProductTabs from "../../../components/ProductTabs.astro";
 import SectionHeading from "../../../components/SectionHeading.astro";
 import StatCard from "../../../components/StatCard.astro";
 import Base from "../../../layouts/Base.astro";
-import { getProduct } from "../../../lib/api";
-import { getCatalog, getCategoryDeals, getProductPaths, getProductSeries, hasData } from "../../../lib/catalog";
+import { getCatalog, getCategoryDeals, getProductPaths, getProductSeries, hasData, getProductSummary } from "../../../lib/catalog";
 import { count, money, moneyShort } from "../../../lib/format";
 import { productSummary } from "../../../lib/text";
 
@@ -23,7 +22,7 @@ const DEALS_SHOWN = 5;
 
 const { category: categoryKey, slug } = Astro.params;
 const category = (await getCatalog()).categories.find((c) => c.category_key === categoryKey)!;
-const { data: product, data_as_of } = await getProduct(slug!);
+const { data: product, data_as_of } = await getProductSummary(slug!);
 const { series } = (await getProductSeries(slug!)).data;
 
 // The API groups the category's deals per product; a product without deals is missing from the answer.

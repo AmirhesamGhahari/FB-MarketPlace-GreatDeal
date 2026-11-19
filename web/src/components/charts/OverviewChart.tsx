@@ -3,10 +3,10 @@ import type { SeriesPoint } from "../../lib/api";
 import LinePanel from "./LinePanel";
 import { SERIES_COLORS } from "./theme";
 
-export default function OverviewChart({ series }: { series: SeriesPoint[] }) {
+export default function OverviewChart({ series, title = "Average asking price, last 15 days" }: { series: SeriesPoint[]; title?: string }) {
   return (
     <LinePanel
-      title="Average asking price, last 15 days"
+      title={title}
       subtitle="The daily average moves up and down; the 7-day average shows the trend."
       rows={series.slice(-15)}
       series={[

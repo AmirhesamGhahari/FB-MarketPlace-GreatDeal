@@ -1,12 +1,274 @@
 ---
+// The home page: full-screen sections that snap into place while scrolling (CSS scroll-snap, no JavaScript for that part).
+import DealCard from "../components/DealCard.astro";
+import OverviewChart from "../components/charts/OverviewChart";
 import Base from "../layouts/Base.astro";
+import type { Deal } from "../lib/api";
+import { count, formatDateTime, moneyShort } from "../lib/format";
+import { getCatalog, getCategoryDeals, getPricesUpdatedAt, getProductSeries, hasData } from "../lib/catalog";
 import { SITE_NAME } from "../lib/site";
+
+const { categories } = await getCatalog();
+const pricesUpdatedAt = await getPricesUpdatedAt();
+const models = categories.flatMap((category) => category.products.filter(hasData).map((card) => ({ category, card })));
+
+// "iPhone", "iPhone and MacBook", "iPhone, MacBook and iPad"
+const names = categories.map((category) => category.category_name);
+const nameList = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : (names[0] ?? "electronics");
+
+// Trust numbers.
+const listingsTracked = models.reduce((sum, { card }) => sum + (card.listings_30d ?? 0), 0);
+
+// The three biggest discounts: each model's best deal, ranked by how far below its own 30-day average it is (in percent).
+const dealGroups = (await Promise.all(categories.map(async (category) => (await getCategoryDeals(category.category_key)).data))).flat();
+const gap = (deal: Deal) => (deal.price_diff_30d !== null && deal.avg_price_30d ? -deal.price_diff_30d / deal.avg_price_30d : -Infinity);
+const topDeals = dealGroups
+  .flatMap((group) => (group.deals[0] ? [{ name: group.display_name, deal: group.deals[0] }] : []))
+  .sort((a, b) => gap(b.deal) - gap(a.deal))
+  .slice(0, 3);
+
+// The chart: the model with the most listings.
+const featured = models.reduce((best, current) => ((current.card.listings_30d ?? 0) > (best.card.listings_30d ?? 0) ? current : best), models[0]);
+const featuredSeries = featured ? (await getProductSeries(featured.card.slug)).data.series : [];
+
+const steps = [
+  {
+    title: "We collect the listings",
+    text: `Every day we gather public used ${nameList} listings from Facebook Marketplace across Canada.`,
+  },
+  {
+    title: "We compare the prices",
+    text: "Listings that look broken or incomplete are filtered out. For each model we work out the 30-day and 7-day average asking price and the price the cheapest 25% fall under.",
+  },
+  {
+    title: "You spot the deals",
+    text: "See how a listing's price compares with the market before you message the seller, and follow the price trend to choose a good moment to buy.",
+  },
+];
+
+const faq = [
+  {
+    q: "Where do the prices come from?",
+    a: "From public used-electronics listings on Facebook Marketplace in Canada. We collect them regularly, clean them up and calculate the averages for each model.",
+  },
+  {
+    q: "Are these sold prices?",
+    a: "No. They are asking prices, what sellers want, not what buyers finally paid. We also do not check whether a listing is still available.",
+  },
+  {
+    q: "How do I know if a listing is a good deal?",
+    a: 'Compare it with the 30-day average and with the "cheapest 25% under" price on the model page. A price below that figure is cheaper than about three quarters of the comparable listings. Always check the condition and ask the seller questions.',
+  },
+  {
+    q: "How up to date is the data?",
+    a: `Prices were last updated on ${formatDateTime(pricesUpdatedAt)}, and the latest update time is also shown at the bottom of every page.`,
+  },
+  {
+    q: `Is ${SITE_NAME} connected to Facebook, Meta or Apple?`,
+    a: `No. ${SITE_NAME} is an independent price guide and is not affiliated with Facebook, Meta or Apple.`,
+  },
+];
+
+// "iPhone", "iPhone or MacBook", "iPhone, MacBook or iPad"
+const orList = names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : (names[0] ?? "electronic device");
+const heroTitle = `Know what a used ${orList} is really worth in Canada`;
+const gradients = ["from-blue-700 to-sky-600", "from-indigo-700 to-violet-600", "from-teal-700 to-emerald-600", "from-slate-800 to-slate-600"];
+const section = "snap-start flex min-h-[calc(100svh-4rem)] items-center";
 ---
 
 <Base
-  title="Used iPhone and MacBook Prices in Canada"
-  description="Price trends and the best current deals on used iPhones and MacBooks, from Facebook Marketplace asking prices."
+  title={`Used ${nameList} Prices and Deals in Canada`}
+  description={`Real asking prices, price trends and the best current deals on used ${nameList} in Canada, from Facebook Marketplace listings.`}
+  fullWidth
 >
-  <h1 class="text-4xl font-bold tracking-tight">{SITE_NAME}</h1>
-  <p class="mt-3 text-lg text-slate-500">Home page placeholder.</p>
+  <!-- 1. Hero -->
+  <section class={`${section} bg-gradient-to-br from-blue-700 via-blue-600 to-sky-500 text-white`}>
+    <div class="mx-auto w-full max-w-5xl px-4 py-16">
+      <p class="text-sm font-semibold uppercase tracking-widest text-white/80">{SITE_NAME}</p>
+      <h1 class="mt-4 max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">{heroTitle}</h1>
+      <p class="mt-5 max-w-2xl text-lg text-white/90 sm:text-xl">
+        We track thousands of Facebook Marketplace listings to show real asking prices, price trends and the best current
+        deals, so you know what a fair price is before you buy.
+      </p>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a href="/categories/" class="rounded-full bg-white px-6 py-3 font-semibold text-blue-700 no-underline hover:bg-blue-50 hover:text-blue-700 hover:no-underline">Browse prices</a>
+        <a href="/top-deals/" class="rounded-full border border-white/70 px-6 py-3 font-semibold text-white no-underline hover:bg-white/10 hover:text-white hover:no-underline">See today's deals</a>
+      </div>
+      <dl class="mt-12 grid max-w-3xl grid-cols-2 gap-6 border-t border-white/25 pt-6 sm:grid-cols-4">
+        <div>
+          <dt class="text-sm text-white/75">Listings, last 30 days</dt>
+          <dd class="text-2xl font-semibold">{count(listingsTracked)}</dd>
+        </div>
+        <div>
+          <dt class="text-sm text-white/75">Models tracked</dt>
+          <dd class="text-2xl font-semibold">{models.length}</dd>
+        </div>
+        <div>
+          <dt class="text-sm text-white/75">Categories</dt>
+          <dd class="text-2xl font-semibold">{categories.length}</dd>
+        </div>
+        <div>
+          <dt class="text-sm text-white/75">Prices updated</dt>
+          <dd class="text-base font-semibold">{formatDateTime(pricesUpdatedAt)}</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- 2. What it does -->
+  <section class={section}>
+    <div class="mx-auto w-full max-w-5xl px-4 py-16">
+      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">How {SITE_NAME} helps you buy smarter</h2>
+      <p class="mt-3 max-w-2xl text-lg text-slate-600">
+        Used listings come with wildly different prices. We turn them into a clear picture of what the market is really
+        asking.
+      </p>
+      <ol class="mt-8 grid gap-6 md:grid-cols-3">
+        {
+          steps.map((step, index) => (
+            <li data-reveal class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" style={`--reveal-delay: ${index * 120}ms`}>
+              <span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 font-semibold text-brand-700">{index + 1}</span>
+              <h3 class="mt-4 text-lg font-semibold tracking-tight">{step.title}</h3>
+              <p class="mt-2 text-slate-600">{step.text}</p>
+            </li>
+          ))
+        }
+      </ol>
+      <p class="mt-6 text-sm"><a href="/how-it-works/">Read how we calculate the numbers →</a></p>
+    </div>
+  </section>
+
+  <!-- 3. Categories -->
+  <section class={`${section} bg-slate-50`}>
+    <div class="mx-auto w-full max-w-5xl px-4 py-16">
+      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Browse by category</h2>
+      <p class="mt-3 max-w-2xl text-lg text-slate-600">Pick a category, then a model, for its price history and current deals.</p>
+      <div class="mt-8 grid gap-6 sm:grid-cols-2">
+        {
+          categories.map((category, index) => (
+            <div
+              data-reveal
+              class={`rounded-2xl bg-gradient-to-br ${gradients[index % gradients.length]} p-6 text-white shadow-sm`}
+              style={`--reveal-delay: ${index * 120}ms`}
+            >
+              <h3 class="text-2xl font-semibold tracking-tight">
+                <a href={`/${category.category_key}/`} class="text-white no-underline hover:text-white hover:underline">{category.category_name}</a>
+              </h3>
+              <ul class="mt-4 space-y-1">
+                {category.products.filter(hasData).map((product) => (
+                  <li>
+                    <a
+                      href={`/${category.category_key}/${product.slug}/`}
+                      class="flex items-center justify-between gap-4 rounded-lg bg-white/10 px-3 py-2 text-white no-underline hover:bg-white/20 hover:text-white hover:no-underline"
+                    >
+                      <span>{product.display_name}</span>
+                      <span class="text-sm text-white/80">avg {moneyShort(product.avg_price_30d)}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <a href={`/${category.category_key}/`} class="mt-4 inline-block text-sm font-medium text-white hover:text-white">All {category.category_name} →</a>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Best deals and a chart -->
+  <section class={section}>
+    <div class="mx-auto w-full max-w-5xl px-4 py-16">
+      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Today's biggest discounts</h2>
+      <p class="mt-3 max-w-2xl text-lg text-slate-600">
+        The best deal on each model, ranked by how far below its own 30-day average it is. Availability is not verified.
+      </p>
+      <div class="mt-8 grid gap-6 md:grid-cols-3">
+        {topDeals.map((item) => <DealCard deal={item.deal} productName={item.name} />)}
+      </div>
+      {
+        featured && (
+          <div class="mt-8">
+            <OverviewChart client:visible series={featuredSeries} title={`${featured.card.display_name}: average asking price, last 15 days`} />
+          </div>
+        )
+      }
+      <p class="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+        <a href="/top-deals/">See all top deals →</a>
+        {featured && <a href={`/${featured.category.category_key}/${featured.card.slug}/market-insights/`}>Full {featured.card.display_name} price history →</a>}
+      </p>
+    </div>
+  </section>
+
+  <!-- 5. FAQ and what comes next -->
+  <section class={`${section} bg-slate-50`}>
+    <div class="mx-auto w-full max-w-5xl px-4 py-16">
+      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Questions and answers</h2>
+      <dl class="mt-8 grid gap-x-10 gap-y-6 md:grid-cols-2">
+        {
+          faq.map((item) => (
+            <div>
+              <dt class="font-semibold text-slate-900">{item.q}</dt>
+              <dd class="mt-1 text-slate-600">{item.a}</dd>
+            </div>
+          ))
+        }
+      </dl>
+      <div class="mt-10 rounded-xl border border-brand-100 bg-brand-50 p-5 text-slate-700">
+        <p class="font-semibold text-slate-900">Deal alerts by email are coming soon.</p>
+        <p class="mt-1">Until then, the <a href="/top-deals/">Top Deals pages</a> show the latest deals for every model.</p>
+      </div>
+    </div>
+  </section>
 </Base>
+
+<style is:global>
+  /* Snap to sections. Mandatory only where a section surely fits the screen; elsewhere "proximity" never traps the reader
+     inside a section that is taller than the screen. The header is 4rem tall and sticky. */
+  html {
+    scroll-snap-type: y proximity;
+    scroll-padding-top: 4rem;
+  }
+  @media (min-width: 1024px) and (min-height: 900px) {
+    html {
+      scroll-snap-type: y mandatory;
+    }
+  }
+
+  /* Gentle fade-in for blocks below the first screen. Only active once the script below has run, so without JavaScript
+     everything stays visible. */
+  html[data-reveal-ready] [data-reveal]:not(.is-visible) {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  [data-reveal] {
+    transition:
+      opacity 0.6s ease var(--reveal-delay, 0ms),
+      transform 0.6s ease var(--reveal-delay, 0ms);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html[data-reveal-ready] [data-reveal]:not(.is-visible) {
+      opacity: 1;
+      transform: none;
+    }
+    [data-reveal] {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  // Adds the class "is-visible" to each [data-reveal] block when it scrolls into view, which triggers the fade-in.
+  document.documentElement.setAttribute("data-reveal-ready", "");
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-visible");
+          observer.unobserve(entry.target);
+        }
+      }
+    },
+    { threshold: 0.15 },
+  );
+  document.querySelectorAll("[data-reveal]").forEach((element) => observer.observe(element));
+</script>

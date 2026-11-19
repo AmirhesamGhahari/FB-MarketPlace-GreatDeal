@@ -10,9 +10,10 @@ interface Props {
   title: string; // page-specific part; the site name is appended
   description: string;
   noindex?: boolean; // true for pages Google should not list (for example the full-listings pages)
+  fullWidth?: boolean; // true for the home page: no centred column, its sections span the screen
 }
 
-const { title, description, noindex = false } = Astro.props;
+const { title, description, noindex = false, fullWidth = false } = Astro.props;
 const fullTitle = `${title} | ${SITE_NAME}`;
 
 // The canonical URL tells Google which address is the "official" one for this page. Needs `site` in astro.config.mjs.
@@ -40,7 +41,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
   <body class="flex min-h-screen flex-col font-sans">
     <SiteHeader />
 
-    <main id="main" class="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+    <main id="main" class:list={["flex-1", !fullWidth && "mx-auto w-full max-w-5xl px-4 py-8"]}>
       <slot />
     </main>
 

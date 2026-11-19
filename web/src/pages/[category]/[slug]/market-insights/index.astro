@@ -7,8 +7,7 @@ import LastUpdated from "../../../../components/LastUpdated.astro";
 import ProductTabs from "../../../../components/ProductTabs.astro";
 import SectionHeading from "../../../../components/SectionHeading.astro";
 import Base from "../../../../layouts/Base.astro";
-import { getProduct } from "../../../../lib/api";
-import { getCatalog, getProductPaths, getProductSeries } from "../../../../lib/catalog";
+import { getCatalog, getProductPaths, getProductSeries, getProductSummary } from "../../../../lib/catalog";
 import { insightPoints } from "../../../../lib/text";
 
 export async function getStaticPaths() {
@@ -17,7 +16,7 @@ export async function getStaticPaths() {
 
 const { category: categoryKey, slug } = Astro.params;
 const category = (await getCatalog()).categories.find((c) => c.category_key === categoryKey)!;
-const { data: product } = await getProduct(slug!);
+const { data: product } = await getProductSummary(slug!);
 const { data: seriesData, data_as_of } = await getProductSeries(slug!);
 const series = seriesData.series;
 

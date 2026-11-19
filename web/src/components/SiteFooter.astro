@@ -1,11 +1,11 @@
 ---
 // Three link columns, the not-affiliated notice and the data-freshness line. Links to pages that are not built yet
 // (About, Contact, ...) show the 404 page until step F9.
-import { getCatalog } from "../lib/catalog";
+import { getPricesUpdatedAt } from "../lib/catalog";
 import { formatDateTime } from "../lib/format";
 import { NAV_SECTIONS, SITE_NAME, SITE_TAGLINE } from "../lib/site";
 
-const { data_as_of } = await getCatalog();
+const pricesUpdatedAt = await getPricesUpdatedAt();
 
 const notice = `Prices are asking prices from Facebook Marketplace listings, not sold prices, and availability is not verified. ${SITE_NAME} is not affiliated with Facebook, Meta or Apple.`;
 
@@ -56,7 +56,7 @@ const groups = [
   <div class="border-t border-slate-200">
     <div class="mx-auto max-w-5xl space-y-1 px-4 py-6 text-sm text-slate-500">
       <p>{notice} <a href="/how-it-works/">How we calculate the numbers</a></p>
-      <p>Data updated {formatDateTime(data_as_of)} · © {new Date().getFullYear()} {SITE_NAME}</p>
+      <p>Prices updated {formatDateTime(pricesUpdatedAt)} · © {new Date().getFullYear()} {SITE_NAME}</p>
     </div>
   </div>
 </footer>

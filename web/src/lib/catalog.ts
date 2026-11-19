@@ -1,6 +1,6 @@
 // The list of categories and products, fetched once per build and shared by every page (menus, hubs, sitemap, search).
 // A module runs once and its variables stay alive for the whole build, so the first call fetches and the rest reuse it.
-import { getCategories, getCategoryProducts, getSeries, getTopDeals, type CategoryProductCard } from "./api";
+import { getCategories, getCategoryProducts, getProduct, getSeries, getTopDeals, type CategoryProductCard } from "./api";
 
 export type CatalogCategory = {
   category_key: string;
@@ -64,4 +64,25 @@ export function getProductSeries(slug: string) {
     seriesCache.set(slug, series);
   }
   return series;
+}
+
+// The summary (headline numbers) of a product, fetched once per build and shared by its pages and the footer.
+const summaryCache = new Map<string, ReturnType<typeof getProduct>>();
+export function getProductSummary(slug: string) {
+  let summary = summaryCache.get(slug);
+  if (!summary) {
+    summary = getProduct(slug);
+    summaryCache.set(slug, summary);
+  }
+  return summary;
+}
+
+// When the price data was last updated: the OLDEST update time among all products, so every number shown is at least this
+// fresh (the catalog's own timestamp only says when the product list was built).
+export async function getPricesUpdatedAt(): Promise<string> {
+  const catalog = await getCatalog();
+  const slugs = catalog.categories.flatMap((category) => category.products.filter(hasData).map((product) => product.slug));
+  const stamps = await Promise.all(slugs.map(async (slug) => (await getProductSummary(slug)).data_as_of));
+  if (stamps.length === 0) return catalog.data_as_of;
+  return stamps.reduce((oldest, stamp) => (new Date(stamp) < new Date(oldest) ? stamp : oldest));
 }
