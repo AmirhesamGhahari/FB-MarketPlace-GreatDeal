@@ -1,6 +1,6 @@
 // Turns numbers into plain sentences (neutral and factual, no buying advice). Every helper returns null when a number it
 // needs is missing, so the page simply leaves that sentence out instead of printing "null".
-import type { ProductSummary, SeriesPoint } from "./api";
+import type { Deal, ProductSummary, SeriesPoint } from "./api";
 import { formatShortDate, money } from "./format";
 
 const plural = (n: number, one: string, many: string) => `${n.toLocaleString("en-CA")} ${n === 1 ? one : many}`;
@@ -76,4 +76,25 @@ export function insightPoints(series: SeriesPoint[]): string[] {
     activity,
     changeSentence("The 7-day average of high-scoring listings (deal score 8 or more)", first.deal8_avg_price_7d, last.deal8_avg_price_7d, window.length),
   ].filter((point) => point !== null);
+}
+
+// Sentences for the top of the top-deals page, from the deals the API ranked (cheapest first). Missing numbers drop a sentence.
+export function dealsSentences(deals: Deal[]): string[] {
+  const best = deals[0];
+  if (!best) return [];
+  const prices = deals.map((deal) => deal.price);
+  const below =
+    best.price_diff_30d !== null && best.price_diff_30d < 0 && best.avg_price_30d !== null
+      ? `The best deal right now is ${money(best.price)}, ${money(-best.price_diff_30d)} below the 30-day average of ${money(best.avg_price_30d)}.`
+      : `The best deal right now is ${money(best.price)}.`;
+  const range =
+    deals.length > 1
+      ? `The ${deals.length} deals range from ${money(Math.min(...prices))} to ${money(Math.max(...prices))}.`
+      : null;
+  const cutoff = best.cutoff_price_cheapest_25pct_30d;
+  const underCutoff =
+    cutoff !== null && deals.every((deal) => deal.price < cutoff)
+      ? `All of them are priced below ${money(cutoff)}, the price that the cheapest 25% of listings fall under.`
+      : null;
+  return [below, range, underCutoff].filter((sentence) => sentence !== null);
 }

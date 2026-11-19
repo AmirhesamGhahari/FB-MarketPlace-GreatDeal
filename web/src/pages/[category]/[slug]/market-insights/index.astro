@@ -3,7 +3,6 @@
 import Breadcrumb from "../../../../components/Breadcrumb.astro";
 import ProductCharts from "../../../../components/charts/ProductCharts";
 import DailyTable from "../../../../components/DailyTable.astro";
-import Disclosure from "../../../../components/Disclosure.astro";
 import LastUpdated from "../../../../components/LastUpdated.astro";
 import ProductTabs from "../../../../components/ProductTabs.astro";
 import SectionHeading from "../../../../components/SectionHeading.astro";
@@ -82,7 +81,4 @@ const description = `${name} price history in Canada: ${points[0] ?? "daily and 
     <a href={`${pagePath}top-deals/`}>See the best deals right now →</a>
   </p>
 
-  <div class="mt-8">
-    <Disclosure />
-  </div>
 </Base>

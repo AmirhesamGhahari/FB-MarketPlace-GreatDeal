@@ -1,8 +1,17 @@
 // API client used at BUILD time (Astro page frontmatter). The shapes below mirror the Pydantic schemas in
 // api/src/fb_marketplace_api/schemas.py and the contract in api_contract.md.
 
-// Set API_BASE_URL (for example in web/.env) to point the build at another API; the default is the live site.
-const API_BASE = import.meta.env.API_BASE_URL ?? "https://d2sru9uf6gw4cs.cloudfront.net/api/v1";
+// At build time (Node) the API is called by its full address; set API_BASE_URL (for example in web/.env) to point the build
+// at another API. In the browser the page and the API share one address (CloudFront sends /api/* to the API), so the
+// browser uses the relative path /api/v1: no cross-site request, and it keeps working when the site gets its own
+// domain. `npm run dev` has no CloudFront in front, so there the browser uses /_api/v1, which the dev server forwards
+// to the live API (see the proxy in astro.config.mjs).
+const API_BASE =
+  typeof window === "undefined"
+    ? (import.meta.env.API_BASE_URL ?? "https://d2sru9uf6gw4cs.cloudfront.net/api/v1")
+    : import.meta.env.DEV
+      ? "/_api/v1"
+      : "/api/v1";
 
 // `T | null` means the API sends null when there is not enough data; the page must handle it.
 export type Envelope<T> = { data_as_of: string; data: T };

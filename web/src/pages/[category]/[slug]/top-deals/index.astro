@@ -1,0 +1,86 @@
+---
+// A product's top-deals page: /{category}/{slug}/top-deals/. The full ranked list, baked into the page at build time.
+import Breadcrumb from "../../../../components/Breadcrumb.astro";
+import DealRow from "../../../../components/DealRow.astro";
+import LastUpdated from "../../../../components/LastUpdated.astro";
+import ProductTabs from "../../../../components/ProductTabs.astro";
+import SectionHeading from "../../../../components/SectionHeading.astro";
+import Base from "../../../../layouts/Base.astro";
+import { getCatalog, getCategoryDeals, getProductPaths } from "../../../../lib/catalog";
+import { dealsSentences } from "../../../../lib/text";
+
+export async function getStaticPaths() {
+  return getProductPaths();
+}
+
+const { category: categoryKey, slug } = Astro.params;
+const category = (await getCatalog()).categories.find((c) => c.category_key === categoryKey)!;
+const name = category.products.find((p) => p.slug === slug)!.display_name;
+const { data: dealGroups, data_as_of } = await getCategoryDeals(categoryKey!);
+const deals = dealGroups.find((group) => group.slug === slug)?.deals ?? [];
+
+const sentences = dealsSentences(deals);
+const pagePath = `/${categoryKey}/${slug}/`;
+const title = `${name} Deals in Canada`;
+const description = `${name} deals in Canada: ${sentences[0] ?? "the cheapest recent Facebook Marketplace listings compared with the 30-day average."}`;
+---
+
+<Base title={title} description={description}>
+  <Breadcrumb
+    items={[
+      { label: "Home", href: "/" },
+      { label: category.category_name, href: `/${categoryKey}/` },
+      { label: name, href: pagePath },
+      { label: "Top deals" },
+    ]}
+  />
+  <h1 class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">Used {name} Deals in Canada</h1>
+  <p class="mt-2 text-slate-500">
+    Asking prices on Facebook Marketplace, all configurations · <LastUpdated iso={data_as_of} />
+  </p>
+  <div class="mt-6">
+    <ProductTabs categoryKey={categoryKey!} slug={slug!} current="top-deals" />
+  </div>
+
+  <div class="mt-6 max-w-3xl space-y-3 text-slate-600">
+    <p>
+      These are the cheapest recent listings of the used {name} on Facebook Marketplace in Canada, each compared with
+      the 30-day average asking price.
+    </p>
+    {sentences.length > 0 && <p>{sentences.join(" ")}</p>}
+  </div>
+
+  {
+    deals.length > 0 ? (
+      <ol class="mt-8 divide-y divide-slate-200 rounded-xl border border-slate-200">
+        {deals.map((deal) => <DealRow deal={deal} showRank />)}
+      </ol>
+    ) : (
+      <p class="mt-8 rounded-xl border border-slate-200 p-5 text-slate-600">
+        There are no deals to show for the {name} right now. Deals appear when enough comparable listings are available.
+      </p>
+    )
+  }
+
+  <section class="mt-12">
+    <SectionHeading title="How deals are chosen" id="how" />
+    <div class="mt-3 max-w-3xl space-y-3 text-slate-600">
+      <p>
+        We look at the comparable listings of the last 30 days and rank them from the lowest price up. Listings that look
+        like broken or incomplete items, and prices far outside the normal range, are left out. Each price is compared
+        with the 30-day average, which gives the green "vs avg" figure.
+      </p>
+      <p>
+        A low price can mean a real bargain, but it can also mean a damaged item, a scam or a listing that has already
+        sold. Check the listing and ask the seller questions before you decide. We do not verify that a listing is still
+        available.
+      </p>
+    </div>
+  </section>
+
+  <p class="mt-8 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+    <a href={pagePath}>← Back to the {name} overview</a>
+    <a href={`${pagePath}listings/`}>Browse all listings →</a>
+  </p>
+
+</Base>
