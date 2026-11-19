@@ -1,0 +1,35 @@
+---
+// The tab bar of a product: Overview, Market insights, Top deals, All listings. The current tab is underlined and marked
+// with aria-current (screen readers announce it). On narrow screens the bar scrolls sideways instead of wrapping.
+import { PRODUCT_TABS, type ProductTabKey } from "../lib/site";
+
+interface Props {
+  categoryKey: string;
+  slug: string;
+  current: ProductTabKey;
+}
+
+const { categoryKey, slug, current } = Astro.props;
+---
+
+<nav aria-label="Product sections" class="border-b border-slate-200">
+  <ul class="-mb-px flex gap-6 overflow-x-auto">
+    {
+      PRODUCT_TABS.map((tab) => (
+        <li class="shrink-0">
+          <a
+            href={`/${categoryKey}/${slug}/${tab.path}`}
+            aria-current={tab.key === current ? "page" : undefined}
+            class={`block border-b-2 py-3 text-sm font-medium no-underline hover:no-underline ${
+              tab.key === current
+                ? "border-brand-600 text-brand-700"
+                : "border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-900"
+            }`}
+          >
+            {tab.label}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</nav>

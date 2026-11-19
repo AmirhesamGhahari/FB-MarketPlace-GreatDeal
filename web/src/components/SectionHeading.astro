@@ -1,0 +1,19 @@
+---
+// A section title with an optional one-line subtitle. `id` makes the section linkable (/page/#id).
+interface Props {
+  title: string;
+  subtitle?: string;
+  id?: string;
+  level?: "h2" | "h3"; // h2 for page sections, h3 inside a section
+}
+
+const { title, subtitle, id, level = "h2" } = Astro.props;
+// A capitalised variable can be used as a tag name (same trick as ProductCard).
+const Tag = level;
+const size = level === "h2" ? "text-xl" : "text-lg";
+---
+
+<div id={id} class="scroll-mt-20">
+  <Tag class={`${size} font-semibold tracking-tight text-slate-900`}>{title}</Tag>
+  {subtitle && <p class="mt-1 text-sm text-slate-500">{subtitle}</p>}
+</div>

@@ -1,0 +1,22 @@
+---
+// A short notice for the page body. "prices" explains what the numbers are; "affiliate" is for pages with affiliate links
+// (needed before any are added).
+interface Props {
+  variant?: "prices" | "affiliate";
+}
+
+const { variant = "prices" } = Astro.props;
+---
+
+<p class="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-500">
+  {
+    variant === "prices" ? (
+      <>
+        These are asking prices from Facebook Marketplace listings, not sold prices, and availability is not verified.{" "}
+        <a href="/how-it-works/">How we calculate the numbers</a>
+      </>
+    ) : (
+      <>Some links on this page are affiliate links: we may earn a commission if you buy through them, at no extra cost to you.</>
+    )
+  }
+</p>

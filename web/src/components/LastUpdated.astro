@@ -1,0 +1,13 @@
+---
+// "Updated November 18, 2026 at 4:14 p.m." The <time datetime> tag gives search engines the exact moment as well.
+import { formatDateTime } from "../lib/format";
+
+interface Props {
+  iso: string; // an API timestamp such as data_as_of
+  label?: string;
+}
+
+const { iso, label = "Updated" } = Astro.props;
+---
+
+<span>{label} <time datetime={iso}>{formatDateTime(iso)}</time></span>

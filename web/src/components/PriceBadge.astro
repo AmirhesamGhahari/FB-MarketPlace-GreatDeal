@@ -12,7 +12,7 @@ const style = diff === null ? "" : diff < 0 ? "bg-good-bg text-good" : diff > 0 
 
 {
   diff !== null && (
-    <span class={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${style}`}>
+    <span class={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${style}`}>
       {formatPriceDiff(diff)} vs avg
     </span>
   )

@@ -1,0 +1,30 @@
+---
+// A reserved place for an ad. While ADS_ENABLED is false it renders nothing, so visitors see no empty boxes. When ads are
+// on, the box keeps a fixed minimum height so the page does not jump when the ad loads (layout shift hurts Google's speed
+// score). The ad network's code will target the data-ad-slot attribute. `preview` forces a visible outline (style guide).
+import { ADS_ENABLED } from "../lib/site";
+
+interface Props {
+  slot: string; // a name for the place, for example "overview-middle"
+  size?: "banner" | "rectangle";
+  preview?: boolean;
+}
+
+const { slot, size = "banner", preview = false } = Astro.props;
+const height = size === "banner" ? "min-h-[100px] sm:min-h-[90px]" : "min-h-[250px]";
+const show = ADS_ENABLED || preview;
+---
+
+{
+  show && (
+    <aside aria-label="Advertisement" class="my-8">
+      <p class="mb-1 text-center text-xs uppercase tracking-wide text-slate-400">Advertisement</p>
+      <div
+        data-ad-slot={slot}
+        class={`mx-auto flex ${height} w-full max-w-3xl items-center justify-center ${preview ? "rounded-lg border border-dashed border-slate-300 text-sm text-slate-400" : ""}`}
+      >
+        {preview && `Ad slot "${slot}" (${size})`}
+      </div>
+    </aside>
+  )
+}

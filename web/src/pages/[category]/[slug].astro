@@ -1,9 +1,15 @@
 ---
+import Breadcrumb from "../../components/Breadcrumb.astro";
+import Disclosure from "../../components/Disclosure.astro";
+import LastUpdated from "../../components/LastUpdated.astro";
+import ProductTabs from "../../components/ProductTabs.astro";
+import SectionHeading from "../../components/SectionHeading.astro";
 import StatCard from "../../components/StatCard.astro";
 import Base from "../../layouts/Base.astro";
 import { getProduct } from "../../lib/api";
 import { getCatalog, hasData } from "../../lib/catalog";
-import { formatDateTime, money, moneyShort } from "../../lib/format";
+import { money, moneyShort } from "../../lib/format";
+import { productSummary } from "../../lib/text";
 
 // Runs once at build time: lists every page this file must produce, as /{category}/{slug}/.
 export async function getStaticPaths() {
@@ -15,7 +21,8 @@ export async function getStaticPaths() {
   );
 }
 
-const { slug } = Astro.params;
+const { category: categoryKey, slug } = Astro.params;
+const categoryName = (await getCatalog()).categories.find((c) => c.category_key === categoryKey)!.category_name;
 const { data: product, data_as_of } = await getProduct(slug!);
 
 // Kept short: Google shows about 60 characters of a title (the site name is appended by the layout).
@@ -27,10 +34,21 @@ const description =
 ---
 
 <Base title={title} description={description}>
-  <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">{product.display_name}</h1>
+  <Breadcrumb
+    items={[
+      { label: "Home", href: "/" },
+      { label: categoryName, href: `/${categoryKey}/` },
+      { label: product.display_name },
+    ]}
+  />
+  <h1 class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">{product.display_name}</h1>
   <p class="mt-2 text-slate-500">
-    Asking prices on Facebook Marketplace, all configurations · Updated {formatDateTime(data_as_of)}
+    Asking prices on Facebook Marketplace, all configurations · <LastUpdated iso={data_as_of} />
   </p>
+  <div class="mt-6">
+    <ProductTabs categoryKey={categoryKey!} slug={slug!} current="overview" />
+  </div>
+  <p class="mt-6 max-w-3xl text-slate-600">{productSummary(product)}</p>
 
   <section class="mt-8 grid gap-4 sm:grid-cols-3" aria-label="Price statistics">
     <StatCard label="30-day average" value={money(product.avg_price_30d)} note={`${product.listings_30d ?? 0} listings`} />
@@ -43,7 +61,7 @@ const description =
   </section>
 
   <section class="mt-10">
-    <h2 class="text-xl font-semibold tracking-tight">Cheapest listings (30 days)</h2>
+    <SectionHeading title="Cheapest listings (30 days)" id="cheapest" />
     <ol class="mt-4 divide-y divide-slate-200 rounded-xl border border-slate-200">
       {(product.lowest_5_deals_30d ?? []).map((deal) => (
         <li class="flex items-center justify-between px-5 py-3">
@@ -53,4 +71,8 @@ const description =
       ))}
     </ol>
   </section>
+
+  <div class="mt-10">
+    <Disclosure />
+  </div>
 </Base>
