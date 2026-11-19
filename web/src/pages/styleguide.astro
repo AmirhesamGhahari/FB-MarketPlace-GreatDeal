@@ -1,6 +1,9 @@
 ---
 // Developer-only page: every shared component, in every variant, on one page. noindex, and it must stay out of the sitemap
 // (and be removed or hidden before launch). Open it at /styleguide/.
+import ProductCharts from "../components/charts/ProductCharts";
+import OverviewChart from "../components/charts/OverviewChart";
+import Sparkline from "../components/Sparkline.astro";
 import AdSlot from "../components/AdSlot.astro";
 import Breadcrumb from "../components/Breadcrumb.astro";
 import Disclosure from "../components/Disclosure.astro";
@@ -11,7 +14,7 @@ import ProductTabs from "../components/ProductTabs.astro";
 import SectionHeading from "../components/SectionHeading.astro";
 import StatCard from "../components/StatCard.astro";
 import Base from "../layouts/Base.astro";
-import { getProduct } from "../lib/api";
+import { getProduct, getSeries } from "../lib/api";
 import { getCatalog, hasData } from "../lib/catalog";
 import { PRODUCT_TABS } from "../lib/site";
 import { productSummary } from "../lib/text";
@@ -21,6 +24,7 @@ const { categories, data_as_of } = await getCatalog();
 const category = categories.find((c) => c.products.some(hasData))!;
 const card = category.products.find(hasData)!;
 const { data: product } = await getProduct(card.slug);
+const { series } = (await getSeries(card.slug)).data;
 ---
 
 <Base title="Style guide" description="Internal page showing the shared components." noindex>
@@ -76,6 +80,24 @@ const { data: product } = await getProduct(card.slug);
       <SectionHeading title="Disclosure" />
       <Disclosure />
       <Disclosure variant="affiliate" />
+    </section>
+
+    <section class="space-y-4">
+      <SectionHeading title="Sparkline" subtitle="Plain SVG made at build time (no JavaScript)" />
+      <div class="flex items-center gap-6">
+        <Sparkline values={series.slice(-7).map((p) => p.avg_price_1d)} label="Average price, last 7 days" />
+        <Sparkline values={series.slice(-30).map((p) => p.avg_price_7d)} label="7-day average, last 30 days" width={200} />
+      </div>
+    </section>
+
+    <section class="space-y-4">
+      <SectionHeading title="OverviewChart" subtitle="The fixed 15-day chart of the overview page (a React island)" />
+      <OverviewChart client:visible series={series} />
+    </section>
+
+    <section class="space-y-4">
+      <SectionHeading title="ProductCharts" subtitle="All charts of the insights page, with the period filter" />
+      <ProductCharts client:visible series={series} />
     </section>
 
     <section>

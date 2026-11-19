@@ -6,7 +6,8 @@ import ProductTabs from "../../components/ProductTabs.astro";
 import SectionHeading from "../../components/SectionHeading.astro";
 import StatCard from "../../components/StatCard.astro";
 import Base from "../../layouts/Base.astro";
-import { getProduct } from "../../lib/api";
+import OverviewChart from "../../components/charts/OverviewChart";
+import { getProduct, getSeries } from "../../lib/api";
 import { getCatalog, hasData } from "../../lib/catalog";
 import { money, moneyShort } from "../../lib/format";
 import { productSummary } from "../../lib/text";
@@ -24,6 +25,7 @@ export async function getStaticPaths() {
 const { category: categoryKey, slug } = Astro.params;
 const categoryName = (await getCatalog()).categories.find((c) => c.category_key === categoryKey)!.category_name;
 const { data: product, data_as_of } = await getProduct(slug!);
+const { series } = (await getSeries(slug!)).data;
 
 // Kept short: Google shows about 60 characters of a title (the site name is appended by the layout).
 const title = `${product.display_name} Price in Canada (${moneyShort(product.avg_price_30d)} avg)`;
@@ -58,6 +60,13 @@ const description =
       value={money(product.cutoff_price_cheapest_25pct_30d)}
       note="30-day price cutoff"
     />
+  </section>
+
+  <section class="mt-10">
+    <SectionHeading title="Price trend" id="trend" />
+    <div class="mt-4">
+      <OverviewChart client:visible series={series} />
+    </div>
   </section>
 
   <section class="mt-10">

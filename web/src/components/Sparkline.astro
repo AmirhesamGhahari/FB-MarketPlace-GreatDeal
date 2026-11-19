@@ -1,0 +1,40 @@
+---
+// A tiny line for cards: drawn as plain SVG at build time, so it costs no JavaScript. Missing days (null) leave a gap.
+interface Props {
+  values: (number | null)[];
+  label: string; // read aloud by screen readers, for example "Average price, last 7 days"
+  width?: number;
+  height?: number;
+}
+
+const { values, label, width = 120, height = 32 } = Astro.props;
+const pad = 4; // room so the end dot is not cut off
+const known = values.filter((v): v is number => v !== null);
+const min = Math.min(...known);
+const max = Math.max(...known);
+const x = (i: number) => pad + (i * (width - 2 * pad)) / Math.max(1, values.length - 1);
+// A flat series (min equals max) is drawn in the middle.
+const y = (v: number) => (max === min ? height / 2 : height - pad - ((v - min) * (height - 2 * pad)) / (max - min));
+
+// One path piece per run of known values; "M" starts a new piece, so a null breaks the line.
+let path = "";
+let pen = false;
+values.forEach((v, i) => {
+  if (v === null) {
+    pen = false;
+    return;
+  }
+  path += `${pen ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)} `;
+  pen = true;
+});
+const lastIndex = values.findLastIndex((v) => v !== null);
+---
+
+{
+  known.length >= 2 && (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label}>
+      <path d={path} fill="none" stroke="#2a78d6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <circle cx={x(lastIndex)} cy={y(values[lastIndex]!)} r="4" fill="#2a78d6" stroke="#ffffff" stroke-width="2" />
+    </svg>
+  )
+}

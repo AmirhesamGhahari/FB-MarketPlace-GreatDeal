@@ -30,3 +30,13 @@ export function formatPriceDiff(diff: number): string {
 export function formatDate(iso: string): string {
   return new Intl.DateTimeFormat("en-CA", { dateStyle: "medium", timeZone: "America/Toronto" }).format(new Date(iso));
 }
+
+// "2026-11-18" -> "Nov 18" (a calendar day without a time, as used on chart axes).
+export function formatShortDate(day: string): string {
+  return new Intl.DateTimeFormat("en-CA", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(day));
+}
+
+// Axis numbers: 950 -> "950", 1200 -> "1.2K".
+export function compactNumber(value: number): string {
+  return new Intl.NumberFormat("en-CA", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+}
