@@ -1,6 +1,6 @@
 // The list of categories and products, fetched once per build and shared by every page (menus, hubs, sitemap, search).
 // A module runs once and its variables stay alive for the whole build, so the first call fetches and the rest reuse it.
-import { getCategories, getCategoryProducts, getTopDeals, type CategoryProductCard } from "./api";
+import { getCategories, getCategoryProducts, getSeries, getTopDeals, type CategoryProductCard } from "./api";
 
 export type CatalogCategory = {
   category_key: string;
@@ -53,4 +53,15 @@ export async function getProductPaths() {
       .filter(hasData)
       .map((product) => ({ params: { category: category.category_key, slug: product.slug } })),
   );
+}
+
+// The chart series of a product, fetched once per build: the overview, insights and category pages all use it.
+const seriesCache = new Map<string, ReturnType<typeof getSeries>>();
+export function getProductSeries(slug: string) {
+  let series = seriesCache.get(slug);
+  if (!series) {
+    series = getSeries(slug);
+    seriesCache.set(slug, series);
+  }
+  return series;
 }

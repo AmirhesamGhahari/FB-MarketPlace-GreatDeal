@@ -1,9 +1,8 @@
 ---
 import Base from "../../layouts/Base.astro";
 import Breadcrumb from "../../components/Breadcrumb.astro";
-import DealRow from "../../components/DealRow.astro";
 import ProductCard from "../../components/ProductCard.astro";
-import { getCatalog, getCategoryDeals } from "../../lib/catalog";
+import { getCatalog, getCategoryDeals, getProductSeries, hasData } from "../../lib/catalog";
 import { formatDateTime } from "../../lib/format";
 
 // One page per category, built from this single file: /iphone/, /macbook/, ...
@@ -20,7 +19,16 @@ const { data: dealGroups, data_as_of } = await getCategoryDeals(categoryKey!);
 
 // The deals of one product (the API groups them per product; products without deals are missing from the answer).
 const dealsFor = (slug: string) => dealGroups.find((group) => group.slug === slug)?.deals.slice(0, DEALS_PER_PRODUCT) ?? [];
-const productsWithDeals = category.products.filter((product) => dealsFor(product.slug).length > 0);
+
+// The last 7 full days of each product's series for the card previews (today is only partly over, so it is left out).
+const last7 = new Map(
+  await Promise.all(
+    category.products.filter(hasData).map(async (card) => {
+      const { series } = (await getProductSeries(card.slug)).data;
+      return [card.slug, series.slice(-8, -1)] as const;
+    }),
+  ),
+);
 
 const name = category.category_name;
 const title = `Used ${name} Prices in Canada`;
@@ -49,26 +57,12 @@ const description =
   <section class="mt-10" aria-labelledby="models-heading">
     <h2 id="models-heading" class="text-xl font-semibold tracking-tight">{name} models</h2>
     <div class="mt-4 grid gap-4 sm:grid-cols-2">
-      {category.products.map((card) => <ProductCard card={card} categoryKey={category.category_key} />)}
+      {
+        category.products.map((card) => (
+          <ProductCard card={card} categoryKey={category.category_key} last7={last7.get(card.slug)} deals={dealsFor(card.slug)} />
+        ))
+      }
     </div>
   </section>
 
-  {
-    productsWithDeals.length > 0 && (
-      <section class="mt-12" aria-labelledby="deals-heading">
-        <h2 id="deals-heading" class="text-xl font-semibold tracking-tight">Best current deals</h2>
-        <p class="mt-1 text-slate-500">
-          The cheapest recent listings per model, compared with the 30-day average. Availability is not verified.
-        </p>
-        {productsWithDeals.map((product) => (
-          <div class="mt-6">
-            <h3 class="text-lg font-semibold tracking-tight">{product.display_name}</h3>
-            <ul class="mt-3 divide-y divide-slate-200 rounded-xl border border-slate-200">
-              {dealsFor(product.slug).map((deal) => <DealRow deal={deal} />)}
-            </ul>
-          </div>
-        ))}
-      </section>
-    )
-  }
 </Base>

@@ -14,8 +14,8 @@ import ProductTabs from "../components/ProductTabs.astro";
 import SectionHeading from "../components/SectionHeading.astro";
 import StatCard from "../components/StatCard.astro";
 import Base from "../layouts/Base.astro";
-import { getProduct, getSeries } from "../lib/api";
-import { getCatalog, hasData } from "../lib/catalog";
+import { getProduct } from "../lib/api";
+import { getCatalog, getProductSeries, hasData } from "../lib/catalog";
 import { PRODUCT_TABS } from "../lib/site";
 import { productSummary } from "../lib/text";
 
@@ -24,7 +24,7 @@ const { categories, data_as_of } = await getCatalog();
 const category = categories.find((c) => c.products.some(hasData))!;
 const card = category.products.find(hasData)!;
 const { data: product } = await getProduct(card.slug);
-const { series } = (await getSeries(card.slug)).data;
+const { series } = (await getProductSeries(card.slug)).data;
 ---
 
 <Base title="Style guide" description="Internal page showing the shared components." noindex>

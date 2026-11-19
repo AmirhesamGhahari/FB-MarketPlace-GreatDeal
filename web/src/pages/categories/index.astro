@@ -1,0 +1,36 @@
+---
+// /categories/: every category as a big card. The top-bar "Products" link leads here.
+import Breadcrumb from "../../components/Breadcrumb.astro";
+import CategoryCard from "../../components/CategoryCard.astro";
+import Base from "../../layouts/Base.astro";
+import { getCatalog } from "../../lib/catalog";
+import { formatDateTime } from "../../lib/format";
+
+const { categories, data_as_of } = await getCatalog();
+
+// Backgrounds, used in turn; photos replace them in step F12.
+const gradients = [
+  "from-blue-700 to-sky-600",
+  "from-indigo-700 to-violet-600",
+  "from-teal-700 to-emerald-600",
+  "from-slate-800 to-slate-600",
+];
+---
+
+<Base
+  title="Used Electronics Prices in Canada by Category"
+  description="Browse used electronics by category: average asking prices, price trends and the best current deals from Facebook Marketplace listings in Canada."
+>
+  <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Categories" }]} />
+  <h1 class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">Used Electronics Prices in Canada by Category</h1>
+  <p class="mt-3 max-w-3xl text-lg text-slate-600">
+    Pick a category to compare what people are asking for used models on Facebook Marketplace. Every model has its own
+    price history and deals page. Prices are asking prices in Canadian dollars, updated after each data refresh ({
+      formatDateTime(data_as_of)
+    }).
+  </p>
+
+  <div class="mt-8 grid gap-6 sm:grid-cols-2">
+    {categories.map((category, index) => <CategoryCard category={category} gradient={gradients[index % gradients.length]} />)}
+  </div>
+</Base>

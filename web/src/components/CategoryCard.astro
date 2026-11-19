@@ -1,0 +1,58 @@
+---
+// One category on the /categories/ page: a big card on a colour gradient (photos come later) with the model count and price
+// range. On a mouse device, hovering (or tabbing into) the card shows the list of models over it; on touch screens, which
+// cannot hover, the list is shown inside the card. The whole card is a link to the category page (the title link is
+// stretched over the card), and the model links sit above it.
+import type { CatalogCategory } from "../lib/catalog";
+import { hasData } from "../lib/catalog";
+import { moneyShort } from "../lib/format";
+
+interface Props {
+  category: CatalogCategory;
+  gradient: string; // Tailwind gradient classes, for example "from-blue-700 to-sky-600"
+}
+
+const { category, gradient } = Astro.props;
+const models = category.products.filter(hasData);
+const averages = models.map((product) => product.avg_price_30d!);
+const range =
+  averages.length === 0
+    ? null
+    : Math.min(...averages) === Math.max(...averages)
+      ? moneyShort(averages[0])
+      : `${moneyShort(Math.min(...averages))} to ${moneyShort(Math.max(...averages))}`;
+const href = `/${category.category_key}/`;
+const name = category.category_name;
+const link = "relative z-10 text-white no-underline hover:text-white hover:underline";
+---
+
+<article class={`group relative min-h-64 overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} p-6 text-white shadow-sm`}>
+  <h2 class="text-2xl font-semibold tracking-tight">
+    <a href={href} class="text-white no-underline hover:text-white hover:no-underline after:absolute after:inset-0">{name}</a>
+  </h2>
+  <p class="mt-1 text-sm text-white/80">
+    {models.length} {models.length === 1 ? "model" : "models"}{range && ` · 30-day averages ${range}`}
+  </p>
+  <p class="mt-4 max-w-sm text-white/90">
+    Average asking prices, price trends and the best current deals for used {name} models in Canada.
+  </p>
+
+  <div
+    class="mt-5 [@media(hover:hover)]:pointer-events-none [@media(hover:hover)]:absolute [@media(hover:hover)]:inset-0 [@media(hover:hover)]:z-10 [@media(hover:hover)]:mt-0 [@media(hover:hover)]:bg-slate-900 [@media(hover:hover)]:p-6 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
+  >
+    <p class="text-xs font-semibold uppercase tracking-wide text-white/70">{name} models</p>
+    <ul class="mt-2 space-y-1">
+      {
+        models.map((product) => (
+          <li>
+            <a href={`/${category.category_key}/${product.slug}/`} class={`${link} flex items-center justify-between gap-4 py-1`}>
+              <span>{product.display_name}</span>
+              <span class="text-sm text-white/80">{moneyShort(product.avg_price_30d)}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+    <a href={href} class={`${link} mt-3 inline-block text-sm font-medium`}>All {name} →</a>
+  </div>
+</article>

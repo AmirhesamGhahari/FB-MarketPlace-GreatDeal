@@ -7,13 +7,14 @@ import PriceBadge from "./PriceBadge.astro";
 interface Props {
   deal: Deal;
   showRank?: boolean; // a number in front, for ranked lists
+  compact?: boolean; // tighter row for small panels (card previews)
 }
 
-const { deal, showRank = false } = Astro.props;
+const { deal, showRank = false, compact = false } = Astro.props;
 const details = [deal.location_city, deal.condition && deal.condition !== "Unknown" ? deal.condition : null, `Listed ${formatDate(deal.listed_at)}`];
 ---
 
-<li class="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+<li class:list={["flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between", compact ? "py-2.5" : "px-5 py-4"]}>
   <div class="flex min-w-0 items-center gap-4">
     {showRank && <span class="w-6 shrink-0 text-lg font-semibold text-slate-400">{deal.deal_rank}</span>}
     <div class="min-w-0">
@@ -24,6 +25,6 @@ const details = [deal.location_city, deal.condition && deal.condition !== "Unkno
   <div class="flex shrink-0 items-center gap-3">
     <PriceBadge diff={deal.price_diff_30d} />
     <span class="text-lg font-semibold">{money(deal.price)}</span>
-    {deal.listing_url && <a href={deal.listing_url} rel="nofollow noopener" class="text-sm">View on Facebook</a>}
+    {deal.listing_url && <a href={deal.listing_url} rel="nofollow noopener" class="text-sm">{compact ? "View" : "View on Facebook"}</a>}
   </div>
 </li>
