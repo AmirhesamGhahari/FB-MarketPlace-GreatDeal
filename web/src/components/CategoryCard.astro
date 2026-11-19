@@ -10,9 +10,12 @@ import { moneyShort } from "../lib/format";
 interface Props {
   category: CatalogCategory;
   gradient: string; // Tailwind gradient classes, for example "from-blue-700 to-sky-600"
+  href?: string; // where the card leads (default: the category page)
+  modelPath?: string; // appended to /{category}/{slug}/ for the model links ("" = the overview, "top-deals/" = the deals page)
+  blurb?: string; // the line of text under the numbers
 }
 
-const { category, gradient } = Astro.props;
+const { category, gradient, href = `/${category.category_key}/`, modelPath = "", blurb } = Astro.props;
 const models = category.products.filter(hasData);
 const averages = models.map((product) => product.avg_price_30d!);
 const range =
@@ -21,7 +24,6 @@ const range =
     : Math.min(...averages) === Math.max(...averages)
       ? moneyShort(averages[0])
       : `${moneyShort(Math.min(...averages))} to ${moneyShort(Math.max(...averages))}`;
-const href = `/${category.category_key}/`;
 const name = category.category_name;
 const link = "relative z-10 text-white no-underline hover:text-white hover:underline";
 ---
@@ -34,7 +36,7 @@ const link = "relative z-10 text-white no-underline hover:text-white hover:under
     {models.length} {models.length === 1 ? "model" : "models"}{range && ` · 30-day averages ${range}`}
   </p>
   <p class="mt-4 max-w-sm text-white/90">
-    Average asking prices, price trends and the best current deals for used {name} models in Canada.
+    {blurb ?? `Average asking prices, price trends and the best current deals for used ${name} models in Canada.`}
   </p>
 
   <div
@@ -45,7 +47,7 @@ const link = "relative z-10 text-white no-underline hover:text-white hover:under
       {
         models.map((product) => (
           <li>
-            <a href={`/${category.category_key}/${product.slug}/`} class={`${link} flex items-center justify-between gap-4 py-1`}>
+            <a href={`/${category.category_key}/${product.slug}/${modelPath}`} class={`${link} flex items-center justify-between gap-4 py-1`}>
               <span>{product.display_name}</span>
               <span class="text-sm text-white/80">{moneyShort(product.avg_price_30d)}</span>
             </a>

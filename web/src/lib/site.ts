@@ -14,6 +14,15 @@ export const PRODUCT_TABS = [
 ] as const;
 export type ProductTabKey = (typeof PRODUCT_TABS)[number]["key"];
 
+// The three hub sections of the top bar. `tab` is the key of the product page each card leads to (see PRODUCT_TABS).
+// The all-listings hub is not for Google (noindex), like the listings pages it leads to.
+export const HUBS = {
+  "market-insights": { label: "Market Insights", tab: "market-insights", noindex: false },
+  "top-deals": { label: "Top Deals", tab: "top-deals", noindex: false },
+  "all-listings": { label: "All Listings", tab: "listings", noindex: true },
+} as const;
+export type HubKey = keyof typeof HUBS;
+
 // Plain links in the top bar (no menu).
 export const NAV_LINKS = [{ label: "How it works", href: "/how-it-works/" }] as const;
 

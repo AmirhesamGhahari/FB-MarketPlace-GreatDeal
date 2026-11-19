@@ -1,0 +1,13 @@
+---
+import HubCategory from "../../../components/hubs/HubCategory.astro";
+import { getCatalog } from "../../../lib/catalog";
+
+export async function getStaticPaths() {
+  const { categories } = await getCatalog();
+  return categories.map((category) => ({ params: { category: category.category_key } }));
+}
+
+const { category } = Astro.params;
+---
+
+<HubCategory hub="all-listings" categoryKey={category!} />

@@ -1,0 +1,78 @@
+---
+// The root page of a section (/market-insights/, /top-deals/, /all-listings/): one big card per category, each leading to the
+// section's page for that category.
+import Breadcrumb from "../Breadcrumb.astro";
+import CategoryCard from "../CategoryCard.astro";
+import Base from "../../layouts/Base.astro";
+import { getCatalog, getCategoryDeals, getProductSeries, hasData } from "../../lib/catalog";
+import LastUpdated from "../LastUpdated.astro";
+import { HUBS, PRODUCT_TABS, type HubKey } from "../../lib/site";
+import { dealsHubSentences, insightsRootSentences, trend30 } from "../../lib/text";
+
+interface Props {
+  hub: HubKey;
+}
+
+const { hub } = Astro.props;
+const { label, tab, noindex } = HUBS[hub];
+const modelPath = PRODUCT_TABS.find((t) => t.key === tab)!.path;
+const { categories, data_as_of } = await getCatalog();
+
+const titles = {
+  "market-insights": "Used Electronics Price History and Trends in Canada",
+  "top-deals": "Best Used Electronics Deals in Canada",
+  "all-listings": "All Used Electronics Listings in Canada",
+};
+const blurbs = {
+  "market-insights": (name: string) => `Price history and 30-day trends for used ${name} models in Canada.`,
+  "top-deals": (name: string) => `The cheapest current deals on used ${name} models in Canada.`,
+  "all-listings": (name: string) => `Every recent listing of used ${name} models, with sorting and filters.`,
+};
+const descriptions = {
+  "market-insights": "Price history and 30-day trends for used electronics in Canada: how asking prices on Facebook Marketplace moved, by category and model.",
+  "top-deals": "The best current deals on used electronics in Canada, compared with the 30-day average asking price on Facebook Marketplace.",
+  "all-listings": "All recent used electronics listings from Facebook Marketplace in Canada, by category and model.",
+};
+
+// Generated sentences from the numbers (only for the two indexed sections).
+let sentences: string[] = [];
+const models = categories.flatMap((category) => category.products.filter(hasData).map((card) => ({ category, card })));
+if (hub === "market-insights") {
+  const items = (
+    await Promise.all(
+      models.map(async ({ card }) => {
+        const trend = trend30((await getProductSeries(card.slug)).data.series);
+        return trend ? { name: card.display_name, pct: trend.pct } : null;
+      }),
+    )
+  ).filter((item) => item !== null);
+  sentences = insightsRootSentences(categories.length, items);
+} else if (hub === "top-deals") {
+  const groups = await Promise.all(categories.map(async (c) => (await getCategoryDeals(c.category_key)).data));
+  const items = groups.flatMap((group) => group.filter((g) => g.deals.length > 0).map((g) => ({ name: g.display_name, deal: g.deals[0] })));
+  sentences = dealsHubSentences(`${items.length} ${items.length === 1 ? "model" : "models"} across ${categories.length} ${categories.length === 1 ? "category" : "categories"}`, items);
+}
+
+const gradients = ["from-blue-700 to-sky-600", "from-indigo-700 to-violet-600", "from-teal-700 to-emerald-600", "from-slate-800 to-slate-600"];
+---
+
+<Base title={titles[hub]} description={descriptions[hub]} noindex={noindex}>
+  <Breadcrumb items={[{ label: "Home", href: "/" }, { label }]} />
+  <h1 class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">{titles[hub]}</h1>
+  <p class="mt-3 max-w-3xl text-lg text-slate-600">{descriptions[hub]} {sentences.join(" ")}</p>
+  <p class="mt-2 text-sm text-slate-500"><LastUpdated iso={data_as_of} /></p>
+
+  <div class="mt-8 grid gap-6 sm:grid-cols-2">
+    {
+      categories.map((category, index) => (
+        <CategoryCard
+          category={category}
+          gradient={gradients[index % gradients.length]}
+          href={`/${hub}/${category.category_key}/`}
+          modelPath={modelPath}
+          blurb={blurbs[hub](category.category_name)}
+        />
+      ))
+    }
+  </div>
+</Base>
