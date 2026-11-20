@@ -8,14 +8,15 @@ interface Props {
   description: string;
   intro?: string; // one sentence under the H1
   updated?: string; // "November 20, 2026", for pages whose wording is dated (Privacy, Terms)
+  searchable?: boolean; // true: the site search finds this page (About, How it works)
 }
 
-const { title, description, intro, updated } = Astro.props;
+const { title, description, intro, updated, searchable = false } = Astro.props;
 ---
 
 <Base title={title} description={description}>
   <Breadcrumb items={[{ label: "Home", href: "/" }, { label: title }]} />
-  <article class="text-page mt-4 max-w-3xl">
+  <article class="text-page mt-4 max-w-3xl" data-pagefind-body={searchable ? "" : undefined}>
     <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
     {intro && <p class="mt-3 text-lg text-slate-600">{intro}</p>}
     {updated && <p class="mt-2 text-sm text-slate-500">Last updated {updated}</p>}
