@@ -40,7 +40,7 @@ const drawerRow = "flex cursor-pointer list-none items-center justify-between px
       <div class="group relative">
         <a href={productsSection.base} class={topLink}>{productsSection.label} <span aria-hidden="true">▾</span></a>
         <div class={panel}>
-          <div class="relative flex min-h-64 w-[34rem] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+          <div class="relative flex min-h-[26rem] w-[40rem] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
             <ul class="w-56 shrink-0 border-r border-slate-100 py-2">
               {
                 menus.map((category) => (
@@ -53,9 +53,9 @@ const drawerRow = "flex cursor-pointer list-none items-center justify-between px
                     </a>
                     <div class="absolute inset-y-0 left-56 right-0 hidden overflow-y-auto bg-white p-4 group-hover/cat:block group-focus-within/cat:block">
                       <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{category.category_name}</p>
-                      <ul class="mt-2">
+                      <ul class="mt-2 sm:columns-2 sm:gap-x-4">
                         {category.products.map((product) => (
-                          <li>
+                          <li class="break-inside-avoid">
                             <a href={`/${category.category_key}/${product.slug}/`} class={flyoutLink}>
                               {product.display_name}
                             </a>

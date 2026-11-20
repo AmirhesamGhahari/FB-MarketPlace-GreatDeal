@@ -2,6 +2,14 @@
 // needs is missing, so the page simply leaves that sentence out instead of printing "null".
 import type { Deal, ProductSummary, SeriesPoint } from "./api";
 import { formatShortDate, money } from "./format";
+import { SITE_NAME } from "./site";
+
+// The first title option that fits (the layout adds " | Site name"; Google shows about 60 characters, and check-site warns
+// above 70 in total). Long model names such as "PlayStation 5 Slim Digital Edition" fall back to a shorter wording.
+export function fitTitle(options: string[]): string {
+  const limit = 70 - ` | ${SITE_NAME}`.length;
+  return options.find((title) => title.length <= limit) ?? options[options.length - 1];
+}
 
 export const plural = (n: number, one: string, many: string) => `${n.toLocaleString("en-CA")} ${n === 1 ? one : many}`;
 

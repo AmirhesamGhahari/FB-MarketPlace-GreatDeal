@@ -1,5 +1,70 @@
 category_key,product_model,slug,display_name,enabled
+iphone,iPhone 13,iphone-13,iPhone 13,true
+iphone,iPhone 13 Pro Max,iphone-13-pro-max,iPhone 13 Pro Max,true
+iphone,iPhone 14,iphone-14,iPhone 14,true
+iphone,iPhone 14 Plus,iphone-14-plus,iPhone 14 Plus,true
+iphone,iPhone 14 Pro,iphone-14-pro,iPhone 14 Pro,true
+iphone,iPhone 14 Pro Max,iphone-14-pro-max,iPhone 14 Pro Max,true
+iphone,iPhone 15,iphone-15,iPhone 15,true
+iphone,iPhone 15 Plus,iphone-15-plus,iPhone 15 Plus,true
+iphone,iPhone 15 Pro,iphone-15-pro,iPhone 15 Pro,true
+iphone,iPhone 15 Pro Max,iphone-15-pro-max,iPhone 15 Pro Max,true
+iphone,iPhone 16 Plus,iphone-16-plus,iPhone 16 Plus,true
+iphone,iPhone 16 Pro,iphone-16-pro,iPhone 16 Pro,true
 iphone,iPhone 16 Pro Max,iphone-16-pro-max,iPhone 16 Pro Max,true
+iphone,iPhone 17,iphone-17,iPhone 17,true
+iphone,iPhone 17 Air,iphone-17-air,iPhone 17 Air,true
+iphone,iPhone 17 Pro,iphone-17-pro,iPhone 17 Pro,true
 iphone,iPhone 17 Pro Max,iphone-17-pro-max,iPhone 17 Pro Max,true
+macbook,MacBook Air,macbook-air,MacBook Air,true
+macbook,MacBook Air M1,macbook-air-m1,MacBook Air M1,true
 macbook,MacBook Air M2,macbook-air-m2,MacBook Air M2,true
 macbook,MacBook Air M3,macbook-air-m3,MacBook Air M3,true
+macbook,MacBook Air M4,macbook-air-m4,MacBook Air M4,true
+macbook,MacBook Air M5,macbook-air-m5,MacBook Air M5,true
+macbook,MacBook Pro,macbook-pro,MacBook Pro,true
+macbook,MacBook Pro 13-inch,macbook-pro-13-inch,MacBook Pro 13-inch,true
+macbook,MacBook Pro 16-inch,macbook-pro-16-inch,MacBook Pro 16-inch,true
+ipad,iPad (10th generation),ipad-10th-generation,iPad (10th generation),true
+ipad,iPad (11th generation),ipad-11th-generation,iPad (11th generation),true
+ipad,iPad (9th generation),ipad-9th-generation,iPad (9th generation),true
+ipad,iPad Air M1,ipad-air-m1,iPad Air M1,true
+ipad,iPad Air M2,ipad-air-m2,iPad Air M2,true
+ipad,iPad Air M3,ipad-air-m3,iPad Air M3,true
+ipad,iPad mini (7th generation),ipad-mini-7th-generation,iPad mini (7th generation),true
+ipad,iPad Pro M1 12.9-inch,ipad-pro-m1-12-9-inch,iPad Pro M1 12.9-inch,true
+ipad,iPad Pro M4,ipad-pro-m4,iPad Pro M4,true
+ipad,iPad Pro M4 11-inch,ipad-pro-m4-11-inch,iPad Pro M4 11-inch,true
+apple_watch,Apple Watch SE,apple-watch-se,Apple Watch SE,true
+apple_watch,Apple Watch SE (2nd generation),apple-watch-se-2nd-generation,Apple Watch SE (2nd generation),true
+apple_watch,Apple Watch SE (3rd generation),apple-watch-se-3rd-generation,Apple Watch SE (3rd generation),true
+apple_watch,Apple Watch Series 10,apple-watch-series-10,Apple Watch Series 10,true
+apple_watch,Apple Watch Series 11,apple-watch-series-11,Apple Watch Series 11,true
+apple_watch,Apple Watch Series 3,apple-watch-series-3,Apple Watch Series 3,true
+apple_watch,Apple Watch Series 7,apple-watch-series-7,Apple Watch Series 7,true
+apple_watch,Apple Watch Series 8,apple-watch-series-8,Apple Watch Series 8,true
+apple_watch,Apple Watch Series 9,apple-watch-series-9,Apple Watch Series 9,true
+apple_watch,Apple Watch Ultra,apple-watch-ultra,Apple Watch Ultra,true
+apple_watch,Apple Watch Ultra 2,apple-watch-ultra-2,Apple Watch Ultra 2,true
+apple_watch,Apple Watch Ultra 3,apple-watch-ultra-3,Apple Watch Ultra 3,true
+airpods,AirPods (3rd generation),airpods-3rd-generation,AirPods (3rd generation),true
+airpods,AirPods (4th generation),airpods-4th-generation,AirPods (4th generation),true
+airpods,AirPods Max,airpods-max,AirPods Max,true
+airpods,AirPods Max (USB-C),airpods-max-usb-c,AirPods Max (USB-C),true
+airpods,AirPods Pro (1st generation),airpods-pro-1st-generation,AirPods Pro (1st generation),true
+airpods,AirPods Pro (2nd generation),airpods-pro-2nd-generation,AirPods Pro (2nd generation),true
+airpods,AirPods Pro (3rd generation),airpods-pro-3rd-generation,AirPods Pro (3rd generation),true
+gaming_console,Nintendo Switch,nintendo-switch,Nintendo Switch,true
+gaming_console,Nintendo Switch 2,nintendo-switch-2,Nintendo Switch 2,true
+gaming_console,Nintendo Switch Lite,nintendo-switch-lite,Nintendo Switch Lite,true
+gaming_console,PlayStation 5,playstation-5,PlayStation 5,true
+gaming_console,PlayStation 5 Digital Edition,playstation-5-digital-edition,PlayStation 5 Digital Edition,true
+gaming_console,PlayStation 5 Pro,playstation-5-pro,PlayStation 5 Pro,true
+gaming_console,PlayStation 5 Slim,playstation-5-slim,PlayStation 5 Slim,true
+gaming_console,PlayStation 5 Slim Digital Edition,playstation-5-slim-digital-edition,PlayStation 5 Slim Digital Edition,true
+gaming_console,Xbox One S,xbox-one-s,Xbox One S,true
+gaming_console,Xbox Series S,xbox-series-s,Xbox Series S,true
+gaming_console,Xbox Series X,xbox-series-x,Xbox Series X,true
+samsung_galaxy,Samsung Galaxy S24,samsung-galaxy-s24,Samsung Galaxy S24,true
+samsung_galaxy,Samsung Galaxy S24 Ultra,samsung-galaxy-s24-ultra,Samsung Galaxy S24 Ultra,true
+smart_rings,Oura Ring 4,oura-ring-4,Oura Ring 4,true

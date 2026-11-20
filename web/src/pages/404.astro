@@ -1,7 +1,7 @@
 ---
 // Shown for any address that does not exist (the web server is set up to serve 404.html for those).
 import Base from "../layouts/Base.astro";
-import { getCatalog, hasData } from "../lib/catalog";
+import { getCatalog } from "../lib/catalog";
 
 const { categories } = await getCatalog();
 ---
@@ -16,13 +16,11 @@ const { categories } = await getCatalog();
     <li><a href="/categories/">All categories</a></li>
     <li><a href="/top-deals/">Today's top deals</a></li>
     {
-      categories.flatMap((category) =>
-        category.products.filter(hasData).map((product) => (
-          <li>
-            <a href={`/${category.category_key}/${product.slug}/`}>{product.display_name} prices</a>
-          </li>
-        )),
-      )
+      categories.map((category) => (
+        <li>
+          <a href={`/${category.category_key}/`}>Used {category.category_name} prices</a>
+        </li>
+      ))
     }
   </ul>
 </Base>

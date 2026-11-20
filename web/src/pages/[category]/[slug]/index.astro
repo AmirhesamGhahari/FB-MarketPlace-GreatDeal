@@ -9,9 +9,9 @@ import ProductTabs from "../../../components/ProductTabs.astro";
 import SectionHeading from "../../../components/SectionHeading.astro";
 import StatCard from "../../../components/StatCard.astro";
 import Base from "../../../layouts/Base.astro";
-import { getCatalog, getCategoryDeals, getProductPaths, getProductSeries, hasData, getProductSummary } from "../../../lib/catalog";
+import { byPopularity, getCatalog, getCategoryDeals, getProductPaths, getProductSeries, hasData, getProductSummary } from "../../../lib/catalog";
 import { count, money, moneyShort } from "../../../lib/format";
-import { productSummary } from "../../../lib/text";
+import { fitTitle, productSummary } from "../../../lib/text";
 
 // Runs once at build time: lists every page this file must produce, as /{category}/{slug}/.
 export async function getStaticPaths() {
@@ -30,11 +30,16 @@ const dealGroups = (await getCategoryDeals(categoryKey!)).data;
 const deals = dealGroups.find((group) => group.slug === slug)?.deals.slice(0, DEALS_SHOWN) ?? [];
 
 // The other models of the same category that have a page.
-const related = category.products.filter((card) => hasData(card) && card.slug !== slug);
+const otherModels = category.products.filter((card) => hasData(card) && card.slug !== slug);
+const related = [...otherModels].sort(byPopularity).slice(0, 4);
 
 const pagePath = `/${categoryKey}/${slug}/`;
 // Kept short: Google shows about 60 characters of a title (the site name is appended by the layout).
-const title = `${product.display_name} Price in Canada (${moneyShort(product.avg_price_30d)} avg)`;
+const title = fitTitle([
+  `${product.display_name} Price in Canada (${moneyShort(product.avg_price_30d)} avg)`,
+  `${product.display_name} Price in Canada`,
+  `${product.display_name} Price`,
+]);
 const description =
   `${product.display_name} asking prices on Facebook Marketplace in Canada: ` +
   `30-day average ${money(product.avg_price_30d)}, cheapest 25% under ${money(product.cutoff_price_cheapest_25pct_30d)}, ` +
@@ -111,6 +116,11 @@ const description =
         <div class="mt-4 grid gap-4 sm:grid-cols-2">
           {related.map((card) => <ProductCard card={card} categoryKey={category.category_key} />)}
         </div>
+        {otherModels.length > related.length && (
+          <p class="mt-4 text-sm">
+            <a href={`/${categoryKey}/`}>All {otherModels.length + 1} {category.category_name} models →</a>
+          </p>
+        )}
       </section>
     )
   }

@@ -5,8 +5,8 @@ import OverviewChart from "../components/charts/OverviewChart";
 import Base from "../layouts/Base.astro";
 import type { Deal } from "../lib/api";
 import { count, formatDateTime, moneyShort } from "../lib/format";
-import { getCatalog, getCategoryDeals, getPricesUpdatedAt, getProductSeries, hasData } from "../lib/catalog";
-import { SITE_NAME } from "../lib/site";
+import { byPopularity, getCatalog, getCategoryDeals, getPricesUpdatedAt, getProductSeries, hasData } from "../lib/catalog";
+import { BRAND_OWNERS, SITE_NAME } from "../lib/site";
 
 // Structured data: tells search engines the site's name and address.
 const structuredData = [
@@ -20,7 +20,11 @@ const models = categories.flatMap((category) => category.products.filter(hasData
 
 // "iPhone", "iPhone and MacBook", "iPhone, MacBook and iPad"
 const names = categories.map((category) => category.category_name);
+// With a few categories the names fit into sentences ("iPhone and MacBook"); with many the text says "tech" instead.
 const nameList = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : (names[0] ?? "electronics");
+
+const compactNames = names.length <= 3;
+const subject = compactNames ? nameList : "tech";
 
 // Trust numbers.
 const listingsTracked = models.reduce((sum, { card }) => sum + (card.listings_30d ?? 0), 0);
@@ -40,7 +44,7 @@ const featuredSeries = featured ? (await getProductSeries(featured.card.slug)).d
 const steps = [
   {
     title: "We collect the listings",
-    text: `Every day we gather public used ${nameList} listings from Facebook Marketplace across Canada.`,
+    text: `Every day we gather public used ${subject} listings from Facebook Marketplace across Canada.`,
   },
   {
     title: "We compare the prices",
@@ -70,21 +74,21 @@ const faq = [
     a: `Prices were last updated on ${formatDateTime(pricesUpdatedAt)}, and the latest update time is also shown at the bottom of every page.`,
   },
   {
-    q: `Is ${SITE_NAME} connected to Facebook, Meta or Apple?`,
-    a: `No. ${SITE_NAME} is an independent price guide and is not affiliated with Facebook, Meta or Apple.`,
+    q: `Is ${SITE_NAME} connected to Facebook, Meta, Apple or any other brand?`,
+    a: `No. ${SITE_NAME} is an independent price guide and is not affiliated with ${BRAND_OWNERS}.`,
   },
 ];
 
 // "iPhone", "iPhone or MacBook", "iPhone, MacBook or iPad"
 const orList = names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : (names[0] ?? "electronic device");
-const heroTitle = `Know what a used ${orList} is really worth in Canada`;
+const heroTitle = compactNames ? `Know what a used ${orList} is really worth in Canada` : "Know what used tech is really worth in Canada";
 const gradients = ["from-blue-700 to-sky-600", "from-indigo-700 to-violet-600", "from-teal-700 to-emerald-600", "from-slate-800 to-slate-600"];
 const section = "snap-start flex min-h-[calc(100svh-4rem)] items-center";
 ---
 
 <Base
-  title={`Used ${nameList} Prices and Deals in Canada`}
-  description={`Real asking prices, price trends and the best current deals on used ${nameList} in Canada, from Facebook Marketplace listings.`}
+  title={compactNames ? `Used ${nameList} Prices and Deals in Canada` : "Used Tech Prices and Deals in Canada"}
+  description={`Real asking prices, price trends and the best current deals on used ${subject} in Canada, from Facebook Marketplace listings.`}
   fullWidth
 >
   <script type="application/ld+json" set:html={JSON.stringify(structuredData).replaceAll("<", "\\u003c")} />
@@ -150,7 +154,7 @@ const section = "snap-start flex min-h-[calc(100svh-4rem)] items-center";
     <div class="mx-auto w-full max-w-5xl px-4 py-16">
       <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Browse by category</h2>
       <p class="mt-3 max-w-2xl text-lg text-slate-600">Pick a category, then a model, for its price history and current deals.</p>
-      <div class="mt-8 grid gap-6 sm:grid-cols-2">
+      <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {
           categories.map((category, index) => (
             <div
@@ -162,7 +166,7 @@ const section = "snap-start flex min-h-[calc(100svh-4rem)] items-center";
                 <a href={`/${category.category_key}/`} class="text-white no-underline hover:text-white hover:underline">{category.category_name}</a>
               </h3>
               <ul class="mt-4 space-y-1">
-                {category.products.filter(hasData).map((product) => (
+                {[...category.products.filter(hasData)].sort(byPopularity).slice(0, 4).map((product) => (
                   <li>
                     <a
                       href={`/${category.category_key}/${product.slug}/`}
@@ -174,7 +178,9 @@ const section = "snap-start flex min-h-[calc(100svh-4rem)] items-center";
                   </li>
                 ))}
               </ul>
-              <a href={`/${category.category_key}/`} class="mt-4 inline-block text-sm font-medium text-white hover:text-white">All {category.category_name} →</a>
+              <a href={`/${category.category_key}/`} class="mt-4 inline-block text-sm font-medium text-white hover:text-white">
+                {category.products.filter(hasData).length > 4 ? `All ${category.products.filter(hasData).length} ${category.category_name} models →` : `All ${category.category_name} →`}
+              </a>
             </div>
           ))
         }

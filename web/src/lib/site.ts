@@ -26,6 +26,9 @@ export const HUBS = {
 } as const;
 export type HubKey = keyof typeof HUBS;
 
+// The owners of the brands whose products the site tracks, for the "not affiliated" statements.
+export const BRAND_OWNERS = "Facebook, Meta, Apple, Samsung, Sony, Microsoft, Nintendo or Oura";
+
 // Plain links in the top bar (no menu).
 export const NAV_LINKS = [{ label: "How it works", href: "/how-it-works/" }] as const;
 

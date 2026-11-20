@@ -7,7 +7,7 @@ import ProductTabs from "../../../../components/ProductTabs.astro";
 import SectionHeading from "../../../../components/SectionHeading.astro";
 import Base from "../../../../layouts/Base.astro";
 import { getCatalog, getCategoryDeals, getProductPaths } from "../../../../lib/catalog";
-import { dealsSentences } from "../../../../lib/text";
+import { dealsSentences, fitTitle } from "../../../../lib/text";
 
 export async function getStaticPaths() {
   return getProductPaths();
@@ -21,7 +21,7 @@ const deals = dealGroups.find((group) => group.slug === slug)?.deals ?? [];
 
 const sentences = dealsSentences(deals);
 const pagePath = `/${categoryKey}/${slug}/`;
-const title = `${name} Deals in Canada`;
+const title = fitTitle([`${name} Deals in Canada`, `${name} Deals`]);
 const description = `${name} deals in Canada: ${sentences[0] ?? "the cheapest recent Facebook Marketplace listings compared with the 30-day average."}`;
 ---
 

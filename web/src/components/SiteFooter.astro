@@ -3,11 +3,11 @@
 // (About, Contact, ...) show the 404 page until step F9.
 import { getPricesUpdatedAt } from "../lib/catalog";
 import { formatDateTime } from "../lib/format";
-import { NAV_SECTIONS, SITE_NAME, SITE_TAGLINE } from "../lib/site";
+import { BRAND_OWNERS, NAV_SECTIONS, SITE_NAME, SITE_TAGLINE } from "../lib/site";
 
 const pricesUpdatedAt = await getPricesUpdatedAt();
 
-const notice = `Prices are asking prices from Facebook Marketplace listings, not sold prices, and availability is not verified. ${SITE_NAME} is not affiliated with Facebook, Meta or Apple.`;
+const notice = `Prices are asking prices from Facebook Marketplace listings, not sold prices, and availability is not verified. ${SITE_NAME} is not affiliated with ${BRAND_OWNERS}.`;
 
 const groups = [
   { title: "Explore", links: NAV_SECTIONS.map((section) => ({ label: section.label, href: section.base })) },

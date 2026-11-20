@@ -1,6 +1,6 @@
 ---
 import TextPage from "../layouts/TextPage.astro";
-import { CONTACT_EMAIL, SITE_NAME } from "../lib/site";
+import { BRAND_OWNERS, CONTACT_EMAIL, SITE_NAME } from "../lib/site";
 ---
 
 <TextPage
@@ -31,7 +31,7 @@ import { CONTACT_EMAIL, SITE_NAME } from "../lib/site";
 
   <h2>Trademarks and other sites</h2>
   <p>
-    Facebook, Meta, Apple, iPhone, MacBook and other names are trademarks of their owners. {SITE_NAME} is not affiliated with,
+    The names of {BRAND_OWNERS.replaceAll(" or ", " and ")}, and of their products, are trademarks of their owners. {SITE_NAME} is not affiliated with,
     endorsed by or sponsored by them. Listings and the content of other sites belong to their owners.
   </p>
 

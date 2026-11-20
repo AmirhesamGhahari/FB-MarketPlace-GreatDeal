@@ -4,6 +4,13 @@ seeds:
   - name: product_catalog
     description: "Allowlist of products that get a website page: category, URL slug and display name. product_model must match the Gemini value in dim_classified_listings exactly."
     columns:
+      - name: category_key
+        description: "Must exist in dim_categories (the join in dim_products would silently drop a product with an unknown key)."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_categories')
+              field: category_key
       - name: product_model
         tests: [unique, not_null]
       - name: slug

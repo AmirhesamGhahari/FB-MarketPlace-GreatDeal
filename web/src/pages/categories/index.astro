@@ -30,7 +30,7 @@ const gradients = [
     }).
   </p>
 
-  <div class="mt-8 grid gap-6 sm:grid-cols-2">
+  <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
     {categories.map((category, index) => <CategoryCard category={category} gradient={gradients[index % gradients.length]} />)}
   </div>
 </Base>

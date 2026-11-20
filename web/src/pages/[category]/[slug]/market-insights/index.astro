@@ -8,7 +8,7 @@ import ProductTabs from "../../../../components/ProductTabs.astro";
 import SectionHeading from "../../../../components/SectionHeading.astro";
 import Base from "../../../../layouts/Base.astro";
 import { getCatalog, getProductPaths, getProductSeries, getProductSummary } from "../../../../lib/catalog";
-import { insightPoints } from "../../../../lib/text";
+import { fitTitle, insightPoints } from "../../../../lib/text";
 
 export async function getStaticPaths() {
   return getProductPaths();
@@ -23,7 +23,7 @@ const series = seriesData.series;
 const points = insightPoints(series);
 const pagePath = `/${categoryKey}/${slug}/`;
 const name = product.display_name;
-const title = `${name} Price History in Canada`;
+const title = fitTitle([`${name} Price History in Canada`, `${name} Price History`]);
 // About 155 characters is what Google shows of a description, so it is the name plus the first takeaway.
 const description = `${name} price history in Canada: ${points[0] ?? "daily and 7-day average asking prices and listings per day."}`;
 ---

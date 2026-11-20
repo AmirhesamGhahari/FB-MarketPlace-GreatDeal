@@ -4,7 +4,7 @@
 // cannot hover, the list is shown inside the card. The whole card is a link to the category page (the title link is
 // stretched over the card), and the model links sit above it.
 import type { CatalogCategory } from "../lib/catalog";
-import { hasData } from "../lib/catalog";
+import { byPopularity, hasData } from "../lib/catalog";
 import { moneyShort } from "../lib/format";
 
 interface Props {
@@ -17,6 +17,9 @@ interface Props {
 
 const { category, gradient, href = `/${category.category_key}/`, modelPath = "", blurb } = Astro.props;
 const models = category.products.filter(hasData);
+// A category can have many models: the card lists the ones with the most listings and links to the rest.
+const MAX_MODELS = 6;
+const shownModels = [...models].sort(byPopularity).slice(0, MAX_MODELS);
 const averages = models.map((product) => product.avg_price_30d!);
 const range =
   averages.length === 0
@@ -45,7 +48,7 @@ const link = "relative z-10 text-white no-underline hover:text-white hover:under
     <p class="text-xs font-semibold uppercase tracking-wide text-white/70">{name} models</p>
     <ul class="mt-2 space-y-1">
       {
-        models.map((product) => (
+        shownModels.map((product) => (
           <li>
             <a href={`/${category.category_key}/${product.slug}/${modelPath}`} class={`${link} flex items-center justify-between gap-4 py-1`}>
               <span>{product.display_name}</span>
@@ -55,6 +58,8 @@ const link = "relative z-10 text-white no-underline hover:text-white hover:under
         ))
       }
     </ul>
-    <a href={href} class={`${link} mt-3 inline-block text-sm font-medium`}>All {name} →</a>
+    <a href={href} class={`${link} mt-3 inline-block text-sm font-medium`}>
+      {models.length > shownModels.length ? `All ${models.length} ${name} models →` : `All ${name} →`}
+    </a>
   </div>
 </article>
