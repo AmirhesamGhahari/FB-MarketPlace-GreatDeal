@@ -1,22 +1,26 @@
 ---
-// Developer-only page: every shared component, in every variant, on one page. noindex, and it must stay out of the sitemap
-// (and be removed or hidden before launch). Open it at /styleguide/.
-import ProductCharts from "../components/charts/ProductCharts";
-import OverviewChart from "../components/charts/OverviewChart";
-import Sparkline from "../components/Sparkline.astro";
-import AdSlot from "../components/AdSlot.astro";
-import Breadcrumb from "../components/Breadcrumb.astro";
-import Disclosure from "../components/Disclosure.astro";
-import LastUpdated from "../components/LastUpdated.astro";
-import PriceBadge from "../components/PriceBadge.astro";
-import ProductCard from "../components/ProductCard.astro";
-import ProductTabs from "../components/ProductTabs.astro";
-import SectionHeading from "../components/SectionHeading.astro";
-import StatCard from "../components/StatCard.astro";
-import Base from "../layouts/Base.astro";
-import { getCatalog, getProductSeries, hasData, getProductSummary } from "../lib/catalog";
-import { PRODUCT_TABS } from "../lib/site";
-import { productSummary } from "../lib/text";
+// Developer-only page: every shared component, in every variant, on one page. Open it at /styleguide/ while running
+// `npm run dev`. It is a dynamic route that lists no pages in a production build, so it is not part of the real site.
+import ProductCharts from "../../components/charts/ProductCharts";
+import OverviewChart from "../../components/charts/OverviewChart";
+import Sparkline from "../../components/Sparkline.astro";
+import AdSlot from "../../components/AdSlot.astro";
+import Breadcrumb from "../../components/Breadcrumb.astro";
+import Disclosure from "../../components/Disclosure.astro";
+import LastUpdated from "../../components/LastUpdated.astro";
+import PriceBadge from "../../components/PriceBadge.astro";
+import ProductCard from "../../components/ProductCard.astro";
+import ProductTabs from "../../components/ProductTabs.astro";
+import SectionHeading from "../../components/SectionHeading.astro";
+import StatCard from "../../components/StatCard.astro";
+import Base from "../../layouts/Base.astro";
+import { getCatalog, getProductSeries, hasData, getProductSummary } from "../../lib/catalog";
+import { PRODUCT_TABS } from "../../lib/site";
+import { productSummary } from "../../lib/text";
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { rest: undefined } }] : [];
+}
 
 // Real data for the samples: the first product that has a page.
 const { categories, data_as_of } = await getCatalog();

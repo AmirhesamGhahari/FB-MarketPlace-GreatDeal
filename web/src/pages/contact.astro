@@ -1,0 +1,22 @@
+---
+import TextPage from "../layouts/TextPage.astro";
+import { CONTACT_EMAIL, SITE_NAME } from "../lib/site";
+---
+
+<TextPage
+  title="Contact"
+  description={`How to contact ${SITE_NAME}: corrections, questions and requests.`}
+  intro="Questions, corrections and requests are welcome."
+>
+  <h2>Email</h2>
+  <p>Write to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</p>
+
+  <h2>What to write about</h2>
+  <ul>
+    <li>A number or a listing that looks wrong, with the page address.</li>
+    <li>A request to remove or correct something that concerns you.</li>
+    <li>Ideas for models or categories you would like to see.</li>
+    <li>Anything about advertising or partnerships.</li>
+  </ul>
+  <p>We read every message but cannot promise a reply to each one. We cannot help with a purchase or a dispute with a seller: that is between you and the seller on Facebook.</p>
+</TextPage>

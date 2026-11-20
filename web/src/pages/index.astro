@@ -8,6 +8,12 @@ import { count, formatDateTime, moneyShort } from "../lib/format";
 import { getCatalog, getCategoryDeals, getPricesUpdatedAt, getProductSeries, hasData } from "../lib/catalog";
 import { SITE_NAME } from "../lib/site";
 
+// Structured data: tells search engines the site's name and address.
+const structuredData = [
+  { "@context": "https://schema.org", "@type": "WebSite", name: SITE_NAME, url: new URL("/", Astro.site).href, inLanguage: "en-CA" },
+  { "@context": "https://schema.org", "@type": "Organization", name: SITE_NAME, url: new URL("/", Astro.site).href },
+];
+
 const { categories } = await getCatalog();
 const pricesUpdatedAt = await getPricesUpdatedAt();
 const models = categories.flatMap((category) => category.products.filter(hasData).map((card) => ({ category, card })));
@@ -81,6 +87,7 @@ const section = "snap-start flex min-h-[calc(100svh-4rem)] items-center";
   description={`Real asking prices, price trends and the best current deals on used ${nameList} in Canada, from Facebook Marketplace listings.`}
   fullWidth
 >
+  <script type="application/ld+json" set:html={JSON.stringify(structuredData).replaceAll("<", "\\u003c")} />
   <!-- 1. Hero -->
   <section class={`${section} bg-gradient-to-br from-blue-700 via-blue-600 to-sky-500 text-white`}>
     <div class="mx-auto w-full max-w-5xl px-4 py-16">

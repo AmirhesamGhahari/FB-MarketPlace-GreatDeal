@@ -1,0 +1,44 @@
+---
+import TextPage from "../layouts/TextPage.astro";
+import { CONTACT_EMAIL, SITE_NAME } from "../lib/site";
+---
+
+<TextPage
+  title="Privacy policy"
+  description={`The privacy policy of ${SITE_NAME}: what information the site does and does not collect.`}
+  intro="In short: this site does not ask for personal information and does not track you."
+  updated="November 20, 2026"
+>
+  <h2>What we collect from visitors</h2>
+  <p>
+    {SITE_NAME} has no accounts, forms or comments, and it does not set cookies or use analytics or advertising trackers. We do
+    not ask you for your name, email address or any other personal information.
+  </p>
+
+  <h2>Technical logs</h2>
+  <p>
+    The site is delivered through Amazon Web Services. Like any web host, the service may keep standard technical records of
+    requests, for example the address of the device that asked for a page, the page, and the time, for security and to keep the
+    site running. We do not use these records to identify individual visitors.
+  </p>
+
+  <h2>The listing data we show</h2>
+  <p>
+    The prices, titles and cities on this site come from public Facebook Marketplace listings. We do not show seller names or
+    profiles, listing photos or descriptions, and we link to the original listing on Facebook.
+  </p>
+
+  <h2>Links to other sites</h2>
+  <p>
+    Pages link to listings on Facebook. When you follow a link, the other site's own privacy practices apply, not this policy.
+  </p>
+
+  <h2>If this changes</h2>
+  <p>
+    If we later add analytics, cookies, advertising or email alerts, we will update this policy before they start and say what
+    information is involved. The date at the top shows when it was last changed.
+  </p>
+
+  <h2>Contact</h2>
+  <p>Questions about this policy or a request about your information: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</p>
+</TextPage>

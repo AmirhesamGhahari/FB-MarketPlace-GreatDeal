@@ -2,6 +2,9 @@
 export const SITE_NAME = "Great Deals";
 export const SITE_TAGLINE = "Used electronics price trends and deals in Canada";
 
+// TODO before launch: replace with a real address on the site's own domain (shown on the Contact and Privacy pages).
+export const CONTACT_EMAIL = "contact@your-domain.example";
+
 // Ad slots (AdSlot component) render nothing while this is false, so no empty boxes show before ads exist.
 export const ADS_ENABLED = false;
 

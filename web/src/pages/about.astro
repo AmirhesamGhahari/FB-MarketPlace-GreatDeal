@@ -1,0 +1,42 @@
+---
+import TextPage from "../layouts/TextPage.astro";
+import { CONTACT_EMAIL, SITE_NAME } from "../lib/site";
+---
+
+<TextPage
+  title={`About ${SITE_NAME}`}
+  description={`${SITE_NAME} is an independent price guide that turns public used-electronics listings in Canada into average prices, price history and deals.`}
+  intro={`${SITE_NAME} is an independent price guide for used electronics in Canada.`}
+>
+  <h2>What it is</h2>
+  <p>
+    Used electronics are listed at very different prices, and it is hard to tell a good price from an ordinary one. {SITE_NAME}
+    collects public listings from Facebook Marketplace across Canada and turns them into a clear picture for each model: what
+    people are asking on average, how that has moved over time, and which current listings are priced well below the market.
+  </p>
+
+  <h2>Who it is for</h2>
+  <p>
+    Anyone buying or selling a used phone or laptop who wants to know what a fair asking price is before they message a seller
+    or post a listing.
+  </p>
+
+  <h2>What it is not</h2>
+  <ul>
+    <li>
+      It is not a marketplace. We do not sell anything, hold any items or take payments. Every listing links back to Facebook,
+      where the seller and the buyer deal directly.
+    </li>
+    <li>It shows asking prices, not sold prices, and it does not check whether a listing is still available.</li>
+    <li>
+      It is not connected to Facebook, Meta or Apple. Those names are trademarks of their owners and are used only to describe
+      the listings and products we track.
+    </li>
+  </ul>
+
+  <h2>Who runs it</h2>
+  <p>{SITE_NAME} is an independent project. You can read exactly how the numbers are built on the <a href="/how-it-works/">How it works</a> page.</p>
+
+  <h2>Get in touch</h2>
+  <p>Found a mistake or have a question? Write to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> or see the <a href="/contact/">Contact</a> page.</p>
+</TextPage>

@@ -2,6 +2,7 @@
 import { defineConfig } from 'astro/config';
 
 import react from '@astrojs/react';
+import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 
 // `npm run dev` only: in the browser the app asks for /_api/v1/... (see lib/api.ts); the dev server forwards that to the live
@@ -20,7 +21,13 @@ export default defineConfig({
   trailingSlash: 'always',
 
   // React is used only for interactive "islands" (the charts); everything else stays plain HTML.
-  integrations: [react()],
+  integrations: [
+    react(),
+    // sitemap-index.xml lists every page except the ones Google should not see: all-listings pages (noindex), the 404 page.
+    sitemap({
+      filter: (page) => !/\/(all-listings|listings|styleguide|404)(\/|$)/.test(new URL(page).pathname),
+    }),
+  ],
 
   vite: {
     plugins: [tailwindcss()],

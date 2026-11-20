@@ -1,0 +1,65 @@
+---
+import TextPage from "../layouts/TextPage.astro";
+import { SITE_NAME } from "../lib/site";
+---
+
+<TextPage
+  title="How it works"
+  description={`How ${SITE_NAME} collects used-electronics listings in Canada and calculates average asking prices, price cutoffs and deals.`}
+  intro="Where the numbers come from, what counts, and how to read them."
+>
+  <h2>Where the data comes from</h2>
+  <p>
+    We collect public used-electronics listings from Facebook Marketplace across Canada several times a day. Each listing's
+    title, asking price, condition, city and date are stored. We show titles and prices and always link back to the original
+    listing; we do not copy listing photos or descriptions.
+  </p>
+
+  <h2>Which listings count</h2>
+  <p>Every listing is checked before it is used in any average. We only use <strong>comparable</strong> listings:</p>
+  <ul>
+    <li>the listing is for the model in question (not an accessory, a case or a different product),</li>
+    <li>it has a price above zero,</li>
+    <li>its condition is not "Poor" and the text does not mention a defect, and</li>
+    <li>its price is between 0.3 and 3 times the model's typical (median) price, which removes joke prices and typing errors.</li>
+  </ul>
+  <p>All storage sizes and colours of a model are grouped together, so averages mix configurations.</p>
+
+  <h2>The numbers explained</h2>
+  <dl>
+    <dt>30-day average and 7-day average</dt>
+    <dd>
+      The average asking price of the comparable listings posted in the last 30 days and the last 7 days. The 7-day average
+      reacts faster; the 30-day average is steadier.
+    </dd>
+    <dt>Cheapest 25% under</dt>
+    <dd>
+      The price that a quarter of the comparable listings of the last 30 days fall under. A listing priced below it is cheaper
+      than about three quarters of the listings, which makes it a handy yardstick for "is this cheap?".
+    </dd>
+    <dt>vs avg</dt>
+    <dd>A listing's price minus the 30-day average. A negative figure (green) means it is cheaper than average; positive (red) means pricier.</dd>
+    <dt>High-scoring listings (deal score 8 or more)</dt>
+    <dd>
+      Each listing receives a deal score from an automated, AI-assisted classification step. Higher means a better deal for
+      the buyer. We show separate figures for listings that score 8 or more. The score is an estimate, not a guarantee.
+    </dd>
+  </dl>
+
+  <h2>How deals are ranked</h2>
+  <p>
+    On the Top Deals pages, the comparable listings of the last 30 days are ranked from the lowest price up and each price is
+    compared with the 30-day average. Models need enough listings (at least ten) before deals are shown.
+  </p>
+
+  <h2>What to keep in mind</h2>
+  <ul>
+    <li>These are asking prices. Sellers often accept less, and some listings never sell.</li>
+    <li>We do not verify that a listing is still available, and a very low price can mean damage, a scam or an item that is already gone.</li>
+    <li>Listings are matched to models automatically, so occasional mistakes are possible.</li>
+    <li>Times are shown in Toronto time. The last update is shown at the bottom of every page.</li>
+  </ul>
+
+  <h2>Questions or corrections</h2>
+  <p>See the <a href="/contact/">Contact</a> page.</p>
+</TextPage>

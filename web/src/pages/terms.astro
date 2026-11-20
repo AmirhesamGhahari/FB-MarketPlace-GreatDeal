@@ -1,0 +1,55 @@
+---
+import TextPage from "../layouts/TextPage.astro";
+import { CONTACT_EMAIL, SITE_NAME } from "../lib/site";
+---
+
+<TextPage
+  title="Terms of use"
+  description={`The terms for using ${SITE_NAME}: information only, asking prices, no guarantees.`}
+  intro="By using this site you agree to these terms."
+  updated="November 20, 2026"
+>
+  <h2>Information only</h2>
+  <p>
+    {SITE_NAME} provides general information about used-electronics prices. It is not financial, legal or purchasing advice,
+    and you decide for yourself whether and how to buy or sell.
+  </p>
+
+  <h2>Asking prices, no guarantees</h2>
+  <p>
+    The prices shown are asking prices from public listings, not sold prices. We do not verify that a listing is still
+    available, accurate or honest, and our averages, deal scores and rankings are estimates that can contain errors or lag
+    behind the market. We give no warranty about the accuracy, completeness or availability of anything on the site.
+  </p>
+
+  <h2>Dealing with sellers</h2>
+  <p>
+    Any purchase or sale happens between you and the other person on Facebook or elsewhere. We are not a party to it and are not
+    responsible for it. Take normal care: meet in public places, check items before paying and be careful with deposits and
+    unusually low prices.
+  </p>
+
+  <h2>Trademarks and other sites</h2>
+  <p>
+    Facebook, Meta, Apple, iPhone, MacBook and other names are trademarks of their owners. {SITE_NAME} is not affiliated with,
+    endorsed by or sponsored by them. Listings and the content of other sites belong to their owners.
+  </p>
+
+  <h2>Acceptable use</h2>
+  <p>
+    You may read and share the pages for personal use. Please do not overload the site with automated requests or try to disrupt
+    it. We may change or remove any part of the site at any time.
+  </p>
+
+  <h2>Limitation of liability</h2>
+  <p>
+    To the extent the law allows, {SITE_NAME} and its operator are not liable for any loss or damage that results from using or
+    relying on the site.
+  </p>
+
+  <h2>Changes</h2>
+  <p>We may update these terms. The date at the top shows the latest version; using the site after a change means you accept it.</p>
+
+  <h2>Contact</h2>
+  <p><a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></p>
+</TextPage>

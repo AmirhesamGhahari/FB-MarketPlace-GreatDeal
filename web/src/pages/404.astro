@@ -1,0 +1,28 @@
+---
+// Shown for any address that does not exist (the web server is set up to serve 404.html for those).
+import Base from "../layouts/Base.astro";
+import { getCatalog, hasData } from "../lib/catalog";
+
+const { categories } = await getCatalog();
+---
+
+<Base title="Page not found" description="This page does not exist." noindex>
+  <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Page not found</h1>
+  <p class="mt-3 max-w-2xl text-lg text-slate-600">
+    The address you followed does not exist, or the page has moved. Here are some good places to continue:
+  </p>
+  <ul class="mt-6 space-y-2 text-lg">
+    <li><a href="/">Home</a></li>
+    <li><a href="/categories/">All categories</a></li>
+    <li><a href="/top-deals/">Today's top deals</a></li>
+    {
+      categories.flatMap((category) =>
+        category.products.filter(hasData).map((product) => (
+          <li>
+            <a href={`/${category.category_key}/${product.slug}/`}>{product.display_name} prices</a>
+          </li>
+        )),
+      )
+    }
+  </ul>
+</Base>

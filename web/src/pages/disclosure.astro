@@ -1,0 +1,29 @@
+---
+import TextPage from "../layouts/TextPage.astro";
+import { SITE_NAME } from "../lib/site";
+---
+
+<TextPage
+  title="Disclosure"
+  description={`What ${SITE_NAME} is, what it is not affiliated with, and how it is funded.`}
+  intro="Plain statements about who we are connected to and how the site is funded."
+  updated="November 20, 2026"
+>
+  <h2>Not affiliated</h2>
+  <p>
+    {SITE_NAME} is an independent site. It is not affiliated with, endorsed by or sponsored by Facebook, Meta or Apple.
+  </p>
+
+  <h2>Asking prices</h2>
+  <p>
+    All prices are asking prices from public Facebook Marketplace listings. They are not sold prices, and we do not verify that
+    a listing is still available.
+  </p>
+
+  <h2>Advertising and affiliate links</h2>
+  <p>
+    Today the site shows no advertising and contains no affiliate links. If that changes, pages with advertising or affiliate
+    links will say so clearly, next to the links, and we will tell you if we earn a commission when you buy through a link. Any
+    paid placement will be labelled and will never change how listings are ranked or how the averages are calculated.
+  </p>
+</TextPage>
