@@ -2,7 +2,7 @@
 // data is baked into the page at build time; picking a period only changes which of the 60 days are drawn, so no request is made.
 import { useState } from "react";
 import type { SeriesPoint } from "../../lib/api";
-import { formatShortDate, money } from "../../lib/format";
+import { formatShortDate, moneyShort } from "../../lib/format";
 import DailyTable from "./DailyTable";
 import DealsPanel from "./DealsPanel";
 import StackedPanel from "./StackedPanel";
@@ -72,7 +72,7 @@ export default function ProductCharts({ series }: { series: SeriesPoint[] }) {
           subtitle="The line is the average asking price of each day; the columns are the number of listings posted that day."
           syncId="price-and-listings"
           headline={[
-            { label: "Latest daily average", value: lastPrice === null ? "n/a" : money(lastPrice) },
+            { label: "Latest daily average", value: lastPrice === null ? "n/a" : moneyShort(lastPrice) },
             {
               label: `Change over ${days} days`,
               value: change === null ? "n/a" : `${change > 0 ? "+" : ""}${change.toFixed(1)}%`,
@@ -89,8 +89,8 @@ export default function ProductCharts({ series }: { series: SeriesPoint[] }) {
           subtitle="Both lines look back 30 days. The columns are the total number of listings in the last 30 days (shown once 30 days of history exist)."
           syncId="averages-and-total"
           headline={[
-            { label: "30-day average now", value: lastNumber(rows, (day) => day.avg_price_30d) === null ? "n/a" : money(lastNumber(rows, (day) => day.avg_price_30d)) },
-            { label: "Cheapest 25% under", value: lastNumber(rows, (day) => day.cutoff_price_cheapest_25pct_30d) === null ? "n/a" : money(lastNumber(rows, (day) => day.cutoff_price_cheapest_25pct_30d)) },
+            { label: "30-day average now", value: lastNumber(rows, (day) => day.avg_price_30d) === null ? "n/a" : moneyShort(lastNumber(rows, (day) => day.avg_price_30d)) },
+            { label: "Cheapest 25% under", value: lastNumber(rows, (day) => day.cutoff_price_cheapest_25pct_30d) === null ? "n/a" : moneyShort(lastNumber(rows, (day) => day.cutoff_price_cheapest_25pct_30d)) },
             { label: "Listings, last 30 days", value: lastNumber(rows, (day) => day.listings_30d_total) === null ? "n/a" : lastNumber(rows, (day) => day.listings_30d_total)!.toLocaleString("en-CA") },
           ]}
           rows={rows}
@@ -105,7 +105,7 @@ export default function ProductCharts({ series }: { series: SeriesPoint[] }) {
           subtitle="Up to three cheapest listings of the previous 7 days at each date. Hover a dot for details, click or tap it to open the listing on Facebook."
           rows={rows}
           headline={[
-            { label: "Lowest listing in this period", value: lowest ? money(lowest.price) : "n/a", hint: lowest ? formatShortDate(lowest.day) : undefined },
+            { label: "Lowest listing in this period", value: lowest ? moneyShort(lowest.price) : "n/a", hint: lowest ? formatShortDate(lowest.day) : undefined },
             { label: "Dots shown", value: String(cheapestPoints.length), hint: "up to 3 per day" },
           ]}
         />

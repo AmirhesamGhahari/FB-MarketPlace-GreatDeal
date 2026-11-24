@@ -5,7 +5,7 @@ import Breadcrumb from "../Breadcrumb.astro";
 import Carousel from "../Carousel.astro";
 import ModelColumn from "../ModelColumn.astro";
 import Base from "../../layouts/Base.astro";
-import { byPopularity, getCatalog, getCategoryDeals, getProductSeries, hasData } from "../../lib/catalog";
+import { aroundCenter, byPopularity, getCatalog, getCategoryDeals, getProductSeries, hasData } from "../../lib/catalog";
 import LastUpdated from "../LastUpdated.astro";
 import { HUBS, type HubKey } from "../../lib/site";
 import { dealsHubSentences, insightsCategorySentences, plural, trend30 } from "../../lib/text";
@@ -21,6 +21,8 @@ const { categories, data_as_of } = await getCatalog();
 const category = categories.find((c) => c.category_key === categoryKey)!;
 const name = category.category_name;
 const cards = category.products.filter(hasData);
+// The model with the most listings in the middle of the carousel, the others around it in order.
+const arranged = aroundCenter([...cards].sort(byPopularity));
 
 // Data per model, depending on the section.
 const seriesBySlug = new Map<string, Awaited<ReturnType<typeof getProductSeries>>["data"]["series"]>();
@@ -40,6 +42,12 @@ if (hub === "market-insights") {
 } else if (hub === "top-deals") {
   const items = cards.flatMap((card) => (dealsFor(card.slug)[0] ? [{ name: card.display_name, deal: dealsFor(card.slug)[0] }] : []));
   sentences = dealsHubSentences(plural(items.length, `${name} model`, `${name} models`), items);
+} else {
+  const listings = cards.reduce((sum, card) => sum + (card.listings_30d ?? 0), 0);
+  sentences = [
+    `That is ${plural(listings, "listing", "listings")} from the last 30 days across ${plural(cards.length, "model", "models")}.`,
+    "Sort by price to see the cheapest first and how far each one sits below its model's average, a quick way to learn what a good price is.",
+  ];
 }
 
 const titles = {
@@ -69,8 +77,8 @@ const intros = {
   <div class="mt-6">
     <Carousel label={`${name} models`}>
       {
-        [...cards].sort(byPopularity).map((card) => (
-          <li data-carousel-item>
+        arranged.items.map((card, index) => (
+          <li data-carousel-item data-carousel-start={index === arranged.center ? "" : undefined}>
             <ModelColumn variant={hub} card={card} categoryKey={categoryKey} />
           </li>
         ))

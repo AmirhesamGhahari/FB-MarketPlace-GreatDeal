@@ -52,7 +52,7 @@ const description = `${name} price history in Canada: ${points[0] ?? "daily and 
   {
     points.length > 0 && (
       <section class="mt-8">
-        <SectionHeading title="Key takeaways" id="takeaways" />
+        <SectionHeading title="Key takeaways" id="takeaways" subtitle="What the last 30 days tell you, before you open the charts." />
         <ul class="mt-3 max-w-3xl list-disc space-y-1 pl-5 text-slate-600">
           {points.map((point) => <li>{point}</li>)}
         </ul>

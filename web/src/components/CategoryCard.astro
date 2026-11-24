@@ -1,8 +1,8 @@
 ---
-// One category as a tall column on a colour gradient (photos come later), for the carousels on /categories/ and on the roots of
-// the sections: the name, a line of text, how many models and listings (last 7 and 30 days) the category has, and its most-listed
-// models with the numbers that fit the page (`variant`). The whole column is a link to the category's page (the title link is
-// stretched over it) and the model links sit above that.
+// One category as a tall column on a colour gradient (photos come later), for the carousels on the home page, /categories/ and
+// the section roots: the name, a line of text, three clear totals (models, listings of the last 7 and 30 days), and the
+// most-listed models as white cards with the numbers that fit the page (`variant`). The whole column is a link to the
+// category's page (the title link is stretched over it) and the model cards sit above that.
 import type { CatalogCategory } from "../lib/catalog";
 import { byPopularity, getCategoryDeals, getCategoryTotals, hasData } from "../lib/catalog";
 import { count, moneyShort } from "../lib/format";
@@ -10,7 +10,7 @@ import { count, moneyShort } from "../lib/format";
 interface Props {
   category: CatalogCategory;
   gradient: string; // Tailwind gradient classes, for example "from-blue-700 to-sky-600"
-  variant?: "categories" | "market-insights" | "top-deals" | "all-listings";
+  variant?: "categories" | "market-insights" | "top-deals" | "all-listings" | "home";
   href?: string; // where the column leads (default: the category page)
   modelPath?: string; // appended to /{category}/{slug}/ for the model links ("" = the overview, "top-deals/" = the deals page)
   blurb?: string; // the line of text under the title
@@ -19,82 +19,102 @@ interface Props {
 const { category, gradient, variant = "categories", href = `/${category.category_key}/`, modelPath = "", blurb } = Astro.props;
 const models = category.products.filter(hasData);
 // A category can have many models: the column lists the ones with the most listings and links to the rest.
-const MAX_MODELS = 8;
+const MAX_MODELS = variant === "home" ? 5 : 6;
 const shownModels = [...models].sort(byPopularity).slice(0, MAX_MODELS);
+const maxListings = Math.max(1, ...shownModels.map((product) => product.listings_30d ?? 0));
 const totals = await getCategoryTotals(category);
-// For the deals page: how many deals each model has and their average price.
+// For the deals page: the deals of each model, to average their prices.
 const dealGroups = variant === "top-deals" ? (await getCategoryDeals(category.category_key)).data : [];
 const dealsOf = (slug: string) => dealGroups.find((group) => group.slug === slug)?.deals ?? [];
-const average = (values: number[]) => (values.length === 0 ? null : values.reduce((a, b) => a + b, 0) / values.length);
+
+type Row = { label: string; value: string; note?: string; share?: number };
+function rowsFor(product: (typeof models)[number]): Row[] {
+  const avg30 = { label: "30-day average", value: moneyShort(product.avg_price_30d) };
+  const listings = { label: "Listings, 30 days", value: count(product.listings_30d), share: (product.listings_30d ?? 0) / maxListings };
+  const cheapest = { label: "Cheapest 25% under", value: moneyShort(product.cutoff_price_cheapest_25pct_30d) };
+  if (variant === "top-deals") {
+    const prices = dealsOf(product.slug).map((deal) => deal.price);
+    const average = prices.length === 0 ? null : prices.reduce((a, b) => a + b, 0) / prices.length;
+    const below = average !== null && product.avg_price_30d ? Math.round((1 - average / product.avg_price_30d) * 100) : null;
+    return [
+      { label: "Top deals average", value: moneyShort(average), note: below !== null && below > 0 ? `${below}% below the 30-day average` : undefined },
+      avg30,
+      listings,
+    ];
+  }
+  if (variant === "all-listings" || variant === "home") return [avg30, listings];
+  return [avg30, listings, cheapest];
+}
 
 const name = category.category_name;
 const link = "relative z-10 text-white no-underline hover:text-white hover:underline";
+const totalsRows = [
+  { label: category.products.length > 0 && models.length === 1 ? "Model" : "Models", value: String(totals.models), icon: "M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5" },
+  { label: "Listings, 7 days", value: count(totals.listings7d), icon: "M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z" },
+  { label: "Listings, 30 days", value: count(totals.listings30d), icon: "M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1zM8 14h3M13 14h3M8 17h3" },
+];
 ---
 
-<article class={`relative flex h-full min-h-[34rem] flex-col overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} p-5 text-white shadow-sm`}>
-  <h2 class="text-3xl font-bold tracking-tight">
+<article class={`relative flex h-full min-h-[34rem] flex-col overflow-hidden rounded-3xl bg-gradient-to-br ${gradient} p-5 text-white shadow-lg`}>
+  <div class="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" aria-hidden="true"></div>
+  <h2 class="relative text-3xl font-extrabold tracking-tight">
     <a href={href} class="text-white no-underline hover:text-white hover:no-underline after:absolute after:inset-0">{name}</a>
   </h2>
-  <p class="mt-3 text-sm leading-relaxed text-white/90">
+  <p class="relative mt-2 text-sm leading-relaxed text-white/90">
     {blurb ?? `Average asking prices, price trends and the best current deals for used ${name} models in Canada.`}
   </p>
-  <dl class="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-black/15 p-3 text-center">
-    <div>
-      <dd class="text-xl font-bold leading-none">{totals.models}</dd>
-      <dt class="mt-1 text-[11px] leading-tight text-white/75">{totals.models === 1 ? "model" : "models"}</dt>
-    </div>
-    <div>
-      <dd class="text-xl font-bold leading-none">{count(totals.listings7d)}</dd>
-      <dt class="mt-1 text-[11px] leading-tight text-white/75">listings, 7 days</dt>
-    </div>
-    <div>
-      <dd class="text-xl font-bold leading-none">{count(totals.listings30d)}</dd>
-      <dt class="mt-1 text-[11px] leading-tight text-white/75">listings, 30 days</dt>
-    </div>
+
+  <dl class="relative mt-4 divide-y divide-white/15 overflow-hidden rounded-2xl bg-black/20 ring-1 ring-white/10">
+    {
+      totalsRows.map((row) => (
+        <div class="flex items-center gap-3 px-3.5 py-2.5">
+          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d={row.icon}></path>
+            </svg>
+          </span>
+          <dt class="flex-1 whitespace-nowrap text-xs text-white/80">{row.label}</dt>
+          <dd class="text-lg font-bold tabular-nums leading-none">{row.value}</dd>
+        </div>
+      ))
+    }
   </dl>
 
-  <p class="mt-5 text-xs font-semibold uppercase tracking-wide text-white/70">Most listed</p>
-  <ul class="mt-2 space-y-2">
+  <p class="relative mt-5 text-xs font-semibold uppercase tracking-wider text-white/70">Most listed models</p>
+  <ul class="relative mt-2 space-y-2.5">
     {
-      shownModels.map((product) => {
-        const deals = dealsOf(product.slug);
-        const stats =
-          variant === "top-deals"
-            ? [
-                ["Deals", deals.length > 0 ? String(deals.length) : "none"],
-                ["Average of the top deals", moneyShort(average(deals.map((deal) => deal.price)))],
-                ["30-day average", moneyShort(product.avg_price_30d)],
-                ["Listings, 30 days", count(product.listings_30d)],
-              ]
-            : variant === "all-listings"
-              ? [
-                  ["30-day average", moneyShort(product.avg_price_30d)],
-                  ["Listings, 30 days", count(product.listings_30d)],
-                ]
-              : [
-                  ["30-day average", moneyShort(product.avg_price_30d)],
-                  ["Listings, 30 days", count(product.listings_30d)],
-                  ["Cheapest 25% under", moneyShort(product.cutoff_price_cheapest_25pct_30d)],
-                ];
-        return (
-          <li>
-            <a href={`/${category.category_key}/${product.slug}/${modelPath}`} class={`${link} block rounded-lg bg-white/10 px-3 py-2.5 hover:bg-white/20 hover:no-underline`}>
-              <span class="block text-sm font-semibold leading-snug">{product.display_name}</span>
-              <span class="mt-1.5 block space-y-0.5">
-                {stats.map(([statLabel, statValue]) => (
-                  <span class="flex items-baseline justify-between gap-3 text-xs">
-                    <span class="text-white/70">{statLabel}</span>
-                    <span class="font-semibold tabular-nums">{statValue}</span>
+      shownModels.map((product) => (
+        <li>
+          <a
+            href={`/${category.category_key}/${product.slug}/${modelPath}`}
+            class="relative z-10 block rounded-xl bg-white p-3 text-slate-900 no-underline shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md hover:no-underline"
+          >
+            <span class="flex items-start justify-between gap-2">
+              <span class="text-sm font-bold leading-snug text-slate-900">{product.display_name}</span>
+              <span class="text-slate-400" aria-hidden="true">›</span>
+            </span>
+            <span class="mt-2 block space-y-1.5">
+              {rowsFor(product).map((row) => (
+                <span class="block">
+                  <span class="flex items-baseline justify-between gap-2">
+                    <span class="text-[11px] text-slate-500">{row.label}</span>
+                    <span class="text-sm font-bold tabular-nums text-slate-900">{row.value}</span>
                   </span>
-                ))}
-              </span>
-            </a>
-          </li>
-        );
-      })
+                  {row.note && <span class="mt-0.5 block text-right"><span class="rounded-full bg-good-bg px-2 py-0.5 text-[10px] font-semibold text-good">{row.note}</span></span>}
+                  {row.share !== undefined && (
+                    <span class="mt-1 block h-1.5 overflow-hidden rounded-full bg-slate-100">
+                      <span class="block h-full rounded-full bg-brand-600" style={`width: ${Math.max(4, Math.round(row.share * 100))}%`}></span>
+                    </span>
+                  )}
+                </span>
+              ))}
+            </span>
+          </a>
+        </li>
+      ))
     }
   </ul>
-  <a href={href} class={`${link} mt-auto inline-block pt-4 text-sm font-semibold`}>
+  <a href={href} class={`${link} relative mt-auto inline-block pt-4 text-sm font-semibold`}>
     {models.length > shownModels.length ? `All ${models.length} ${name} models →` : `All ${name} →`}
   </a>
 </article>

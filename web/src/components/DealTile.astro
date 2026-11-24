@@ -13,14 +13,16 @@ const { deal } = Astro.props;
 const place = [deal.location_city, deal.condition && deal.condition !== "Unknown" ? deal.condition : null].filter(Boolean).join(" · ");
 ---
 
-<article class="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
+<article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ring-1 ring-black/[0.02]">
   <h4 class="line-clamp-2 text-sm font-semibold leading-snug text-slate-900">{deal.title ?? "Untitled listing"}</h4>
   <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-    <span class="text-xl font-bold tracking-tight text-slate-900">{money(deal.price)}</span>
+    <span class="text-2xl font-extrabold tracking-tight text-slate-900">{money(deal.price)}</span>
     <PriceBadge diff={deal.price_diff_30d} />
   </div>
-  {deal.avg_price_30d !== null && <p class="mt-0.5 text-xs text-slate-500">30-day average {money(deal.avg_price_30d)}</p>}
-  <p class="mt-2 text-xs text-slate-500">Listed {formatDate(deal.listed_at)}{place && ` · ${place}`}</p>
+  <p class="mt-2.5 flex items-center gap-1.5 text-xs text-slate-500">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11zM12 12a2 2 0 100-4 2 2 0 000 4z"></path></svg>
+    <span>Listed {formatDate(deal.listed_at)}{place && ` · ${place}`}</span>
+  </p>
   {
     deal.listing_url && (
       <a

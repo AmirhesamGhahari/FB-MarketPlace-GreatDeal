@@ -3,7 +3,7 @@
 // are visible on a large screen, three on a tablet and one on a phone with its neighbours peeking in; the column in the middle
 // is shown sharp and the others fade. It is plain scrolling with scroll-snap, so every column and every link is in the page's
 // HTML for Google and the carousel still scrolls without JavaScript (the script only adds the fading and the button states).
-// Put <li data-carousel-item> elements in the slot.
+// Put <li data-carousel-item> elements in the slot; mark the one to start on with data-carousel-start.
 interface Props {
   label: string; // read aloud by screen readers, for example "Categories"
 }
@@ -97,9 +97,9 @@ const { label } = Astro.props;
         move(event.key === "ArrowRight" ? 1 : -1);
       }
     });
-    // Start with the third column in the middle, so two columns show on each side (on a phone: start at the first).
-    const startIndex = window.matchMedia("(min-width: 640px)").matches ? Math.min(2, items.length - 1) : 0;
-    const start = items[startIndex];
+    // Start with the column marked data-carousel-start in the middle (the most important one, with others on both sides);
+    // without a mark, the third column.
+    const start = items.find((item) => item.hasAttribute("data-carousel-start")) ?? items[Math.min(2, items.length - 1)];
     track.scrollTo({ left: start.offsetLeft - (track.clientWidth - start.offsetWidth) / 2, behavior: "instant" });
     update();
   }

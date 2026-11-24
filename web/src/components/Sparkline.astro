@@ -7,9 +7,10 @@ interface Props {
   width?: number;
   height?: number;
   color?: string;
+  ring?: string; // the colour around the end dot: the background the chart sits on
 }
 
-const { values, label, width = 120, height = 36, color = "#2a78d6" } = Astro.props;
+const { values, label, width = 120, height = 36, color = "#2a78d6", ring = "#ffffff" } = Astro.props;
 const pad = 5; // room so the end dot is not cut off
 const known = values.filter((v): v is number => typeof v === "number");
 const min = Math.min(...known);
@@ -60,7 +61,7 @@ const gradientId = `spark-${color.replace("#", "")}`;
       </defs>
       <path d={area} fill={`url(#${gradientId})`} stroke="none" />
       <path d={path} fill="none" stroke={color} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-      <circle cx={x(lastIndex)} cy={y(values[lastIndex] as number)} r="4" fill={color} stroke="#ffffff" stroke-width="2" />
+      <circle cx={x(lastIndex)} cy={y(values[lastIndex] as number)} r="4" fill={color} stroke={ring} stroke-width="2" />
     </svg>
   )
 }

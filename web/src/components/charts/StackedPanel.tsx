@@ -25,6 +25,8 @@ const count = (value: number) => value.toLocaleString("en-CA");
 export default function StackedPanel({ title, subtitle, headline, rows, lines: allLines, bar, syncId }: Props) {
   const lines = allLines.filter((line) => rows.some((row) => typeof row[line.key] === "number"));
   const lastIndex = rows.length - 1;
+  // The newest day that has a value for a line (today can still be empty), where its end dot is drawn.
+  const lastWith = (key: string) => rows.map((row) => typeof row[key] === "number").lastIndexOf(true);
   const lastDate = rows[lastIndex]?.stat_date ?? "";
   const gradientId = `fill-${syncId}`;
   const items = [
@@ -84,7 +86,7 @@ export default function StackedPanel({ title, subtitle, headline, rows, lines: a
               strokeLinejoin="round"
               isAnimationActive={false}
               dot={(dot) =>
-                dot.index === lastIndex ? (
+                dot.index === lastWith(line.key) ? (
                   <circle key={`end-${line.key}`} cx={dot.cx} cy={dot.cy} r={5} fill={line.color} stroke={SURFACE} strokeWidth={2} />
                 ) : (
                   <g key={`none-${line.key}-${dot.index}`} />

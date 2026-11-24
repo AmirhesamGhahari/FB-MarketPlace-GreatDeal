@@ -112,3 +112,18 @@ export async function getPricesUpdatedAt(): Promise<string> {
   if (stamps.length === 0) return catalog.data_as_of;
   return stamps.reduce((oldest, stamp) => (new Date(stamp) < new Date(oldest) ? stamp : oldest));
 }
+
+// Puts the first item of a list sorted from the most to the least important in the middle and the rest around it, in order:
+// [a, b, c, d, e] becomes [e, c, a, b, d]. `center` is the position of the first item in the result.
+export function aroundCenter<T>(sortedDescending: T[]): { items: T[]; center: number } {
+  const left: T[] = [];
+  const right: T[] = [];
+  sortedDescending.slice(1).forEach((item, index) => (index % 2 === 0 ? right : left).push(item));
+  return { items: [...left.reverse(), ...sortedDescending.slice(0, 1), ...right], center: left.length };
+}
+
+// The categories with the most listings in the last 30 days first.
+export async function sortCategoriesByListings(categories: CatalogCategory[]): Promise<CatalogCategory[]> {
+  const totals = await Promise.all(categories.map(async (category) => ({ category, listings: (await getCategoryTotals(category)).listings30d })));
+  return totals.sort((a, b) => b.listings - a.listings).map((entry) => entry.category);
+}

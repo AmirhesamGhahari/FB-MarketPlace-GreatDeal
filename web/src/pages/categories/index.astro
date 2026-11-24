@@ -4,10 +4,13 @@ import Breadcrumb from "../../components/Breadcrumb.astro";
 import CategoryCard from "../../components/CategoryCard.astro";
 import Carousel from "../../components/Carousel.astro";
 import Base from "../../layouts/Base.astro";
-import { getCatalog } from "../../lib/catalog";
+import { aroundCenter, getCatalog, hasData, sortCategoriesByListings } from "../../lib/catalog";
 import { formatDateTime } from "../../lib/format";
 
-const { categories, data_as_of } = await getCatalog();
+const { categories: all, data_as_of } = await getCatalog();
+// The category with the most listings in the middle, the others around it in order.
+const modelCount = all.reduce((sum, category) => sum + category.products.filter(hasData).length, 0);
+const { items: categories, center } = aroundCenter(await sortCategoriesByListings(all));
 
 // Backgrounds, used in turn; photos replace them in step F12.
 const gradients = [
@@ -24,19 +27,21 @@ const gradients = [
 >
   <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Categories" }]} />
   <h1 class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">Used Electronics Prices in Canada by Category</h1>
-  <p class="mt-3 max-w-3xl text-lg text-slate-600">
-    Pick a category to compare what people are asking for used models on Facebook Marketplace. Every model has its own
-    price history and deals page. Prices are asking prices in Canadian dollars, updated after each data refresh ({
-      formatDateTime(data_as_of)
-    }).
-  </p>
+  <div class="mt-3 max-w-3xl space-y-3 text-lg text-slate-600">
+    <p>
+      Pick a category to compare what people are really asking for used models on Facebook Marketplace. {modelCount} models
+      in {all.length} categories, and every one has its own price history, a "cheapest 25% under" yardstick and a list of the
+      cheapest deals, so you can tell a fair price from a bargain before you message a seller.
+    </p>
+    <p>Prices are asking prices in Canadian dollars, updated after each data refresh ({formatDateTime(data_as_of)}).</p>
+  </div>
 
   <div class="mt-6">
     <Carousel label="Categories">
       {
         categories.map((category, index) => (
-          <li data-carousel-item>
-            <CategoryCard category={category} gradient={gradients[index % gradients.length]} variant="categories" />
+          <li data-carousel-item data-carousel-start={index === center ? "" : undefined}>
+            <CategoryCard category={category} gradient={gradients[all.indexOf(category) % gradients.length]} variant="categories" />
           </li>
         ))
       }

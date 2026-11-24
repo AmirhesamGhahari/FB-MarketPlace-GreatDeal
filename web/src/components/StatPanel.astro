@@ -1,4 +1,5 @@
 ---
+import Sparkline from "./Sparkline.astro";
 // A headline number in a card with a coloured accent, an icon, and a few supporting lines. Used on the model overview and
 // listings pages.
 interface Props {
@@ -8,16 +9,18 @@ interface Props {
   lines?: { label: string; value: string }[]; // supporting figures
   tone?: "blue" | "orange" | "green" | "violet";
   icon?: "trend" | "calendar" | "tag" | "stack";
+  spark?: (number | null | undefined)[]; // a small trend line next to the number
+  sparkLabel?: string;
 }
 
-const { label, value, note, lines = [], tone = "blue", icon = "trend" } = Astro.props;
+const { label, value, note, lines = [], tone = "blue", icon = "trend", spark, sparkLabel = "" } = Astro.props;
 
 // Complete class names, so Tailwind can find them.
 const tones = {
-  blue: { bar: "from-blue-500 to-sky-400", bubble: "bg-blue-50 text-blue-600" },
-  orange: { bar: "from-orange-500 to-amber-400", bubble: "bg-orange-50 text-orange-600" },
-  green: { bar: "from-emerald-500 to-teal-400", bubble: "bg-emerald-50 text-emerald-600" },
-  violet: { bar: "from-violet-500 to-fuchsia-400", bubble: "bg-violet-50 text-violet-600" },
+  blue: { bar: "from-blue-500 to-sky-400", bubble: "bg-blue-50 text-blue-600", color: "#2a78d6" },
+  orange: { bar: "from-orange-500 to-amber-400", bubble: "bg-orange-50 text-orange-600", color: "#eb6834" },
+  green: { bar: "from-emerald-500 to-teal-400", bubble: "bg-emerald-50 text-emerald-600", color: "#1baf7a" },
+  violet: { bar: "from-violet-500 to-fuchsia-400", bubble: "bg-violet-50 text-violet-600", color: "#8b5cf6" },
 };
 const paths = {
   trend: "M3 17l6-6 4 4 8-8M15 7h6v6",
@@ -28,7 +31,7 @@ const paths = {
 const style = tones[tone];
 ---
 
-<div class="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+<div class="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
   <div class={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${style.bar}`}></div>
   <div class="flex items-center gap-3">
     <span class={`flex h-9 w-9 items-center justify-center rounded-xl ${style.bubble}`}>
@@ -38,7 +41,10 @@ const style = tones[tone];
     </span>
     <p class="text-sm font-medium text-slate-500">{label}</p>
   </div>
-  <p class="mt-4 text-3xl font-bold tracking-tight text-slate-900">{value}</p>
+  <div class="mt-4 flex items-end justify-between gap-2">
+    <p class="whitespace-nowrap text-3xl font-extrabold tracking-tight text-slate-900">{value}</p>
+    {spark && <Sparkline values={spark} label={sparkLabel} width={84} height={36} color={style.color} />}
+  </div>
   {note && <p class="mt-1 text-sm text-slate-500">{note}</p>}
   {
     lines.length > 0 && (

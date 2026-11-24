@@ -1,7 +1,7 @@
 // The chart on a model's overview page: the last 15 days, price and listings per day, with the average of the 5 cheapest
 // listings of each day as a second line.
 import type { SeriesPoint } from "../../lib/api";
-import { money } from "../../lib/format";
+import { moneyShort } from "../../lib/format";
 import StackedPanel from "./StackedPanel";
 import { SERIES_COLORS } from "./theme";
 
@@ -28,7 +28,7 @@ export default function OverviewChart({ series, title = "Average asking price an
       }
       syncId="overview"
       headline={[
-        { label: "Latest daily average", value: last === null ? "n/a" : money(last) },
+        { label: "Latest daily average", value: last === null ? "n/a" : moneyShort(last) },
         {
           label: "Change over 15 days",
           value: change === null ? "n/a" : `${change > 0 ? "+" : ""}${change.toFixed(1)}%`,

@@ -41,7 +41,7 @@ export function ChartCard({ title, subtitle, legend, headline, tableColumns, tab
               <div key={item.label} className="rounded-xl bg-slate-50 px-3.5 py-2.5">
                 <dt className="text-xs text-slate-500">{item.label}</dt>
                 <dd
-                  className={`text-xl font-bold tabular-nums ${item.tone === "good" ? "text-good" : item.tone === "bad" ? "text-bad" : "text-slate-900"}`}
+                  className={`whitespace-nowrap text-xl font-bold tabular-nums ${item.tone === "good" ? "text-good" : item.tone === "bad" ? "text-bad" : "text-slate-900"}`}
                 >
                   {item.value}
                 </dd>
