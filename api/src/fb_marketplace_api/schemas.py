@@ -61,6 +61,7 @@ class SeriesPoint(BaseModel):
     lowest_3_deals_7d: list[LowestDeal] | None
     cutoff_price_cheapest_25pct_30d: float | None
     cutoff_price_cheapest_25pct_7d: float | None
+    lowest_5_avg_1d: float | None  # average price of the up to 5 cheapest listings posted that day
 
 
 class ProductSeries(BaseModel):

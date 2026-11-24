@@ -193,7 +193,8 @@ All chart data for one product: one object per day, oldest first, up to 60 days.
           { "listing_id": "123456789", "url": "https://www.facebook.com/marketplace/item/123456789", "price": 700.0 }
         ],
         "cutoff_price_cheapest_25pct_30d": 1050.0,
-        "cutoff_price_cheapest_25pct_7d": 1040.0
+        "cutoff_price_cheapest_25pct_7d": 1040.0,
+        "lowest_5_avg_1d": 760.0
       }
     ]
   }
@@ -203,6 +204,7 @@ All chart data for one product: one object per day, oldest first, up to 60 days.
 Notes:
 - The last element is today, which is partial; the UI labels it "today so far".
 - Early days may have fewer than 30 days of history behind their 30-day figures; values are passed through as they are.
+- `lowest_5_avg_1d` (added 2026-11-24) is the average price of the up to 5 cheapest listings posted that day (`null` on a day without listings).
 - Charts: (a) `listings_1d` and `avg_price_1d`; (b) `avg_price_3d/7d/30d`; (c) `deal8_*`; (d) `lowest_3_deals_7d` with clickable URLs; (e) the two cutoff columns.
 
 ### 2.5 `GET /v1/products/{slug}/listings`
@@ -294,7 +296,7 @@ The whole list of one product's listings from the last 30 days in a single respo
 
 ### 2.6 `GET /v1/deals/{category_key}/top`
 
-The best current deals of one category (`iphone`, `macbook`, ...): up to 10 listings per product, grouped by product. A deal is ranked by how far its price is below the product's 30-day 25th-percentile cutoff (largest gap first), among listings from the last 30 days.
+The best current deals of one category (`iphone`, `macbook`, ...): up to 25 listings per product (dbt variable `top_deals_per_product`; changed from 10 on 2026-11-24), grouped by product. A deal is ranked by how far its price is below the product's 30-day 25th-percentile cutoff (largest gap first), among listings from the last 30 days.
 
 - Source: `serving.mart_top_deals`; the category is checked against `serving.dim_products` (the catalog)
 - Parameters: `category_key` in the path

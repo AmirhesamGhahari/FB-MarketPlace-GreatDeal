@@ -2,6 +2,7 @@
 // /categories/: every category as a big card. The top-bar "Products" link leads here.
 import Breadcrumb from "../../components/Breadcrumb.astro";
 import CategoryCard from "../../components/CategoryCard.astro";
+import Carousel from "../../components/Carousel.astro";
 import Base from "../../layouts/Base.astro";
 import { getCatalog } from "../../lib/catalog";
 import { formatDateTime } from "../../lib/format";
@@ -30,7 +31,15 @@ const gradients = [
     }).
   </p>
 
-  <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-    {categories.map((category, index) => <CategoryCard category={category} gradient={gradients[index % gradients.length]} />)}
+  <div class="mt-6">
+    <Carousel label="Categories">
+      {
+        categories.map((category, index) => (
+          <li data-carousel-item>
+            <CategoryCard category={category} gradient={gradients[index % gradients.length]} variant="categories" />
+          </li>
+        ))
+      }
+    </Carousel>
   </div>
 </Base>

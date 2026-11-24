@@ -11,6 +11,14 @@ export function fitTitle(options: string[]): string {
   return options.find((title) => title.length <= limit) ?? options[options.length - 1];
 }
 
+// The average price of a few listings (for example the 5 cheapest), or null without any.
+export function averagePrice(listings: { price: number }[] | null | undefined): number | null {
+  return listings && listings.length > 0 ? listings.reduce((sum, listing) => sum + listing.price, 0) / listings.length : null;
+}
+
+// How many listings about a quarter of `total` is (the cheapest-25% price has a quarter of the listings under it).
+export const quarterOf = (total: number | null) => (total === null ? null : Math.round(total / 4));
+
 export const plural = (n: number, one: string, many: string) => `${n.toLocaleString("en-CA")} ${n === 1 ? one : many}`;
 
 // How far `value` is above (+) or below (-) `base`, in percent; null when either is unknown or base is 0.
@@ -62,7 +70,7 @@ function changeSentence(what: string, from: number | null, to: number | null, da
   return `${what} went ${diff < 0 ? "down" : "up"} from ${money(from)} to ${money(to)} over the last ${days} days (${diff < 0 ? "-" : "+"}${pct}%).`;
 }
 
-// Four short facts for the top of the market-insights page, from the last 30 days of the series. Missing numbers drop a point.
+// Three short facts for the top of the market-insights page, from the last 30 days of the series. Missing numbers drop a point.
 export function insightPoints(series: SeriesPoint[]): string[] {
   const window = series.slice(-30);
   const first = window[0];
@@ -82,7 +90,6 @@ export function insightPoints(series: SeriesPoint[]): string[] {
     changeSentence("The 7-day average asking price", first.avg_price_7d, last.avg_price_7d, window.length),
     changeSentence("The price that the cheapest 25% of listings fall under", first.cutoff_price_cheapest_25pct_30d, last.cutoff_price_cheapest_25pct_30d, window.length),
     activity,
-    changeSentence("The 7-day average of high-scoring listings (deal score 8 or more)", first.deal8_avg_price_7d, last.deal8_avg_price_7d, window.length),
   ].filter((point) => point !== null);
 }
 

@@ -2,7 +2,6 @@
 // A product's market-insights page: /{category}/{slug}/market-insights/. All charts with a period filter, plus its own text.
 import Breadcrumb from "../../../../components/Breadcrumb.astro";
 import ProductCharts from "../../../../components/charts/ProductCharts";
-import DailyTable from "../../../../components/DailyTable.astro";
 import LastUpdated from "../../../../components/LastUpdated.astro";
 import ProductTabs from "../../../../components/ProductTabs.astro";
 import SectionHeading from "../../../../components/SectionHeading.astro";
@@ -65,13 +64,6 @@ const description = `${name} price history in Canada: ${points[0] ?? "daily and 
     <SectionHeading title="Charts" id="charts" />
     <div class="mt-4">
       <ProductCharts client:visible series={series} />
-    </div>
-  </section>
-
-  <section class="mt-10">
-    <SectionHeading title="Daily numbers" id="daily" subtitle="The last 14 days, newest first." />
-    <div class="mt-4">
-      <DailyTable rows={series} />
     </div>
   </section>
 

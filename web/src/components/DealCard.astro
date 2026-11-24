@@ -28,5 +28,5 @@ const details = [deal.location_city, deal.condition && deal.condition !== "Unkno
   }
   <p class="mt-4 line-clamp-2 font-medium text-slate-900">{deal.title ?? "Untitled listing"}</p>
   <p class="mt-1 text-sm text-slate-500">{details.filter(Boolean).join(" · ")}</p>
-  {deal.listing_url && <a href={deal.listing_url} rel="nofollow noopener" class="mt-auto pt-4 text-sm font-medium">View on Facebook →</a>}
+  {deal.listing_url && <a href={deal.listing_url} target="_blank" rel="nofollow noopener noreferrer" class="mt-auto pt-4 text-sm font-medium">View on Facebook →</a>}
 </article>

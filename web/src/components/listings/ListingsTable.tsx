@@ -5,7 +5,7 @@ import { getListingsAll, type ListingRow } from "../../lib/api";
 import { formatDate, formatPriceDiff, money } from "../../lib/format";
 
 const PERIODS = [1, 3, 7, 15, 30] as const;
-const PAGE_SIZE = 25;
+const PAGE_SIZES = [10, 25, 50, 100] as const;
 const SORTS = {
   newest: "Newest first",
   price_asc: "Lowest price",
@@ -49,12 +49,20 @@ function pageList(current: number, last: number): (number | "gap")[] {
   return out;
 }
 
-export default function ListingsTable({ slug }: { slug: string }) {
+type Props = {
+  slug: string;
+  defaultSort?: SortKey; // "price_asc" turns the table into a list of the cheapest listings (the deals explorer)
+  defaultDays?: number;
+  defaultPageSize?: number;
+};
+
+export default function ListingsTable({ slug, defaultSort = "newest", defaultDays = 15, defaultPageSize = 25 }: Props) {
   const [rows, setRows] = useState<ListingRow[] | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<false | "missing" | "error">(false);
   const [attempt, setAttempt] = useState(0);
-  const [days, setDays] = useState<number>(15);
-  const [sort, setSort] = useState<SortKey>("newest");
+  const [days, setDays] = useState<number>(defaultDays);
+  const [sort, setSort] = useState<SortKey>(defaultSort);
+  const [pageSize, setPageSize] = useState<number>(defaultPageSize);
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -63,7 +71,8 @@ export default function ListingsTable({ slug }: { slug: string }) {
     setRows(null);
     getListingsAll(slug)
       .then((res) => !cancelled && setRows(res.data))
-      .catch(() => !cancelled && setFailed(true));
+      // "API 404" means the live API does not know the all-listings address (it has not been updated yet).
+      .catch((error) => !cancelled && setFailed(String(error).includes("API 404") ? "missing" : "error"));
     return () => {
       cancelled = true;
     };
@@ -72,7 +81,11 @@ export default function ListingsTable({ slug }: { slug: string }) {
   if (failed) {
     return (
       <div className="rounded-xl border border-slate-200 p-6 text-slate-600">
-        <p>The listings could not be loaded. Please try again in a moment.</p>
+        <p>
+          {failed === "missing"
+            ? "The listings service has not been updated yet, so the full list is not available right now."
+            : "The listings could not be loaded. Please try again in a moment."}
+        </p>
         <button
           type="button"
           onClick={() => setAttempt(attempt + 1)}
@@ -97,11 +110,11 @@ export default function ListingsTable({ slug }: { slug: string }) {
   const inPeriod = rows.filter((row) => row.days_ago < days);
   const sorter = SORTERS[sort];
   const sorted = sorter ? [...inPeriod].sort(sorter) : inPeriod;
-  const lastPage = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const lastPage = Math.max(1, Math.ceil(sorted.length / pageSize));
   const current = Math.min(page, lastPage);
-  const shown = sorted.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
-  const from = sorted.length === 0 ? 0 : (current - 1) * PAGE_SIZE + 1;
-  const to = (current - 1) * PAGE_SIZE + shown.length;
+  const shown = sorted.slice((current - 1) * pageSize, current * pageSize);
+  const from = sorted.length === 0 ? 0 : (current - 1) * pageSize + 1;
+  const to = (current - 1) * pageSize + shown.length;
 
   const choose = <T,>(setter: (value: T) => void, value: T) => {
     setter(value);
@@ -141,6 +154,22 @@ export default function ListingsTable({ slug }: { slug: string }) {
                 {label}
               </option>
             ))}
+          </select>
+        </label>
+        <label className="flex items-center gap-2 text-sm text-slate-500">
+          Rows per page
+          <select
+            value={pageSize}
+            onChange={(event) => choose(setPageSize, Number(event.target.value))}
+            className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-800"
+          >
+            {[...new Set([...PAGE_SIZES, defaultPageSize])]
+              .sort((a, b) => a - b)
+              .map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
           </select>
         </label>
       </div>

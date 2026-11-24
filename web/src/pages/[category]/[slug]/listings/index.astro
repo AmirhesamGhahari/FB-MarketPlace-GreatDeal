@@ -5,10 +5,11 @@ import Breadcrumb from "../../../../components/Breadcrumb.astro";
 import LastUpdated from "../../../../components/LastUpdated.astro";
 import ListingsTable from "../../../../components/listings/ListingsTable";
 import ProductTabs from "../../../../components/ProductTabs.astro";
-import StatCard from "../../../../components/StatCard.astro";
+import StatPanel from "../../../../components/StatPanel.astro";
 import Base from "../../../../layouts/Base.astro";
 import { getCatalog, getProductPaths, getProductSummary } from "../../../../lib/catalog";
-import { count, money } from "../../../../lib/format";
+import { count, money, moneyShort } from "../../../../lib/format";
+import { formatPct, percentDiff, quarterOf } from "../../../../lib/text";
 
 export async function getStaticPaths() {
   return getProductPaths();
@@ -39,9 +40,39 @@ const pagePath = `/${categoryKey}/${slug}/`;
   </div>
 
   <section class="mt-6 grid gap-4 sm:grid-cols-3" aria-label="Statistics">
-    <StatCard label="Listings in 30 days" value={count(product.listings_30d)} note="comparable listings" />
-    <StatCard label="30-day average" value={money(product.avg_price_30d)} note="asking price" />
-    <StatCard label="Cheapest 25% under" value={money(product.cutoff_price_cheapest_25pct_30d)} note="30-day price cutoff" />
+    <StatPanel
+      label="30-day average"
+      value={money(product.avg_price_30d)}
+      note="asking price, last 30 days"
+      icon="calendar"
+      tone="blue"
+      lines={[{ label: "Listings in 30 days", value: count(product.listings_30d) }]}
+    />
+    <StatPanel
+      label="7-day average"
+      value={money(product.avg_price_7d)}
+      note="asking price, last 7 days"
+      icon="trend"
+      tone="orange"
+      lines={[
+        { label: "Listings in 7 days", value: count(product.listings_7d) },
+        {
+          label: "Compared with 30 days",
+          value: percentDiff(product.avg_price_7d, product.avg_price_30d) === null ? "n/a" : formatPct(percentDiff(product.avg_price_7d, product.avg_price_30d)!),
+        },
+      ]}
+    />
+    <StatPanel
+      label="Cheapest 25% under"
+      value={money(product.cutoff_price_cheapest_25pct_30d)}
+      note="a quarter of the listings are priced below this (30 days)"
+      icon="tag"
+      tone="green"
+      lines={[
+        { label: "Listings below it", value: quarterOf(product.listings_30d) === null ? "n/a" : `about ${count(quarterOf(product.listings_30d))}` },
+        { label: "Same price, 7 days", value: moneyShort(product.cutoff_price_cheapest_25pct_7d) },
+      ]}
+    />
   </section>
 
   <section class="mt-8" aria-label="Listings">

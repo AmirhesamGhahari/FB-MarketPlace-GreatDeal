@@ -1,57 +1,47 @@
 ---
-// One product on a category page: headline numbers, linked to the product page. A product without data yet (null stats)
-// is shown as a plain, unlinked card, because its product page does not exist (api_contract.md 2.2).
-// With `last7` and `deals` the card also has a preview (two tiny charts and the best deals): on a mouse device it opens as a
-// panel under the card when the card is hovered or focused; on touch screens, which cannot hover, it is shown below the stats.
-import type { CategoryProductCard, Deal, SeriesPoint } from "../lib/api";
+// One product as a simple card: headline numbers, linked to the product page (used for "Other models" on a product page). A
+// product without data yet (null stats) is shown as a plain, unlinked card, because its product page does not exist
+// (api_contract.md 2.2). The tall columns of the carousels are ModelColumn.astro.
+import type { CategoryProductCard } from "../lib/api";
 import { money } from "../lib/format";
-import CardPreview from "./CardPreview.astro";
 
 interface Props {
   card: CategoryProductCard;
   categoryKey: string;
-  last7?: SeriesPoint[]; // the last 7 full days of the series, oldest first
-  deals?: Deal[];
 }
 
-const { card, categoryKey, last7, deals = [] } = Astro.props;
+const { card, categoryKey } = Astro.props;
 const hasData = card.avg_price_30d !== null;
 const href = hasData ? `/${categoryKey}/${card.slug}/` : undefined;
 // A capitalised variable can be used as a tag name: a link when there is a page to go to, otherwise a plain box.
 const Tag = hasData ? "a" : "div";
-
-const showPreview = hasData && last7 !== undefined && last7.length >= 2;
 ---
 
-<div class="group relative">
-  <Tag
-    href={href}
-    class="block rounded-xl border border-slate-200 bg-white p-5 shadow-sm no-underline hover:no-underline"
-    class:list={[hasData && "transition hover:border-brand-600 hover:shadow-md group-focus-within:border-brand-600"]}
-  >
-    <h3 class="text-lg font-semibold tracking-tight text-slate-900">{card.display_name}</h3>
-    {
-      hasData ? (
-        <>
-          <p class="mt-3 text-sm text-slate-500">30-day average</p>
-          <p class="text-3xl font-semibold tracking-tight text-slate-900">{money(card.avg_price_30d)}</p>
-          <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <dt class="text-slate-500">7-day average</dt>
-              <dd class="font-medium text-slate-900">{money(card.avg_price_7d)}</dd>
-            </div>
-            <div>
-              <dt class="text-slate-500">Cheapest 25% under</dt>
-              <dd class="font-medium text-slate-900">{money(card.cutoff_price_cheapest_25pct_30d)}</dd>
-            </div>
-          </dl>
-          <p class="mt-4 text-sm text-slate-500">{card.listings_30d ?? 0} listings in 30 days</p>
-        </>
-      ) : (
-        <p class="mt-3 text-sm text-slate-500">No data yet</p>
-      )
-    }
-  </Tag>
-
-  {showPreview && <CardPreview name={card.display_name} last7={last7} deals={deals} />}
-</div>
+<Tag
+  href={href}
+  class="block rounded-xl border border-slate-200 bg-white p-5 shadow-sm no-underline hover:no-underline"
+  class:list={[hasData && "transition hover:border-brand-600 hover:shadow-md"]}
+>
+  <h3 class="text-lg font-semibold tracking-tight text-slate-900">{card.display_name}</h3>
+  {
+    hasData ? (
+      <>
+        <p class="mt-3 text-sm text-slate-500">30-day average</p>
+        <p class="text-3xl font-semibold tracking-tight text-slate-900">{money(card.avg_price_30d)}</p>
+        <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <dt class="text-slate-500">7-day average</dt>
+            <dd class="font-medium text-slate-900">{money(card.avg_price_7d)}</dd>
+          </div>
+          <div>
+            <dt class="text-slate-500">Cheapest 25% under</dt>
+            <dd class="font-medium text-slate-900">{money(card.cutoff_price_cheapest_25pct_30d)}</dd>
+          </div>
+        </dl>
+        <p class="mt-4 text-sm text-slate-500">{card.listings_30d ?? 0} listings in 30 days</p>
+      </>
+    ) : (
+      <p class="mt-3 text-sm text-slate-500">No data yet</p>
+    )
+  }
+</Tag>

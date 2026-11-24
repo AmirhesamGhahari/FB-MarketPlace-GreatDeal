@@ -1,40 +1,66 @@
 ---
-// A tiny line for cards: drawn as plain SVG at build time, so it costs no JavaScript. Missing days (null) leave a gap.
+// A small line chart for cards: plain SVG made at build time (no JavaScript), with a soft fill under the line and a dot on the
+// newest value. Missing days (null) leave a gap.
 interface Props {
-  values: (number | null)[];
+  values: (number | null | undefined)[];
   label: string; // read aloud by screen readers, for example "Average price, last 7 days"
   width?: number;
   height?: number;
+  color?: string;
 }
 
-const { values, label, width = 120, height = 32 } = Astro.props;
-const pad = 4; // room so the end dot is not cut off
-const known = values.filter((v): v is number => v !== null);
+const { values, label, width = 120, height = 36, color = "#2a78d6" } = Astro.props;
+const pad = 5; // room so the end dot is not cut off
+const known = values.filter((v): v is number => typeof v === "number");
 const min = Math.min(...known);
 const max = Math.max(...known);
 const x = (i: number) => pad + (i * (width - 2 * pad)) / Math.max(1, values.length - 1);
 // A flat series (min equals max) is drawn in the middle.
 const y = (v: number) => (max === min ? height / 2 : height - pad - ((v - min) * (height - 2 * pad)) / (max - min));
 
-// One path piece per run of known values; "M" starts a new piece, so a null breaks the line.
+// One path piece per run of known values; "M" starts a new piece, so a null breaks the line. `area` closes each piece down to the
+// bottom edge for the fill.
 let path = "";
-let pen = false;
+let area = "";
+let runStart = -1;
+let runEnd = -1;
+const closeRun = () => {
+  if (runStart >= 0) area += `L${x(runEnd).toFixed(1)} ${height} L${x(runStart).toFixed(1)} ${height} Z `;
+  runStart = -1;
+};
 values.forEach((v, i) => {
-  if (v === null) {
-    pen = false;
+  if (typeof v !== "number") {
+    closeRun();
     return;
   }
-  path += `${pen ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)} `;
-  pen = true;
+  const point = `${x(i).toFixed(1)} ${y(v).toFixed(1)}`;
+  if (runStart < 0) {
+    runStart = i;
+    path += `M${point} `;
+    area += `M${point} `;
+  } else {
+    path += `L${point} `;
+    area += `L${point} `;
+  }
+  runEnd = i;
 });
-const lastIndex = values.findLastIndex((v) => v !== null);
+closeRun();
+const lastIndex = values.findLastIndex((v) => typeof v === "number");
+const gradientId = `spark-${color.replace("#", "")}`;
 ---
 
 {
   known.length >= 2 && (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label}>
-      <path d={path} fill="none" stroke="#2a78d6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-      <circle cx={x(lastIndex)} cy={y(values[lastIndex]!)} r="4" fill="#2a78d6" stroke="#ffffff" stroke-width="2" />
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label} class="block max-w-full">
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color={color} stop-opacity="0.22"></stop>
+          <stop offset="1" stop-color={color} stop-opacity="0"></stop>
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${gradientId})`} stroke="none" />
+      <path d={path} fill="none" stroke={color} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <circle cx={x(lastIndex)} cy={y(values[lastIndex] as number)} r="4" fill={color} stroke="#ffffff" stroke-width="2" />
     </svg>
   )
 }

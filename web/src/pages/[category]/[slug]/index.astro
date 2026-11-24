@@ -7,11 +7,11 @@ import LastUpdated from "../../../components/LastUpdated.astro";
 import ProductCard from "../../../components/ProductCard.astro";
 import ProductTabs from "../../../components/ProductTabs.astro";
 import SectionHeading from "../../../components/SectionHeading.astro";
-import StatCard from "../../../components/StatCard.astro";
+import StatPanel from "../../../components/StatPanel.astro";
 import Base from "../../../layouts/Base.astro";
 import { byPopularity, getCatalog, getCategoryDeals, getProductPaths, getProductSeries, hasData, getProductSummary } from "../../../lib/catalog";
 import { count, money, moneyShort } from "../../../lib/format";
-import { fitTitle, productSummary } from "../../../lib/text";
+import { averagePrice, fitTitle, formatPct, percentDiff, productSummary, quarterOf } from "../../../lib/text";
 
 // Runs once at build time: lists every page this file must produce, as /{category}/{slug}/.
 export async function getStaticPaths() {
@@ -63,20 +63,50 @@ const description =
   </div>
   <p data-pagefind-body class="mt-6 max-w-3xl text-slate-600">{productSummary(product)}</p>
 
-  <section class="mt-8 grid gap-4 sm:grid-cols-3" aria-label="Statistics">
-    <StatCard label="30-day average" value={money(product.avg_price_30d)} note="asking price, last 30 days" />
-    <StatCard label="7-day average" value={money(product.avg_price_7d)} note="asking price, last 7 days" />
-    <StatCard
+  <section class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Statistics">
+    <StatPanel
+      label="30-day average"
+      value={money(product.avg_price_30d)}
+      note="asking price, last 30 days"
+      icon="calendar"
+      tone="blue"
+      lines={[{ label: "Listings in 30 days", value: count(product.listings_30d) }]}
+    />
+    <StatPanel
+      label="7-day average"
+      value={money(product.avg_price_7d)}
+      note="asking price, last 7 days"
+      icon="trend"
+      tone="orange"
+      lines={[
+        { label: "Listings in 7 days", value: count(product.listings_7d) },
+        {
+          label: "Compared with 30 days",
+          value: percentDiff(product.avg_price_7d, product.avg_price_30d) === null ? "n/a" : formatPct(percentDiff(product.avg_price_7d, product.avg_price_30d)!),
+        },
+      ]}
+    />
+    <StatPanel
       label="Cheapest 25% under"
       value={money(product.cutoff_price_cheapest_25pct_30d)}
-      note="30-day price cutoff"
+      note="a quarter of the listings are priced below this (30 days)"
+      icon="tag"
+      tone="green"
+      lines={[
+        { label: "Listings below it", value: quarterOf(product.listings_30d) === null ? "n/a" : `about ${count(quarterOf(product.listings_30d))}` },
+        { label: "Same price, 7 days", value: moneyShort(product.cutoff_price_cheapest_25pct_7d) },
+      ]}
     />
-    <StatCard label="Listings in 30 days" value={count(product.listings_30d)} note="comparable listings" />
-    <StatCard label="Listings in 7 days" value={count(product.listings_7d)} note="comparable listings" />
-    <StatCard
-      label="High-scoring listings"
-      value={count(product.deal8_listings_30d)}
-      note={`deal score 8 or more, 30 days · average ${money(product.deal8_avg_price_30d)}`}
+    <StatPanel
+      label="Average of the 5 cheapest"
+      value={moneyShort(averagePrice(product.lowest_5_deals_30d))}
+      note="the 5 cheapest listings found, last 30 days"
+      icon="stack"
+      tone="violet"
+      lines={[
+        { label: "Last 7 days", value: moneyShort(averagePrice(product.lowest_5_deals_7d)) },
+        { label: "Cheapest of all (30 days)", value: moneyShort(product.lowest_5_deals_30d?.[0]?.price ?? null) },
+      ]}
     />
   </section>
 

@@ -97,6 +97,9 @@ export type SeriesPoint = {
   lowest_3_deals_7d: LowestDeal[] | null;
   cutoff_price_cheapest_25pct_30d: number | null;
   cutoff_price_cheapest_25pct_7d: number | null;
+  // The average price of the up to 5 cheapest listings posted that day. Optional: the live API only sends it after the
+  // 2026-11-24 update (api_contract.md 2.4).
+  lowest_5_avg_1d?: number | null;
 };
 
 // Up to 60 days, oldest first; the last element is today (partial).
@@ -121,24 +124,56 @@ export type ListingRow = {
 };
 
 // The first request after a quiet period can wake the paused Aurora cluster (the API itself waits up to ~23 s and may
-// answer 503 database_resuming). A build must survive that, so it waits long and retries. No pause between attempts:
-// the API has already waited for the database before it answers 503.
-const MAX_ATTEMPTS = 4;
+// answer 503 database_resuming). A build must survive that, so it waits long and retries.
+const MAX_ATTEMPTS = 6;
 const TIMEOUT_MS = 45_000;
+
+// The API is deliberately small: API Gateway lets through about 2 requests a second (a short burst of 5), and the database
+// is tiny. A build with many products needs hundreds of requests, so at most 3 are in flight at a time. Answers CloudFront has
+// already cached never reach the API and come back fast, so requests start without a gap; after the first "429 too many
+// requests" the build spaces its requests out (SLOW_GAP_MS) for the rest of the run.
+const MAX_IN_FLIGHT = 3;
+const SLOW_GAP_MS = 600;
+let minGap = 0;
+let inFlight = 0;
+let lastStart = 0;
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function acquireSlot() {
+  // The check and the increment below happen with no await in between, so two callers can never take the same slot.
+  while (inFlight >= MAX_IN_FLIGHT || Date.now() - lastStart < minGap) await sleep(50);
+  inFlight++;
+  lastStart = Date.now();
+}
 
 async function get<T>(path: string): Promise<Envelope<T>> {
   const url = `${API_BASE}${path}`;
   for (let attempt = 1; ; attempt++) {
+    let pauseMs = 0;
+    await acquireSlot();
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
       if (res.ok) return (await res.json()) as Envelope<T>;
-      if (res.status !== 503) throw new Error(`API ${res.status} for ${url}`); // 404/422: retrying will not help
-      console.warn(`[api] ${url} answered 503 (attempt ${attempt}/${MAX_ATTEMPTS})`);
+      if (res.status === 429) {
+        // Too many requests: wait before trying again (the API's own retry hint if it sends one).
+        minGap = SLOW_GAP_MS;
+        pauseMs = Number(res.headers.get("retry-after")) * 1000 || 2000 * attempt;
+        console.warn(`[api] ${url} answered 429, waiting ${pauseMs} ms (attempt ${attempt}/${MAX_ATTEMPTS})`);
+      } else if (res.status === 503) {
+        // No pause: the API has already waited for the database before it answers 503.
+        console.warn(`[api] ${url} answered 503 (attempt ${attempt}/${MAX_ATTEMPTS})`);
+      } else {
+        throw new Error(`API ${res.status} for ${url}`); // 404/422: retrying will not help
+      }
     } catch (err) {
       if (err instanceof Error && err.message.startsWith("API ")) throw err;
       console.warn(`[api] ${url} failed: ${err} (attempt ${attempt}/${MAX_ATTEMPTS})`);
+      pauseMs = 1000;
+    } finally {
+      inFlight--;
     }
     if (attempt >= MAX_ATTEMPTS) throw new Error(`API unreachable after ${MAX_ATTEMPTS} attempts: ${url}`);
+    if (pauseMs > 0) await sleep(pauseMs);
   }
 }
 

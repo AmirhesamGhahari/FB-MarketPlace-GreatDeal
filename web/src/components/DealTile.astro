@@ -1,0 +1,36 @@
+---
+// One deal as its own clearly separated tile (used in the model columns): the title, the price with its comparison to the
+// 30-day average, when and where it was listed, and a link that opens the listing on Facebook Marketplace in a new tab.
+import type { Deal } from "../lib/api";
+import { formatDate, money } from "../lib/format";
+import PriceBadge from "./PriceBadge.astro";
+
+interface Props {
+  deal: Deal;
+}
+
+const { deal } = Astro.props;
+const place = [deal.location_city, deal.condition && deal.condition !== "Unknown" ? deal.condition : null].filter(Boolean).join(" · ");
+---
+
+<article class="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
+  <h4 class="line-clamp-2 text-sm font-semibold leading-snug text-slate-900">{deal.title ?? "Untitled listing"}</h4>
+  <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+    <span class="text-xl font-bold tracking-tight text-slate-900">{money(deal.price)}</span>
+    <PriceBadge diff={deal.price_diff_30d} />
+  </div>
+  {deal.avg_price_30d !== null && <p class="mt-0.5 text-xs text-slate-500">30-day average {money(deal.avg_price_30d)}</p>}
+  <p class="mt-2 text-xs text-slate-500">Listed {formatDate(deal.listed_at)}{place && ` · ${place}`}</p>
+  {
+    deal.listing_url && (
+      <a
+        href={deal.listing_url}
+        target="_blank"
+        rel="nofollow noopener noreferrer"
+        class="mt-3 inline-flex items-center gap-1 rounded-lg bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 no-underline hover:bg-brand-100 hover:no-underline"
+      >
+        See it on Facebook Marketplace <span aria-hidden="true">↗</span>
+      </a>
+    )
+  }
+</article>

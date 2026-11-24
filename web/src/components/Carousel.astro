@@ -1,0 +1,108 @@
+---
+// A row of tall columns you move through sideways (swipe, arrow buttons or the left and right arrow keys). About five columns
+// are visible on a large screen, three on a tablet and one on a phone with its neighbours peeking in; the column in the middle
+// is shown sharp and the others fade. It is plain scrolling with scroll-snap, so every column and every link is in the page's
+// HTML for Google and the carousel still scrolls without JavaScript (the script only adds the fading and the button states).
+// Put <li data-carousel-item> elements in the slot.
+interface Props {
+  label: string; // read aloud by screen readers, for example "Categories"
+}
+
+const { label } = Astro.props;
+---
+
+<!-- The wrapper is as wide as the screen (up to 1500 px) so five columns fit, although the page text column is narrower. -->
+<div data-carousel class="relative left-1/2 w-screen max-w-[1500px] -translate-x-1/2 [--col:72vw] sm:[--col:30vw] lg:[--col:clamp(215px,18.5vw,270px)]">
+  <button
+    type="button"
+    data-carousel-prev
+    aria-label="Previous"
+    class="absolute left-2 top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-xl text-slate-700 shadow-md hover:bg-slate-50 disabled:cursor-default disabled:opacity-0 sm:flex"
+  >
+    ‹
+  </button>
+  <ul
+    data-carousel-track
+    tabindex="0"
+    aria-label={label}
+    class="relative flex snap-x snap-mandatory items-stretch gap-4 overflow-x-auto scroll-smooth px-[calc(50%-var(--col)/2)] py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+  >
+    <slot />
+  </ul>
+  <button
+    type="button"
+    data-carousel-next
+    aria-label="Next"
+    class="absolute right-2 top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-xl text-slate-700 shadow-md hover:bg-slate-50 disabled:cursor-default disabled:opacity-0 sm:flex"
+  >
+    ›
+  </button>
+</div>
+
+<style is:global>
+  /* The carousel is wider than the page column, so a scrollbar of the whole page must not appear. */
+  html {
+    overflow-x: clip;
+  }
+  [data-carousel-item] {
+    flex: 0 0 var(--col);
+    min-width: 0; /* long text inside a column must not make it wider than the others */
+    scroll-snap-align: center;
+    transition:
+      opacity 0.15s linear,
+      transform 0.15s linear;
+  }
+</style>
+
+<script>
+  // Fades the columns by their distance from the middle, enables or disables the arrow buttons, and handles the keys.
+  function setup(root: HTMLElement) {
+    const track = root.querySelector<HTMLElement>("[data-carousel-track]")!;
+    const items = [...track.querySelectorAll<HTMLElement>("[data-carousel-item]")];
+    const prev = root.querySelector<HTMLButtonElement>("[data-carousel-prev]")!;
+    const next = root.querySelector<HTMLButtonElement>("[data-carousel-next]")!;
+    if (items.length === 0) return;
+
+    let frame = 0;
+    function update() {
+      frame = 0;
+      const middle = track.scrollLeft + track.clientWidth / 2;
+      let nearest = 0;
+      let nearestDistance = Infinity;
+      items.forEach((item, index) => {
+        // 0 = in the middle, 1 = one column away, 2 = two columns away ...
+        const distance = Math.abs(item.offsetLeft + item.offsetWidth / 2 - middle) / item.offsetWidth;
+        const fade = Math.min(1, distance / 2.2);
+        item.style.opacity = String(1 - 0.65 * fade);
+        item.style.transform = `scale(${1 - 0.07 * fade})`;
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearest = index;
+        }
+      });
+      prev.disabled = nearest === 0;
+      next.disabled = nearest === items.length - 1;
+    }
+
+    const step = () => (items[1] ? items[1].offsetLeft - items[0].offsetLeft : track.clientWidth / 3);
+    const move = (direction: number) => track.scrollBy({ left: direction * step(), behavior: "smooth" });
+
+    track.addEventListener("scroll", () => frame || (frame = requestAnimationFrame(update)), { passive: true });
+    window.addEventListener("resize", update);
+    prev.addEventListener("click", () => move(-1));
+    next.addEventListener("click", () => move(1));
+    track.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+        event.preventDefault();
+        move(event.key === "ArrowRight" ? 1 : -1);
+      }
+    });
+    // Start with the third column in the middle, so two columns show on each side (on a phone: start at the first).
+    const startIndex = window.matchMedia("(min-width: 640px)").matches ? Math.min(2, items.length - 1) : 0;
+    const start = items[startIndex];
+    track.scrollTo({ left: start.offsetLeft - (track.clientWidth - start.offsetWidth) / 2, behavior: "instant" });
+    update();
+  }
+
+  document.querySelectorAll<HTMLElement>("[data-carousel]").forEach(setup);
+</script>

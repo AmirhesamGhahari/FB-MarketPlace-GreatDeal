@@ -70,6 +70,17 @@ export async function getProductPaths() {
   );
 }
 
+// Listing totals of a category: the sum over its models with data, for the last 7 and the last 30 days.
+export async function getCategoryTotals(category: CatalogCategory) {
+  const models = category.products.filter(hasData);
+  const summaries = await Promise.all(models.map(async (product) => (await getProductSummary(product.slug)).data));
+  return {
+    models: models.length,
+    listings7d: summaries.reduce((sum, summary) => sum + (summary.listings_7d ?? 0), 0),
+    listings30d: summaries.reduce((sum, summary) => sum + (summary.listings_30d ?? 0), 0),
+  };
+}
+
 // The chart series of a product, fetched once per build: the overview, insights and category pages all use it.
 const seriesCache = new Map<string, ReturnType<typeof getSeries>>();
 export function getProductSeries(slug: string) {

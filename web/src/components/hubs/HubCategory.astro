@@ -2,9 +2,10 @@
 // The page of a section for one category (/market-insights/iphone/, ...): a card per model, each leading to the model's page of
 // that section.
 import Breadcrumb from "../Breadcrumb.astro";
-import HubCard from "./HubCard.astro";
+import Carousel from "../Carousel.astro";
+import ModelColumn from "../ModelColumn.astro";
 import Base from "../../layouts/Base.astro";
-import { getCatalog, getCategoryDeals, getProductSeries, hasData } from "../../lib/catalog";
+import { byPopularity, getCatalog, getCategoryDeals, getProductSeries, hasData } from "../../lib/catalog";
 import LastUpdated from "../LastUpdated.astro";
 import { HUBS, type HubKey } from "../../lib/site";
 import { dealsHubSentences, insightsCategorySentences, plural, trend30 } from "../../lib/text";
@@ -65,12 +66,16 @@ const intros = {
   <p class="mt-3 max-w-3xl text-lg text-slate-600">{intros[hub]} {sentences.join(" ")}</p>
   <p class="mt-2 text-sm text-slate-500"><LastUpdated iso={data_as_of} /></p>
 
-  <div class="mt-8 grid gap-4 sm:grid-cols-2">
-    {
-      cards.map((card) => (
-        <HubCard variant={hub} card={card} categoryKey={categoryKey} series={seriesBySlug.get(card.slug)} deals={dealsFor(card.slug)} />
-      ))
-    }
+  <div class="mt-6">
+    <Carousel label={`${name} models`}>
+      {
+        [...cards].sort(byPopularity).map((card) => (
+          <li data-carousel-item>
+            <ModelColumn variant={hub} card={card} categoryKey={categoryKey} />
+          </li>
+        ))
+      }
+    </Carousel>
   </div>
 
   <p class="mt-8 flex flex-wrap gap-x-6 gap-y-1 text-sm">

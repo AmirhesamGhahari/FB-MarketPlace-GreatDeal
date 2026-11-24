@@ -1,0 +1,51 @@
+---
+// A list shown a few items at a time with page buttons. Every item is in the page's HTML (for Google and for visitors without
+// JavaScript, who simply see them all); the script hides the items of the other pages and adds the buttons.
+// Put <li data-pager-item> elements in the slot.
+interface Props {
+  pageSize?: number;
+  class?: string; // classes of the <ol>
+}
+
+const { pageSize = 5, class: className = "" } = Astro.props;
+---
+
+<div data-pager data-page-size={pageSize}>
+  <ol class={className}><slot /></ol>
+  <nav data-pager-nav aria-label="Pages" class="mt-4 hidden flex-wrap items-center gap-1"></nav>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-pager]").forEach((root) => {
+    const items = [...root.querySelectorAll<HTMLElement>("[data-pager-item]")];
+    const nav = root.querySelector<HTMLElement>("[data-pager-nav]")!;
+    const size = Number(root.dataset.pageSize) || 5;
+    const last = Math.ceil(items.length / size);
+    if (last <= 1) return;
+
+    const button = (label: string, onClick: () => void, options: { disabled?: boolean; current?: boolean } = {}) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = label;
+      b.disabled = !!options.disabled;
+      if (options.current) b.setAttribute("aria-current", "page");
+      b.className = options.current
+        ? "min-w-9 rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white"
+        : "min-w-9 rounded-lg px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent";
+      b.addEventListener("click", onClick);
+      return b;
+    };
+
+    function show(page: number) {
+      items.forEach((item, index) => (item.hidden = Math.floor(index / size) + 1 !== page));
+      nav.replaceChildren(
+        button("Previous", () => show(page - 1), { disabled: page === 1 }),
+        ...Array.from({ length: last }, (_, i) => button(String(i + 1), () => show(i + 1), { current: i + 1 === page })),
+        button("Next", () => show(page + 1), { disabled: page === last }),
+      );
+      nav.classList.remove("hidden");
+      nav.classList.add("flex");
+    }
+    show(1);
+  });
+</script>

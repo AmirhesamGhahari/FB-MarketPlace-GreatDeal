@@ -8,23 +8,24 @@ interface Props {
   deal: Deal;
   showRank?: boolean; // a number in front, for ranked lists
   compact?: boolean; // tighter row for small panels (card previews)
+  pagerItem?: boolean; // mark the row as an item of a PagedList
 }
 
-const { deal, showRank = false, compact = false } = Astro.props;
+const { deal, showRank = false, compact = false, pagerItem = false } = Astro.props;
 const details = [deal.location_city, deal.condition && deal.condition !== "Unknown" ? deal.condition : null, `Listed ${formatDate(deal.listed_at)}`];
 ---
 
-<li class:list={["flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between", compact ? "py-2.5" : "px-5 py-4"]}>
+<li data-pager-item={pagerItem ? "" : undefined} class:list={["flex flex-col gap-2", compact ? "py-2.5" : "px-5 py-4 sm:flex-row sm:items-center sm:justify-between"]}>
   <div class="flex min-w-0 items-center gap-4">
     {showRank && <span class="w-6 shrink-0 text-lg font-semibold text-slate-400">{deal.deal_rank}</span>}
     <div class="min-w-0">
-    <p class="truncate font-medium text-slate-900">{deal.title ?? "Untitled listing"}</p>
+    <p class:list={["font-medium text-slate-900", compact ? "line-clamp-2" : "truncate"]}>{deal.title ?? "Untitled listing"}</p>
     <p class="mt-0.5 text-sm text-slate-500">{details.filter(Boolean).join(" · ")}</p>
     </div>
   </div>
-  <div class="flex shrink-0 items-center gap-3">
+  <div class:list={["flex items-center gap-3", compact ? "flex-wrap" : "shrink-0"]}>
     <PriceBadge diff={deal.price_diff_30d} />
     <span class="text-lg font-semibold">{money(deal.price)}</span>
-    {deal.listing_url && <a href={deal.listing_url} rel="nofollow noopener" class="text-sm">{compact ? "View" : "View on Facebook"}</a>}
+    {deal.listing_url && <a href={deal.listing_url} target="_blank" rel="nofollow noopener noreferrer" class="text-sm">{compact ? "View" : "View on Facebook"}</a>}
   </div>
 </li>

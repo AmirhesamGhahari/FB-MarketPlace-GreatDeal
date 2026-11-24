@@ -1,0 +1,199 @@
+---
+// One model as a tall column in a carousel. What it shows depends on the page it is on (`variant`):
+//   "category"        the model list of a category (/iphone/): price trend, numbers, 7-day charts and the 3 best deals
+//   "market-insights" /market-insights/iphone/: price trend, numbers and the 7-day charts
+//   "top-deals"       /top-deals/iphone/: the 4 best deals, each in its own tile
+//   "all-listings"    /all-listings/iphone/: how to filter the listings, and the numbers for 7, 15 and 30 days
+// The column fetches what it needs itself (the build shares every request, see catalog.ts).
+import type { CategoryProductCard } from "../lib/api";
+import { count, moneyShort } from "../lib/format";
+import { getCategoryDeals, getProductSeries, getProductSummary, hasData } from "../lib/catalog";
+import { formatPct, trend30 } from "../lib/text";
+import DealTile from "./DealTile.astro";
+import Sparkline from "./Sparkline.astro";
+
+interface Props {
+  variant: "category" | "market-insights" | "top-deals" | "all-listings";
+  card: CategoryProductCard;
+  categoryKey: string; // URL form
+}
+
+const { variant, card, categoryKey } = Astro.props;
+const ready = hasData(card);
+const pagePath = `/${categoryKey}/${card.slug}/`;
+const name = card.display_name;
+
+const withInsights = variant === "category" || variant === "market-insights";
+const series = ready && (withInsights || variant === "all-listings") ? (await getProductSeries(card.slug)).data.series : [];
+const deals =
+  ready && (variant === "category" || variant === "top-deals")
+    ? ((await getCategoryDeals(categoryKey)).data.find((group) => group.slug === card.slug)?.deals ?? [])
+    : [];
+const summary = ready && variant === "all-listings" ? (await getProductSummary(card.slug)).data : null;
+
+// Insights: the 30-day trend and the last 7 full days (today is only partly over, so it is left out of the small charts).
+const trend = withInsights ? trend30(series) : null;
+const last7 = series.slice(-8, -1);
+const prices = last7.map((day) => day.avg_price_1d);
+const listings = last7.map((day) => day.listings_1d);
+const cheapest = last7.map((day) => day.cutoff_price_cheapest_25pct_7d);
+const lastKnown = (values: (number | null)[]) => values.findLast((v) => v !== null) ?? null;
+
+// All listings: the last 15 days from the daily numbers (the API has no 15-day average or cheapest-25% price).
+const last15 = series.slice(-15);
+const count15 = last15.reduce((sum, day) => sum + (day.listings_1d ?? 0), 0);
+const priced15 = last15.filter((day) => day.avg_price_1d !== null && (day.listings_1d ?? 0) > 0);
+const avg15 =
+  priced15.length === 0
+    ? null
+    : priced15.reduce((sum, day) => sum + day.avg_price_1d! * day.listings_1d!, 0) / priced15.reduce((sum, day) => sum + day.listings_1d!, 0);
+const periods = summary
+  ? [
+      { label: "Last 7 days", listings: summary.listings_7d, average: summary.avg_price_7d, cheapest: summary.cutoff_price_cheapest_25pct_7d },
+      { label: "Last 15 days", listings: count15, average: avg15, cheapest: null },
+      { label: "Last 30 days", listings: summary.listings_30d, average: summary.avg_price_30d, cheapest: summary.cutoff_price_cheapest_25pct_30d },
+    ]
+  : [];
+
+const subtitle = {
+  category: "Price trend, numbers and best deals",
+  "market-insights": "Price history and numbers",
+  "top-deals": `${deals.length} best ${deals.length === 1 ? "deal" : "deals"} right now`,
+  "all-listings": "Every recent listing",
+}[variant];
+const label = "text-xs font-semibold uppercase tracking-wide text-slate-500";
+---
+
+<article class="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <header class="border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white px-5 pb-4 pt-5">
+    <h3 class="text-2xl font-bold leading-tight tracking-tight text-slate-900">
+      {ready ? <a href={pagePath} class="text-slate-900 no-underline hover:text-brand-700 hover:no-underline">{name}</a> : name}
+    </h3>
+    <p class="mt-1 text-sm text-slate-500">{ready ? subtitle : "No data yet"}</p>
+  </header>
+
+  {
+    ready && (
+      <div class="flex-1 space-y-5 p-5">
+        {withInsights && (
+          <>
+            <div>
+              <p class={label}>30-day trend</p>
+              <div class="mt-2 flex items-center justify-between gap-3">
+                {trend ? (
+                  <span
+                    class:list={[
+                      "inline-block rounded-full px-3 py-1 text-base font-bold",
+                      Math.round(trend.pct) < 0 ? "bg-good-bg text-good" : Math.round(trend.pct) > 0 ? "bg-bad-bg text-bad" : "bg-slate-100 text-slate-600",
+                    ]}
+                  >
+                    {formatPct(trend.pct)}
+                  </span>
+                ) : (
+                  <span class="text-sm text-slate-400">n/a</span>
+                )}
+                <Sparkline values={series.slice(-30).map((day) => day.avg_price_7d)} label={`${name}: 7-day average price, last 30 days`} width={140} height={44} />
+              </div>
+              <p class="mt-1 text-xs text-slate-400">How the 7-day average moved</p>
+            </div>
+
+            <dl class="grid grid-cols-2 gap-x-3 gap-y-3 rounded-xl bg-slate-50 p-3 text-sm">
+              <div>
+                <dt class="text-[11px] text-slate-500">30-day average</dt>
+                <dd class="font-bold text-slate-900">{moneyShort(card.avg_price_30d)}</dd>
+              </div>
+              <div>
+                <dt class="text-[11px] text-slate-500">7-day average</dt>
+                <dd class="font-bold text-slate-900">{moneyShort(card.avg_price_7d)}</dd>
+              </div>
+              <div>
+                <dt class="text-[11px] text-slate-500">Cheapest 25% under</dt>
+                <dd class="font-bold text-slate-900">{moneyShort(card.cutoff_price_cheapest_25pct_30d)}</dd>
+              </div>
+              <div>
+                <dt class="text-[11px] text-slate-500">Listings, 30 days</dt>
+                <dd class="font-bold text-slate-900">{count(card.listings_30d)}</dd>
+              </div>
+            </dl>
+
+            <div>
+              <p class={label}>Last 7 days</p>
+              <div class="mt-2 space-y-3">
+                {[
+                  { title: "Average price per day", values: prices, value: moneyShort(lastKnown(prices)), color: "#2a78d6" },
+                  { title: "Listings per day", values: listings, value: String(lastKnown(listings) ?? "n/a"), color: "#eb6834" },
+                  { title: "Cheapest 25% price", values: cheapest, value: moneyShort(lastKnown(cheapest)), color: "#1baf7a" },
+                ].map((chart) => (
+                  <div>
+                    <div class="flex items-baseline justify-between text-sm">
+                      <span class="text-slate-500">{chart.title}</span>
+                      <span class="font-semibold tabular-nums text-slate-900">{chart.value}</span>
+                    </div>
+                    <Sparkline values={chart.values} label={`${name}: ${chart.title.toLowerCase()}, last 7 days`} width={200} height={40} color={chart.color} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {(variant === "category" || variant === "top-deals") && deals.length > 0 && (
+          <div>
+            <p class={label}>{variant === "category" ? "Best deals now" : `${deals.length} best deals`}</p>
+            <div class="mt-3 space-y-3">
+              {deals.slice(0, variant === "category" ? 3 : 4).map((deal) => <DealTile deal={deal} />)}
+            </div>
+          </div>
+        )}
+        {variant === "top-deals" && deals.length === 0 && <p class="text-sm text-slate-500">No deals right now.</p>}
+
+        {variant === "all-listings" && summary && (
+          <>
+            <p class="text-sm leading-relaxed text-slate-600">
+              Every recent listing of the {name}, ready to browse. On the listings page you can choose the period (the last 1, 3, 7,
+              15 or 30 days), sort by newest, lowest price, highest price or biggest saving, and choose how many rows to see.
+            </p>
+            <div class="space-y-3">
+              {periods.map((period) => (
+                <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+                  <p class="text-sm font-semibold text-slate-900">{period.label}</p>
+                  <dl class="mt-2 grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <dt class="text-[11px] text-slate-500">Listings</dt>
+                      <dd class="font-bold text-slate-900">{count(period.listings)}</dd>
+                    </div>
+                    <div>
+                      <dt class="text-[11px] text-slate-500">Average</dt>
+                      <dd class="font-bold text-slate-900">{moneyShort(period.average)}</dd>
+                    </div>
+                    <div>
+                      <dt class="text-[11px] text-slate-500">Cheapest 25%</dt>
+                      <dd class="font-bold text-slate-900">{period.cheapest === null ? "—" : moneyShort(period.cheapest)}</dd>
+                    </div>
+                  </dl>
+                </div>
+              ))}
+            </div>
+            <p class="text-xs text-slate-400">The cheapest-25% price is available for 7 and 30 days.</p>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  {
+    ready && (
+      <footer class="border-t border-slate-100 bg-slate-50/60 px-5 py-3 text-sm">
+        {variant === "market-insights" && <a href={`${pagePath}market-insights/`} class="font-semibold">Full price history →</a>}
+        {variant === "category" && (
+          <div class="flex flex-wrap gap-x-5 gap-y-1">
+            <a href={pagePath} class="font-semibold">{name} overview →</a>
+            <a href={`${pagePath}top-deals/`} class="font-semibold">All deals →</a>
+          </div>
+        )}
+        {variant === "top-deals" && <a href={`${pagePath}top-deals/`} class="font-semibold">See all {deals.length} deals for the {name} →</a>}
+        {variant === "all-listings" && <a href={`${pagePath}listings/`} class="font-semibold">Browse all listings →</a>}
+      </footer>
+    )
+  }
+</article>

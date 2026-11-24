@@ -3,7 +3,9 @@
 import Breadcrumb from "../../../../components/Breadcrumb.astro";
 import DealRow from "../../../../components/DealRow.astro";
 import LastUpdated from "../../../../components/LastUpdated.astro";
+import PagedList from "../../../../components/PagedList.astro";
 import ProductTabs from "../../../../components/ProductTabs.astro";
+import ListingsTable from "../../../../components/listings/ListingsTable";
 import SectionHeading from "../../../../components/SectionHeading.astro";
 import Base from "../../../../layouts/Base.astro";
 import { getCatalog, getCategoryDeals, getProductPaths } from "../../../../lib/catalog";
@@ -52,15 +54,31 @@ const description = `${name} deals in Canada: ${sentences[0] ?? "the cheapest re
 
   {
     deals.length > 0 ? (
-      <ol class="mt-8 divide-y divide-slate-200 rounded-xl border border-slate-200">
-        {deals.map((deal) => <DealRow deal={deal} showRank />)}
-      </ol>
+      <div class="mt-8">
+        <p class="mb-3 text-sm text-slate-500">
+          The {deals.length} best deals, cheapest compared with the market first, five at a time. Use the page buttons to see the next ones.
+        </p>
+        <PagedList pageSize={5} class="space-y-3 [&>li]:rounded-xl [&>li]:border [&>li]:border-slate-200 [&>li]:bg-white [&>li]:shadow-sm">
+          {deals.map((deal) => <DealRow deal={deal} showRank pagerItem />)}
+        </PagedList>
+      </div>
     ) : (
       <p class="mt-8 rounded-xl border border-slate-200 p-5 text-slate-600">
         There are no deals to show for the {name} right now. Deals appear when enough comparable listings are available.
       </p>
     )
   }
+
+  <section class="mt-12" aria-label="Explore more deals">
+    <SectionHeading
+      title="Explore more deals"
+      id="explore"
+      subtitle="Every comparable listing, cheapest first. Choose the period, how many to show and how to sort."
+    />
+    <div class="mt-4">
+      <ListingsTable client:visible slug={slug!} defaultSort="price_asc" defaultDays={30} defaultPageSize={10} />
+    </div>
+  </section>
 
   <section class="mt-12">
     <SectionHeading title="How deals are chosen" id="how" />
