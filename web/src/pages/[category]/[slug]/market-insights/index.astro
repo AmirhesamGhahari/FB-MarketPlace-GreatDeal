@@ -7,7 +7,8 @@ import ProductTabs from "../../../../components/ProductTabs.astro";
 import SectionHeading from "../../../../components/SectionHeading.astro";
 import Base from "../../../../layouts/Base.astro";
 import { getCatalog, getProductPaths, getProductSeries, getProductSummary } from "../../../../lib/catalog";
-import { fitTitle, insightPoints } from "../../../../lib/text";
+import { modelValues, pageMeta } from "../../../../lib/seo";
+import { insightPoints } from "../../../../lib/text";
 
 export async function getStaticPaths() {
   return getProductPaths();
@@ -22,12 +23,10 @@ const series = seriesData.series;
 const points = insightPoints(series);
 const pagePath = `/${categoryKey}/${slug}/`;
 const name = product.display_name;
-const title = fitTitle([`${name} Price History in Canada`, `${name} Price History`]);
-// About 155 characters is what Google shows of a description, so it is the name plus the first takeaway.
-const description = `${name} price history in Canada: ${points[0] ?? "daily and 7-day average asking prices and listings per day."}`;
+const meta = pageMeta("model_market_insights", modelValues(product, { series }));
 ---
 
-<Base title={title} description={description}>
+<Base title={meta.title} description={meta.description}>
   <Breadcrumb
     items={[
       { label: "Home", href: "/" },
@@ -36,7 +35,7 @@ const description = `${name} price history in Canada: ${points[0] ?? "daily and 
       { label: "Market insights" },
     ]}
   />
-  <h1 class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">Used {name} Price History in Canada</h1>
+  <h1 class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">{meta.h1}</h1>
   <p class="mt-2 text-slate-500">
     Asking prices on Facebook Marketplace, all configurations · <LastUpdated iso={data_as_of} />
   </p>

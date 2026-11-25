@@ -1,12 +1,15 @@
 ---
 import TextPage from "../layouts/TextPage.astro";
-import { SITE_NAME } from "../lib/site";
+import { pageMeta } from "../lib/seo";
+
+const meta = pageMeta("how_it_works");
 ---
 
 <TextPage
   searchable
-  title="How it works"
-  description={`How ${SITE_NAME} collects used-electronics listings in Canada and calculates average asking prices, price cutoffs and deals.`}
+  title={meta.title}
+  h1={meta.h1}
+  description={meta.description}
   intro="Where the numbers come from, what counts, and how to read them."
 >
   <h2>Where the data comes from</h2>

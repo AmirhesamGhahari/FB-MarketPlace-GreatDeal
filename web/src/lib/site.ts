@@ -1,9 +1,12 @@
-// Site-wide constants. Working name for now; change it here and every page title, header and footer follows.
-export const SITE_NAME = "Great Deals";
-export const SITE_TAGLINE = "Used electronics price trends and deals in Canada";
+// Site-wide constants. The name, tagline and contact address come from seo_templates.yaml (the owner edits that file), so every
+// title, header, footer and legal page follows it.
+import { SEO_GLOBAL } from "./seo";
 
-// TODO before launch: replace with a real address on the site's own domain (shown on the Contact and Privacy pages).
-export const CONTACT_EMAIL = "contact@your-domain.example";
+export const SITE_NAME = SEO_GLOBAL.site_name;
+export const SITE_TAGLINE = SEO_GLOBAL.tagline;
+export const CONTACT_EMAIL = SEO_GLOBAL.contact_email;
+// Shown as the person behind the site (About, Privacy, Terms).
+export const OWNER_NAME = SEO_GLOBAL.owner_name;
 
 // Ad slots (AdSlot component) render nothing while this is false, so no empty boxes show before ads exist.
 export const ADS_ENABLED = false;

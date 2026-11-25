@@ -1,12 +1,16 @@
 ---
 import TextPage from "../layouts/TextPage.astro";
-import { BRAND_OWNERS, CONTACT_EMAIL, SITE_NAME } from "../lib/site";
+import { pageMeta } from "../lib/seo";
+import { BRAND_OWNERS, CONTACT_EMAIL, OWNER_NAME, SITE_NAME } from "../lib/site";
+
+const meta = pageMeta("about");
 ---
 
 <TextPage
   searchable
-  title={`About ${SITE_NAME}`}
-  description={`${SITE_NAME} is an independent price guide that turns public used-electronics listings in Canada into average prices, price history and deals.`}
+  title={meta.title}
+  h1={meta.h1}
+  description={meta.description}
   intro={`${SITE_NAME} is an independent price guide for used electronics in Canada.`}
 >
   <h2>What it is</h2>
@@ -36,7 +40,7 @@ import { BRAND_OWNERS, CONTACT_EMAIL, SITE_NAME } from "../lib/site";
   </ul>
 
   <h2>Who runs it</h2>
-  <p>{SITE_NAME} is an independent project. You can read exactly how the numbers are built on the <a href="/how-it-works/">How it works</a> page.</p>
+  <p>{SITE_NAME} is an independent project run by {OWNER_NAME}. You can read exactly how the numbers are built on the <a href="/how-it-works/">How it works</a> page.</p>
 
   <h2>Get in touch</h2>
   <p>Found a mistake or have a question? Write to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> or see the <a href="/contact/">Contact</a> page.</p>

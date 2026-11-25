@@ -1,11 +1,15 @@
 ---
 import TextPage from "../layouts/TextPage.astro";
-import { BRAND_OWNERS, CONTACT_EMAIL, SITE_NAME } from "../lib/site";
+import { pageMeta } from "../lib/seo";
+import { BRAND_OWNERS, CONTACT_EMAIL, OWNER_NAME, SITE_NAME } from "../lib/site";
+
+const meta = pageMeta("terms");
 ---
 
 <TextPage
-  title="Terms of use"
-  description={`The terms for using ${SITE_NAME}: information only, asking prices, no guarantees.`}
+  title={meta.title}
+  h1={meta.h1}
+  description={meta.description}
   intro="By using this site you agree to these terms."
   updated="November 20, 2026"
 >
@@ -43,7 +47,7 @@ import { BRAND_OWNERS, CONTACT_EMAIL, SITE_NAME } from "../lib/site";
 
   <h2>Limitation of liability</h2>
   <p>
-    To the extent the law allows, {SITE_NAME} and its operator are not liable for any loss or damage that results from using or
+    To the extent the law allows, {SITE_NAME} and its operator, {OWNER_NAME}, are not liable for any loss or damage that results from using or
     relying on the site.
   </p>
 

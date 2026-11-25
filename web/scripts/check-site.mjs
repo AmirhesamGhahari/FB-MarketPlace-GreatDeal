@@ -67,10 +67,12 @@ for (const { pathname, html } of pages) {
   const canonical = first(html, /<link rel="canonical" href="([^"]*)"/);
   const h1Count = (html.match(/<h1[\s>]/g) ?? []).length;
   if (!title) errors.push(`${pathname}: no <title>`);
-  else if (title.length > 70) warnings.push(`${pathname}: title is ${title.length} characters (Google shows about 60)`);
+  else if (title.length > 60) warnings.push(`${pathname}: title is ${title.length} characters (Google shows about 60)`);
   if (!description) errors.push(`${pathname}: no meta description`);
-  else if (description.length > 170) warnings.push(`${pathname}: description is ${description.length} characters (Google shows about 155)`);
+  else if (description.length > 160) warnings.push(`${pathname}: description is ${description.length} characters (Google shows about 155)`);
   else if (description.length < 50) warnings.push(`${pathname}: description is only ${description.length} characters`);
+  if (/[{}]/.test(`${title}${description}`)) errors.push(`${pathname}: unfilled {placeholder} in the title or description`);
+  if (html.includes("Great Deals")) errors.push(`${pathname}: still mentions the old name "Great Deals"`);
   if (!canonical) errors.push(`${pathname}: no canonical link`);
   else if (new URL(canonical).pathname !== pathname) errors.push(`${pathname}: canonical points to ${canonical}`);
   if (h1Count !== 1) errors.push(`${pathname}: ${h1Count} <h1> elements (expected 1)`);

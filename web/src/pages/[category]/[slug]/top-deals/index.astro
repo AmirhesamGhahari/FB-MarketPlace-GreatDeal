@@ -8,8 +8,9 @@ import ProductTabs from "../../../../components/ProductTabs.astro";
 import ListingsTable from "../../../../components/listings/ListingsTable";
 import SectionHeading from "../../../../components/SectionHeading.astro";
 import Base from "../../../../layouts/Base.astro";
-import { getCatalog, getCategoryDeals, getProductPaths } from "../../../../lib/catalog";
-import { dealsSentences, fitTitle } from "../../../../lib/text";
+import { getCatalog, getCategoryDeals, getProductPaths, getProductSummary } from "../../../../lib/catalog";
+import { modelValues, pageMeta } from "../../../../lib/seo";
+import { dealsSentences } from "../../../../lib/text";
 
 export async function getStaticPaths() {
   return getProductPaths();
@@ -23,11 +24,11 @@ const deals = dealGroups.find((group) => group.slug === slug)?.deals ?? [];
 
 const sentences = dealsSentences(deals);
 const pagePath = `/${categoryKey}/${slug}/`;
-const title = fitTitle([`${name} Deals in Canada`, `${name} Deals`]);
-const description = `${name} deals in Canada: ${sentences[0] ?? "the cheapest recent Facebook Marketplace listings compared with the 30-day average."}`;
+const { data: product } = await getProductSummary(slug!);
+const meta = pageMeta("model_top_deals", modelValues(product, { deals }));
 ---
 
-<Base title={title} description={description}>
+<Base title={meta.title} description={meta.description}>
   <Breadcrumb
     items={[
       { label: "Home", href: "/" },
@@ -36,7 +37,7 @@ const description = `${name} deals in Canada: ${sentences[0] ?? "the cheapest re
       { label: "Top deals" },
     ]}
   />
-  <h1 class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">Used {name} Deals in Canada</h1>
+  <h1 class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">{meta.h1}</h1>
   <p class="mt-2 text-slate-500">
     Asking prices on Facebook Marketplace, all configurations · <LastUpdated iso={data_as_of} />
   </p>

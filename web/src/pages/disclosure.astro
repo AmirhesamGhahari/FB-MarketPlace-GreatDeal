@@ -1,11 +1,15 @@
 ---
 import TextPage from "../layouts/TextPage.astro";
+import { pageMeta } from "../lib/seo";
 import { BRAND_OWNERS, SITE_NAME } from "../lib/site";
+
+const meta = pageMeta("disclosure");
 ---
 
 <TextPage
-  title="Disclosure"
-  description={`What ${SITE_NAME} is, what it is not affiliated with, and how it is funded.`}
+  title={meta.title}
+  h1={meta.h1}
+  description={meta.description}
   intro="Plain statements about who we are connected to and how the site is funded."
   updated="November 20, 2026"
 >

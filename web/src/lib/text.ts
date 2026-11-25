@@ -2,14 +2,6 @@
 // needs is missing, so the page simply leaves that sentence out instead of printing "null".
 import type { Deal, ProductSummary, SeriesPoint } from "./api";
 import { formatShortDate, money } from "./format";
-import { SITE_NAME } from "./site";
-
-// The first title option that fits (the layout adds " | Site name"; Google shows about 60 characters, and check-site warns
-// above 70 in total). Long model names such as "PlayStation 5 Slim Digital Edition" fall back to a shorter wording.
-export function fitTitle(options: string[]): string {
-  const limit = 70 - ` | ${SITE_NAME}`.length;
-  return options.find((title) => title.length <= limit) ?? options[options.length - 1];
-}
 
 // The average price of a few listings (for example the 5 cheapest), or null without any.
 export function averagePrice(listings: { price: number }[] | null | undefined): number | null {
@@ -72,6 +64,13 @@ function moveClause(from: number | null, to: number | null): string | null {
   const pct = Math.round(Math.abs(diff));
   if (pct === 0) return `stayed at about ${money(to)}`;
   return `went ${diff < 0 ? "down" : "up"} from ${money(from)} to ${money(to)} (${diff < 0 ? "-" : "+"}${pct}%)`;
+}
+
+// "the 7-day average went down from $1,150 to $1,088 (-5%)" for the last 30 days of a series, for descriptions; null without data.
+export function trendClause(series: SeriesPoint[]): string | null {
+  const window = series.slice(-30);
+  const clause = moveClause(window[0]?.avg_price_7d ?? null, window[window.length - 1]?.avg_price_7d ?? null);
+  return clause ? `the 7-day average ${clause}` : null;
 }
 
 // Three short facts for the top of the market-insights page, from the last 30 days of the series. Missing numbers drop a point.
@@ -138,15 +137,25 @@ export function trend30(series: SeriesPoint[]): { pct: number; from: number; to:
 // -5.2 -> "-5%", 3 -> "+3%", 0.2 -> "0%"
 export const formatPct = (pct: number) => `${Math.round(pct) > 0 ? "+" : Math.round(pct) < 0 ? "-" : ""}${Math.abs(Math.round(pct))}%`;
 
-type Trend = { name: string; pct: number };
+export type Trend = { name: string; pct: number };
 
-// "fell on 9 models, rose on 5 and held steady on 3" for the 7-day average over the last 30 days (a move under 0.5% is steady).
-function movesClause(items: Trend[], noun: string): string {
+// How many models fell, rose or held steady over the last 30 days (a move under 0.5% is steady).
+export function trendCounts(items: Trend[]) {
   const steady = (item: Trend) => Math.round(item.pct) === 0;
+  return {
+    fell: items.filter((item) => item.pct < 0 && !steady(item)).length,
+    rose: items.filter((item) => item.pct > 0 && !steady(item)).length,
+    steady: items.filter(steady).length,
+  };
+}
+
+// "fell on 9 models, rose on 5 and held steady on 3" for the 7-day average over the last 30 days.
+function movesClause(items: Trend[], noun: string): string {
+  const counts = trendCounts(items);
   const parts = [
-    [items.filter((item) => item.pct < 0 && !steady(item)).length, "fell on"],
-    [items.filter((item) => item.pct > 0 && !steady(item)).length, "rose on"],
-    [items.filter(steady).length, "held steady on"],
+    [counts.fell, "fell on"],
+    [counts.rose, "rose on"],
+    [counts.steady, "held steady on"],
   ]
     .filter(([n]) => n !== 0)
     .map(([n, verb]) => `${verb} ${plural(n as number, noun, `${noun}s`)}`);
@@ -177,19 +186,24 @@ export function insightsRootSentences(categoryCount: number, items: Trend[]): st
   ];
 }
 
-type BestDeal = { name: string; deal: Deal };
+export type BestDeal = { name: string; deal: Deal };
 
 // How far below its model's 30-day average a deal is, in percent (null when there is no average).
 const gapPercent = (deal: Deal) =>
   deal.price_diff_30d !== null && deal.avg_price_30d ? Math.round((-deal.price_diff_30d / deal.avg_price_30d) * 100) : null;
 
+// The typical (median) % that the cheapest listing of each model sits below its 30-day average, and how many models have a
+// listing at least 25% below. `median` is null when no deal has an average to compare with.
+export function dealStats(items: BestDeal[]) {
+  const gaps = items.map((item) => gapPercent(item.deal)).filter((gap) => gap !== null).sort((a, b) => a - b);
+  return { median: gaps.length > 0 ? gaps[Math.floor(gaps.length / 2)] : null, deep: gaps.filter((gap) => gap >= 25).length };
+}
+
 // Text for /top-deals/{category}/ and /top-deals/: the best deal of each model is passed in. `subject` names what the deals
 // are on, for example "2 iPhone models" or "4 models across 2 categories".
 export function dealsHubSentences(subject: string, items: BestDeal[]): string[] {
   if (items.length === 0) return [];
-  const gaps = items.map((item) => gapPercent(item.deal)).filter((gap) => gap !== null).sort((a, b) => a - b);
-  const median = gaps.length > 0 ? gaps[Math.floor(gaps.length / 2)] : null;
-  const deep = gaps.filter((gap) => gap >= 25).length;
+  const { median, deep } = dealStats(items);
   return [
     `There are deals right now on ${subject}.`,
     median !== null && median > 0

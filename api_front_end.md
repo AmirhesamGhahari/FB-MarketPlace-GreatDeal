@@ -421,10 +421,31 @@ Order logic: data layer, then shared pieces, then pages from the most reused to 
 
 **Existing pages:** `index.astro` placeholder is replaced in F8; `[category]/index.astro` is upgraded in F6; `[category]/[slug].astro` moves into `[slug]/index.astro` in F5a; `Base.astro` is extended in F2.
 
+### Phase 6A — Names, titles and descriptions pass for SEO  **[REMINDER: do this soon, before the domain goes public]**
+Owner request 2026-11-25. Page names, titles and descriptions are cheapest to change **before Google has indexed them**, so this comes right before the launch steps. Remind the owner when Phase 6 starts and before the domain is connected to the public.
+**Decisions made 2026-11-25 (owner):** public name **Tech Deal Radar**; title suffix ` | Tech Deal Radar` only when the whole title fits in about 60 characters; home title keywords first ("Used Tech Prices and Deals in Canada | Tech Deal Radar"); the word **"used"**; the live average price **not in the model title, only in the description**; model price-history page called **"Price History and Trends"**; model deals page called **"Best Deals"**; top-bar labels unchanged; all URL names unchanged; descriptions with live numbers; a **visible FAQ with FAQ markup on model pages**; the About, Privacy and Terms pages show the **owner's name** (name still to be given); contact address **contact@techdealradar.ca**; one default share image remade with the new name; titles and descriptions always say "Canada" and prices "CAD"; tagline "Spot the cheapest used tech in Canada: real prices, trends and deals."; owner name shown: **Amir Ghahari**. The owner edits the per-page-type templates in `seo_templates.yaml` (title, description, H1, model FAQ per page type); after that the site is changed to read them. The templates are in `web/seo_templates.yaml`.
+- [ ] **Brand name:** (decided: Tech Deal Radar) the domain is
+- [ ] **Page names and navigation labels:** the top bar (Products, Market Insights, Top Deals, All Listings, How it works), breadcrumbs, tab names; use the words people actually search for.
+- [ ] **Titles and H1s per page type:** home, categories, category, model (overview, market insights, top deals, listings), three hubs and their category pages. One main keyword each, no two pages competing for the same query. Keep titles under about 60 characters (the checker already warns above 70 in total).
+- [ ] **Meta descriptions:** about 150 characters, unique per page, with the real numbers (average price, cheapest deals) that make a searcher click.
+- [ ] **URLs and slugs:** check the category and model slugs and the section names (`/top-deals/`, `/market-insights/`). Changing a URL later needs redirects, so decide now.
+- [ ] **Keyword check:** compare the candidate wording with Google's own suggestions and "People also ask" for 5 to 10 typical searches ("used iphone 15 price canada", "ps5 deals canada"); use Google Search Console data after launch to adjust.
+- [ ] **Verify:** `npm run check:site`, a look at how titles and descriptions would appear in search results, and a log entry in Sec. 12.
+
 ### 5.6 Phase 6 — CI/CD and pipeline integration
 - [ ] New Step Functions state after `RunTransform`: purge the CloudFront cache and warm top URLs
 - [ ] Deploy flow: frontend = build, sync to S3, invalidate; API = package, update Lambda (extend CodePipeline or add GitHub Actions)
 - [ ] Deployment ordering: dbt serving models must exist before an API version that queries them
+
+**Step 6.0 — Connect the domain `techdealradar.ca` (bought 2026-11-25 at Squarespace Domains)**
+- [ ] **Decision (open): where the DNS lives.** Recommended: **Amazon Route 53** (about $0.50/month). The bare domain `techdealradar.ca` can then point straight at CloudFront with an alias record, and Terraform keeps everything in one place. Squarespace stays the registrar; only its "nameservers" setting changes. (As far as known, Squarespace's own DNS cannot point the bare domain at CloudFront; verify before choosing it.)
+- [ ] **Terraform (assistant writes, owner runs):** variable `domain_name`; Route 53 hosted zone; an **ACM certificate in `us-east-1`** (CloudFront only accepts certificates from there) validated by DNS records created in the zone; CloudFront `aliases` for `techdealradar.ca` and `www.techdealradar.ca` and the certificate in `viewer_certificate`; A and AAAA alias records for both names; a **CloudFront Function** that serves `index.html` for folder URLs (fixes 13.3) and redirects `www` to the bare domain; a `404.html` for missing pages (`custom_error_response`); outputs with the four Route 53 nameservers.
+- [ ] **Owner, in two stages:** (1) `terraform apply` the hosted zone first; copy its four nameservers; (2) at Squarespace Domains, open the domain, DNS settings, "Use custom nameservers" and paste them; wait until it resolves (minutes to a few hours); (3) run the full `terraform apply` (the certificate validates once the nameservers work).
+- [ ] **Email:** the Contact page needs a real address such as `contact@techdealradar.ca`. Squarespace's email forwarding depends on its DNS, so after the nameserver change either recreate the mail records in Route 53 or choose another way (a free forwarding service or a mailbox provider). Decide, then replace `CONTACT_EMAIL` in `site.ts`.
+- [ ] **Site settings:** change `site` in `web/astro.config.mjs` to `https://techdealradar.ca` (canonicals, sitemap, robots and the share image follow it), set the final `SITE_NAME` (Phase 6A), rebuild.
+- [ ] **First real upload:** `npm run build`, `aws s3 sync web/dist s3://<web bucket> --delete`, invalidate CloudFront (`/*`). Needs 13.2 (API redeploy) first so the listings pages work, and a decision on 13.1.
+- [ ] **Keep it private until ready:** until Phase 6A and the 13.x items are done, serve `robots.txt` with `Disallow: /` and a `noindex` tag (a launch switch), then remove them on launch day so Google never indexes unfinished titles.
+- [ ] **After launch:** verify the domain in **Google Search Console** (a DNS TXT record in Route 53), submit `sitemap-index.xml`, and do the same in Bing Webmaster Tools.
 
 ### 5.7 Phase 7 — Hardening and launch
 - [ ] API Gateway throttling + Lambda reserved concurrency (protects DB and bill from bots)
@@ -432,12 +453,150 @@ Order logic: data layer, then shared pieces, then pages from the most reused to 
 - [ ] Privacy/terms pages and a "not affiliated with Facebook" notice
 - [ ] Load test cached and uncached paths
 
+### Phases 8, 9 and 10 (after launch, once Phases 6 and 7 are done; planned 2026-11-25)
+
+These phases come after Phase 7. Phases 8 and 9 are short; they only group the ideas of Section 11 so the numbering is clear. Phase 10 is the big one and has its own plan below.
+
+| Phase | What | Where it is described |
+|---|---|---|
+| 8 | **Listing availability:** re-check the listings the site shows (cheapest and top deals), mark sold or gone, full listing lifecycle (`last_seen_at`, status) | 11.1 and 11.3 |
+| 9 | **Alerts and faster serving:** email deal alerts (and later accounts and watchlists), pre-built JSON or DynamoDB if cold starts or cache misses become a real problem | 11.2, 11.4 and the home page "alerts coming soon" |
+| 10 | **Multi-city:** the user picks a city and every number, chart, deal and listing follows it | The "Phase 10" sections below |
+
+#### Phase 10: goal and why it matters
+
+Today the whole product is one market: the scraper searches "Toronto, Ontario" with a 100 km radius, and every statistic mixes whatever came back (Toronto, Hamilton, Montreal, a few US cities, see 13.1). Phase 10 turns **market** (a city or metro area) into a first-class dimension, from the scraper to the database, dbt, the API, the build and the website. Result: "used iPhone 16 Pro Max price in Toronto / Vancouver / Montreal / Canada".
+
+Why it is worth the work:
+- **SEO.** Local searches ("used ps5 price Calgary") are the highest-intent searches for this site, and a city page targets exactly them. Today every page can only compete on the national query.
+- **Truth.** A Toronto average is not a Vancouver average. A buyer needs the price where they can actually pick the item up.
+- **It also fixes 13.1** (US listings) properly, because every listing gets a country and a market from its own location.
+
+#### Phase 10: what we found in the code
+
+- Scraper config (`configs/*.yaml`): `cities: ["Toronto, Ontario"]` is already a list, but `cli.py` uses **only the first entry** (`cities[0]`), and one radius (`radius_km: "100"`) per config. The Apify input is `location` + `radiusKm`.
+- Step Functions: `infra/lambda/fanout/handler.py` makes **one task per category config**; the initial/periodic mode lives in DynamoDB under the key `{config}#facebook_legacy`. There is no market in the task or in the state key.
+- Raw table `facebook.fb_listings_raw`: has `location_city` and `location_state` (from `payload.location`), no country, no coordinates. The payload does contain `extraListingData.location.latitude/longitude` (when `fetch_detailed_items` is on), so coordinates can be extracted without any extra scraping. A listing is unique on `(category_id, fb_listing_id)`, which stays correct with many markets (a listing exists once, wherever it was found).
+- dbt: `dim_toronto_area_cities` (a hard-coded list with coordinates, only used by `fct_deal_candidates`); `benchmark_listings` and all `serving.*` models have **no location filter**; `fct_products_daily` has grain `(product_model, stat_date)`.
+- API and CloudFront: no market anywhere; CloudFront already includes **all query strings in the cache key**, so a `?market=` parameter caches correctly without infrastructure changes.
+- Time zones: dbt day buckets use Toronto time (11.5). Vancouver and Calgary are 2 to 3 hours behind, so "today" differs by market; this needs a decision (see "Phase 10: open questions for the owner").
+- Frontend: URLs are `/{category}/{slug}/...`; the build calls the API for every page (about 320 pages and several hundred requests at 2 requests per second). Pages times markets would be thousands of requests, so the data path must change (see "Phase 10: website build, selector and text").
+
+#### Phase 10: what is a "market"?
+
+| Option | Meaning | Verdict |
+|---|---|---|
+| A. Exact listing city | Mississauga, Brampton, ... | Too thin: Mississauga alone has few listings per model, and people shop across a metro area |
+| **B. Metro market from a seed table [recommended]** | A list of markets (Greater Toronto and Hamilton, Montreal, Vancouver, Ottawa, Calgary, Edmonton, ...). A seed maps city names (and a coordinate fallback) to a market | Enough data per market, matches how buyers think, simple to explain |
+| C. Free radius around any point | The user picks any place and a radius | Best precision, but cannot be pre-rendered or cached well, and each query is unique; maybe a later "advanced" feature |
+
+Recommended structure: **city name or coordinates -> market -> province -> Canada**, with "Canada" as a real market (a rollup computed from all listings, never an average of market averages). Every listing gets `country`, `province` and `market_key` **from its own location, never from the search that found it** (Facebook mixes in nearby and out-of-radius listings, and two searches can find the same listing).
+
+#### Phase 10: data and pipeline plan
+
+1. **Markets seed** `transform/seeds/markets.csv`: `market_key`, `display_name`, `province`, `lat`, `lon`, `search_location` (the text sent to Apify, e.g. "Toronto, Ontario"), `radius_km`, `tier` (how often to scrape), `enabled`. A second seed `city_market_map.csv` maps `(location_city, location_state)` to `market_key` for exact names (handles "Montréal" vs "Montreal", "St Catharines"). Coordinates (nearest enabled market within its radius) are the fallback for cities not in the map; anything else becomes `market_key = 'other'`.
+2. **Raw table (Alembic migration):** add `location_lat`, `location_lon` (extracted from the payload, nullable) and `search_market_key` (which market's search found it; for audit and cost, not for statistics). Existing rows are backfilled from the payload.
+3. **Country:** derive `country` from the state or province code (`ON`, `QC`, ... are Canadian; `IN`, `TX`, `PA` are not) with the coordinates as a second check. Non-Canadian listings leave the benchmark (this is option 1 of 13.1).
+4. **Scraper:** `cli.py` loops over all markets of a config (config key `markets:` replaces `cities:` with a per-market `radius_km` and `listings_per_search`). Each (category, market) pair is its own Apify run and its own step-function task.
+5. **Fan-out and state:** `fanout/handler.py` returns one task per `(config, market)`; the DynamoDB key becomes `{config}#facebook_legacy#{market}`, so a new market starts in `initial` mode (a backfill) while the others stay `periodic`. An existing key without a market is read as `toronto` so nothing re-backfills.
+6. **Cost guard:** Apify cost grows with `categories x search terms x markets`. Measure the current monthly cost first (step 10.0), then use tiers: big markets every run, small markets daily or weekly, lower `listings_per_search` for small markets. A hard cap per run stays in the config.
+7. **dbt:**
+   - `benchmark_listings` gets `country`, `province`, `market_key` and filters `country = 'CA'`.
+   - `fct_products_daily` changes grain to `(product_model, market_key, stat_date)`, with `market_key = 'canada'` computed from all Canadian listings (a separate group, not a sum of the others). The outlier rule (0.3x to 3x the median) should stay **national** so one market cannot redefine "normal".
+   - Every serving table gets `market_key` in its key and unique index (`(slug, market_key, stat_date)` for the daily mart); `mart_product_summary` gets a `has_enough_data` flag per market and window.
+   - `fct_deal_candidates.within_90km_toronto` becomes "within the user's market" when alerts get accounts (Phase 9).
+   - Tests: the Canada rollup row count equals the number of distinct listings that are Canadian; every Canadian listing has exactly one market; no listing falls in two markets; relationship tests to the seeds.
+   - Size check: about 69 models x 60 days x (about 12 markets + Canada) is under 60,000 daily rows, trivial; the lateral percentile queries need a timing test.
+8. **Minimum sample rules** (decide with real numbers): a 30-day average needs at least 10 listings (the cutoff already needs 10); a market page for a model is only published and indexed with at least about 20 listings in 30 days; below that the page shows the Canada numbers with a note, or does not exist.
+
+#### Phase 10: API plan
+
+- New `GET /v1/markets`: key, name, province, listing counts, models with enough data. Cached like categories.
+- Existing endpoints get an optional query parameter `market` (default `canada`), for `categories/{key}/products`, `products/{slug}`, `series`, `listings` and `listings/all`, and `deals/{category}/top`. The parameter is validated against the list of markets (unknown value: 404 `unknown_market`, not a silent fallback).
+- Responses carry a `market` object (key and name) and a `sample_ok` flag, so the frontend can show "not enough listings in Calgary yet".
+- The old URLs keep working (no `market` means Canada). The default changes from "everything we scraped around Toronto" to "all Canada", which is an honest label change that must be mentioned in the contract and in the site copy.
+- CloudFront needs no change (query strings are in the cache key); the cache-warming list in Phase 6 grows by markets x top URLs and needs a cap.
+- A bulk path for the build (see "Phase 10: website build, selector and text"), either a snapshot to S3 or a bulk endpoint.
+
+#### Phase 10: website URL design
+
+| Option | Example | Notes |
+|---|---|---|
+| **A. `/cities/{market}/...` [recommended]** | `/cities/toronto/iphone/iphone-16-pro-max/`, plus `/cities/`, `/cities/toronto/`, `/cities/toronto/iphone/` and the same tabs (`market-insights`, `top-deals`, `listings`) | No clash with `/{category}/{slug}/` routes (Astro cannot tell `/toronto/iphone/` from `/iphone/iphone-16/`), clear breadcrumbs, national pages stay where they are and keep their ranking |
+| B. City after the product | `/iphone/iphone-16-pro-max/toronto/` | Also workable; long URLs, harder hub pages for a city |
+| C. City only in the browser (selector, no URL) | same URLs, numbers swapped by JavaScript | Poor SEO (Google sees one national page), but simple; could be a first small step |
+
+Rules for the recommended option:
+- The national pages (`/iphone/...`) stay the "Canada" version and keep their URLs.
+- A market page is built **only if** that (model, market) has enough data; otherwise there is no page (a link goes to the Canada page). Market pages below the threshold at build time are never in the sitemap.
+- Every market page gets its own title, description and text from numbers (for example "Used iPhone 16 Pro Max price in Toronto: $1,090 avg, Canada $1,098"), a comparison with the national price, and JSON-LD breadcrumbs. This avoids "thin duplicate" pages, which Google can penalise.
+- Listings pages stay `noindex`.
+
+#### Phase 10: website build, selector and text
+
+- **Build data path (must be solved first).** The current build calls the API for every page at about 2 requests per second. Thousands of market pages would take hours and hit the throttle. Fix: the last pipeline step writes **snapshots** (one JSON per market and category with summaries, series and top deals) to S3 (this is the hybrid idea in 11.2), and the site build reads those; or a bulk endpoint returns a whole market at once. Pick one in step 10.5.
+- **City selector** in the header (next to search): lists the markets, remembers the choice in `localStorage`, and sends the user to the equivalent page of the chosen city (falls back to the city's category page, then the city's home). The browser may suggest a city from CloudFront's viewer-region header ("Prices near you: Toronto?") but **never redirects automatically**, so Google always sees the same page for a URL.
+- **Home page** stays national; a "Pick your city" block leads to `/cities/`. Hubs (`/top-deals/`, `/market-insights/`, `/all-listings/`) get a city filter (links to the city version of the same hub).
+- **Text helpers** (`web/src/lib/text.ts`) and all copy that says "Canada" take a `place` argument ("in Toronto" / "in Canada"). The wording pass of 2026-11-24 already generates most sentences from numbers, so this is parameterising, not rewriting.
+- **Charts, listings tables and cards** read the market's data; the listings table also shows the listing's city.
+- **Extra differentiator:** "cheapest cities for this model" (a small table ranking markets by 30-day average, with the sample size), which also links the city pages together.
+
+#### Phase 10: step by step (10.0 to 10.9)
+
+| Step | What | Depends on | Owner decides |
+|---|---|---|---|
+| 10.0 | **Decisions and measurement:** market list and radii; measure current Apify cost per run; trial-scrape 2 to 3 other cities for one category to see listings per model per day; check how often coordinates exist | Phase 7 launched (or at least 13.1 understood) | Market list, minimum sample sizes, budget |
+| 10.1 | **Geo cleanup in the single-market world:** extract coordinates, derive country and province, `markets` and `city_market_map` seeds, add `market_key` to `benchmark_listings`, filter non-Canadian listings. Fixes 13.1 | 10.0 | Where Canada ends: exact rules for odd cities |
+| 10.2 | **Scraper and orchestration:** `markets:` config, multi-market `cli.py`, per-market fan-out and DynamoDB state, Alembic migration for the new raw columns, cost guard | 10.1 | Tiers and per-market limits |
+| 10.3 | **dbt:** new grain with `market_key` and the Canada rollup, sample flags, serving tables, tests, performance check, one full refresh of history | 10.1 (10.2 for real new data) | Outlier rule national or per market |
+| 10.4 | **API:** `/v1/markets`, the `market` parameter, `sample_ok`, contract and tests | 10.3 | Default market and error behaviour |
+| 10.5 | **Build data path:** S3 snapshots or bulk endpoint; build time under the target | 10.4 | Snapshot vs bulk |
+| 10.6 | **Frontend routes:** `/cities/...` pages, thresholds, sitemap, canonical, `noindex` rules | 10.5 | URL option A, B or C |
+| 10.7 | **City selector, suggestion banner, text with `place`, hub filters** | 10.6 | Selector look, suggestion wording |
+| 10.8 | **SEO and quality:** local text, national-vs-city comparison, "cheapest cities" table, structured data, Lighthouse, link check | 10.7 | Nothing big |
+| 10.9 | **Rollout:** pilot with 2 to 3 markets (for example Toronto, Montreal, Vancouver), watch cost, data volume and index status in Search Console, then add markets in batches | 10.8 | Which markets next |
+
+10.1 is the only step that is worth doing **early and on its own** (it removes the US-listing problem and prepares the data), even if the rest waits.
+
+#### Phase 10: open questions for the owner
+
+1. **Market list and radii.** Recommended start: Greater Toronto and Hamilton, Montreal, Vancouver, Ottawa, Calgary, Edmonton, with a "Rest of Canada" bucket only inside the Canada totals. The current 100 km radius around Toronto overlaps Hamilton and Kitchener, so radii need a look.
+2. **URL option** (see "Phase 10: website URL design"): A (recommended), B or C.
+3. **Minimum sample sizes** per window and for publishing a page (start: 10 listings for an average, about 20 in 30 days for a page).
+4. **Budget** for Apify (it grows roughly with the number of markets) and tiers for small markets.
+5. **Time zone of "today"** for each market. Simplest: keep the single Toronto day bucket for all markets (a Vancouver evening listing counts for the next day); more precise: one time zone per market in the seed. Recommended: keep one bucket for v1 of Phase 10.
+6. **Shipping listings.** Listings that ship nationwide (`delivery_types`) are priced for a national buyer. Count them in their seller's market (recommended) or exclude shipping-only ones from market statistics.
+7. **Language.** Quebec listings are often in French; the Gemini extraction must handle them (check accuracy before adding Montreal).
+8. **Default home:** national (recommended) or the suggested city.
+
+#### Phase 10: risks and what to do now
+
+| Risk | Mitigation |
+|---|---|
+| Apify cost multiplies with markets | Measure first (10.0), tiers, hard cap per run, pilot with 2 to 3 markets |
+| Thin markets give noisy averages | Sample thresholds, `sample_ok`, no page and no sitemap entry below the threshold |
+| Thin or duplicate city pages hurt SEO | Unique numbers and text per page, comparison with Canada, only publish pages with data |
+| Build time and API throttle | Snapshots or bulk export (10.5) before generating pages |
+| Wrong market assignment (cities with accents, new towns) | Seed map plus coordinates fallback plus a dbt test and a report of unmapped cities after each run |
+| Facebook returns nearby foreign listings | Country filter (10.1), never trust the search location |
+| Existing history is Toronto-only | Backfill raw coordinates, map to markets, `full-refresh` of `fct_products_daily` once; new markets begin their history on the day they start |
+| Day buckets differ by time zone | the time-zone question in "open questions" |
+
+**FLAG (owner, 2026-11-25): titles and all SEO text must name the city.** Today every title, description, H1 and FAQ says "in Canada" (templates in `seo_templates.yaml`, built in Phase 6A). In Phase 10 each market page must say its own place ("... in Toronto") and every number, endpoint and page the user sees must follow the chosen city. Preparation: when the templates are wired into the site (Phase 6A), add a `{place}` placeholder ("Canada" for now) and use it instead of the literal word "Canada" in the templates, so Phase 10 only has to pass the market name. Phase 10 also needs per-market template overrides (for example different wording or a "cheapest in {place} vs Canada" sentence), city-specific titles that still fit 60 characters, and per-market FAQ answers. Without this, every city page would carry the wrong title.
+
+Cheap things worth doing **now** so nothing has to be redone:
+- Fix 13.1 with the market-aware approach (10.1) instead of an ad-hoc city list.
+- Do not hard-code "Toronto" in new copy or code (the API's `TorontoDatetime` is a time zone, not a market).
+- Keep `cities` as a list in the configs and avoid new code that assumes `cities[0]`.
+- Reserve `cities` as a URL name (add it to the reserved-slugs list in `web/src/lib/site.ts` if that list exists).
+
 ### 5.8 Dependency map
 ```
 Phase 0 → Phase 1 (serving models) → Phase 2 (contract) → Phase 3 (API) ─┐
                                                    └──→ Phase 5 (frontend) ─┤→ Phase 4 (infra) → Phase 6 → Phase 7
 ```
 Phases 3 and 5 can proceed in parallel once the contract (Phase 2) is stable. Phase 4 can start early for the bucket/CDN pieces.
+After launch: Phase 8 (listing availability), Phase 9 (alerts, faster serving) and Phase 10 (multi-city, see "Phases 8, 9 and 10" below Phase 7). Step 10.1 of Phase 10 can be done earlier because it also fixes 13.1.
 
 ### 5.9 Walking skeleton (first milestone)
 Prove the riskiest parts end-to-end with the thinnest slice:
@@ -545,6 +704,9 @@ This validates networking, database access, caching, and deployment. Widening to
 | 2026-10-19 | ~~Add `median_price_30d` to the product summary~~ | Reversed 2026-10-20: no median in v1 |
 | 2026-10-19 | Generic "MacBook Air" (unknown chip) bucket excluded from v1 | No catalog row; revisit via re-classification |
 | 2026-10-19 | One product page per `product_model`, all storage/colour variants grouped; no storage or colour filters/breakdowns | Owner decision; keeps the fct's grain, avoids splitting thin MacBook data. Averages mix configurations and are labelled "all configurations". |
+| 2026-11-25 | **Phase 10 = multi-city** (the user picks a city and everything follows it) is planned for after launch; Phases 8 and 9 group the ideas of Section 11 (availability, alerts and serving). Plan, steps 10.0 to 10.9, open questions and risks are in the Phase 10 sections after Phase 7. Recommended: a metro-market seed table, market assigned from each listing's own location, `/cities/{market}/...` URLs, snapshots for the build. Step 10.1 (country and market per listing) also fixes 13.1 and can be done earlier. | Owner request. Open questions for the owner are listed under "Phase 10: open questions for the owner"; nothing is built yet. |
+| 2026-11-25 | **Domain bought: `techdealradar.ca`** (Squarespace Domains). Planned: DNS in Route 53, certificate in `us-east-1`, CloudFront aliases, CloudFront Function for folders and 404 (Step 6.0). New **Phase 6A** reminder: revisit page names, titles, descriptions and the public site name for SEO before the domain goes public. | Owner request. Open: public brand name ("Great Deals" vs "Tech Deal Radar"), DNS location, email address. Nothing built yet. |
+| 2026-11-25 | SEO templates (`seo_templates.yaml`): **one keyword focus per page** so pages do not compete: overview, category and categories pages target "Price" ("Used {model} Price in Canada"); the market-insights pages target "Price History and Trends"; the deals pages target "Best ... Deals". Every title has shorter fallbacks so all 69 models fit 60 characters; every description has an option within 160 characters for all models and categories. The home page stays broad (prices, trends and best deals). | Checked with a script against the product catalog. The wording is wired into the site in the next 6A step. |
 
 ---
 
@@ -649,6 +811,8 @@ Related to 11.1 and 5.1.1. Today a listing that disappears from Facebook keeps `
 | 2026-11-24 | Design round 3 (visual pass, ordering, home page) | **Section roots and category columns** (`CategoryCard`): three clear total rows with icons (models, listings 7 days, listings 30 days) in a glass panel, and each model as a white card with label and value rows, a thin bar for listings relative to the busiest model, and on the deals page a "top deals average" with a green pill ("51% below the 30-day average"); the deals count is removed from each model; new variant `home` (30-day average and listings only). **Ordering:** `aroundCenter()` in `catalog.ts` puts the item with the most listings in the middle and the others around it in order ([e, c, a, b, d] for a > b > c > d > e); used on `/categories/`, the three section roots (categories sorted by listings with `sortCategoriesByListings`), `/[category]/` and the three section category pages (models by listings); `Carousel` starts on the column marked `data-carousel-start`; category colours follow the catalog order so they stay the same on every page. **`ModelColumn`:** the 30-day average line is removed from `DealTile` (everywhere), all-listings columns show three period cards with a pill, a big listings number, a bar and two tiles (average, cheapest 25%). **Model overview** (`/iphone/iphone-15-pro/`): a gradient header with the title, update time, summary text and a 30-day average panel with trend and sparkline; the four stat panels have sparklines (`StatPanel` `spark`, `Sparkline` `ring`); deals in a rounded card with ranks; "Other models" are new `ModelSummaryCard`s (average with trend badge, chart, three numbers) in four columns. **Home page:** 1 hero with a live example card of the most-listed model and glass number tiles; 2 "How it works" with three step cards (icons, numbers, longer text) and four feature tiles; 3 "The market at a glance": the two most-listed models' price and listings charts, and below them a carousel of the best iPhone and MacBook deals (5 per category mixed, middle of the carousel); 4 "Browse by category" as a carousel of category columns with each model's name, 30-day average and 30-day listings; 5 FAQ. Chart key-number tiles show prices without "CAD" so they do not wrap. Removed `DealCard`. | `astro check` 0 errors, build passes (320 pages), `check:site` passed; screenshots of the home sections (desktop and phone), the four section roots, the category-level pages and the overview. The deal carousel on the home page shows very cheap old MacBook listings because they are far below their model's average: a data-quality point for the pipeline (13.1). |
 | 2026-11-24 | Design round 4 | `CategoryCard` lists at most 6 models (5 on the home page) and links to the rest ("All N models") on `/categories/` and the three section roots; `ModelColumn` has colour themes: top-deals columns are emerald/teal (gradient header with white title, tinted body and footer), all-listings columns are indigo/blue (period pills and bars in indigo); the category and market-insights columns stay light. | `astro check` 0 errors, build passes (320 pages), `check:site` passed; screenshots of both coloured pages and the home categories. |
 | 2026-11-24 | Text pass | New wording on every page: the section roots, category pages, `/categories/`, the four product pages and the home page. The sentences that named one model (biggest gap, moved the most) were replaced by counts (models that fell, rose or held steady; typical gap of the cheapest listing below its average; models with a listing 25%+ under). Every section now points to the cheapest listings as the yardstick for a good price. The home title says "and find the cheapest deals", the hero card is no longer tilted, the two home charts are two random models (different after every build), the deals text is generic and "several times a day" was removed. Tip: the shell's default Node is 14, use `/usr/local/bin` (Node 26) for npm commands. | `astro check` 0 errors, build passes, `check:site` passed; rendered text of the key pages checked in `dist`. |
+| 2026-11-25 | Charts and hero | New series fields `lowest_5_deals_1d` (the 5 cheapest listings of each day) and `cutoff_price_cheapest_25pct_1d` (cheapest-25% price of that day's own listings) in `mart_product_daily`, the API and `api_contract.md` 2.4. "Average asking price and listings per day" gets a second line, the cheapest 25% of the day. "Cheapest listings by day" now draws 5 dots per day plus two lines (30-day average and cheapest-25% price as of each day; same colours as the 30-day chart). The home title now sits above the hero text and card. Finding: the 30-day cheapest-25% price was already computed as of each day; it looks flat when many listings share a round price (iPhone 16 Pro Max: $1,000 every day). Until the API is redeployed the dots fall back to the 3 cheapest of the last 7 days and the new line is hidden. | `astro check` 0 errors, build and `check:site` pass; screenshots of the home hero and the three charts. |
+| 2026-11-25 | SEO templates wired in (Phase 6A) | `web/seo_templates.yaml` (moved from the repo root) is read by the site (`web/src/lib/seo.ts`): titles, descriptions, H1s and the model FAQ per page type; the name, tagline and contact address in `site.ts` come from it. `{place}` is the word "Canada" today (Phase 10 passes the city). Site name added to a title only when it fits 60 characters (`Base.astro`). New: `ModelFaq.astro` (visible FAQ + FAQPage markup on model pages), owner name on About, Privacy and Terms, home title with the brand, radar favicon (svg and ico), new share image `og-default.png`. `check-site` now warns above 60 / 160 characters and errors on unfilled `{placeholders}` or the old name. | `astro check` 0 errors, build and `check:site` pass (280 pages); screenshots of the home page and the FAQ; all titles fit in 60 characters. |
 | 2026-11-02 | API local env file | `api/.env.example` (`API_DATABASE_URL` for the read-only role, optional `API_DB_CONNECT_TIMEOUT`); owner copies to `api/.env` | n/a |
 
 Owner-run and pending (the owner does these later, not the assistant): roll out the timezone change (11.5, no code change needed; `PGOPTIONS` is already set in `stage3_transform.py`), build the serving tables, apply the Alembic migration and set the reader password, then run the six endpoints with `uvicorn` against Aurora (3c).
@@ -667,6 +831,8 @@ The API shows timestamps in Toronto time. dbt had no timezone: `transform/profil
 When the owner asks "what issues are left", start here. Newest first. Mark an item **FIXED** (with the date and where it is recorded in Section 12) instead of deleting it.
 
 ### 13.1 Non-Canadian listings in website statistics and deals  **[OPEN, found 2026-11-13, owner chose to deal with it later]**
+
+**Update 2026-11-25:** the proper fix is step 10.1 of the multi-city plan (Phase 10): every listing gets a country and a market from its own coordinates and city, and non-Canadian listings leave the benchmark. Prefer it over an ad-hoc city list.
 
 **What was seen.** `GET /v1/deals/iphone/top` returned top deals for iPhone 16 Pro Max in **Louisville, Cape Coral and Lafayette** (US cities) at the cheapest ranks (for example $465 to $500 against a 30-day average of about $1,121). A sample of the 100 newest iPhone 16 Pro Max listings (`/listings?window=30d&sort=newest`, pages 1 to 5) was almost entirely Canadian (Toronto 28, Brampton 8, Mississauga 8, Hamilton 6, Barrie 5, Ottawa 4, and so on). So US listings look rare overall but concentrate in the cheapest lists, which is where top deals, the 25th-percentile cutoff and the "cheapest 5" lists look. The prices may be in USD, but the site labels everything CAD and "in Canada".
 

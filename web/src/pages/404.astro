@@ -2,12 +2,14 @@
 // Shown for any address that does not exist (the web server is set up to serve 404.html for those).
 import Base from "../layouts/Base.astro";
 import { getCatalog } from "../lib/catalog";
+import { pageMeta } from "../lib/seo";
 
 const { categories } = await getCatalog();
+const meta = pageMeta("not_found");
 ---
 
-<Base title="Page not found" description="This page does not exist." noindex>
-  <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Page not found</h1>
+<Base title={meta.title} description={meta.description} noindex>
+  <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">{meta.h1}</h1>
   <p class="mt-3 max-w-2xl text-lg text-slate-600">
     The address you followed does not exist, or the page has moved. Here are some good places to continue:
   </p>

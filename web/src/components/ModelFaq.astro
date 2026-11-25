@@ -1,0 +1,41 @@
+---
+// The visible questions and answers of a model page, plus the same text as FAQ structured data (FAQPage) for Google. The
+// wording comes from model_faq in seo_templates.yaml, filled with the model's numbers.
+import SectionHeading from "./SectionHeading.astro";
+
+interface Props {
+  faq: { q: string; a: string }[];
+  model: string;
+}
+
+const { faq, model } = Astro.props;
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faq.map((item) => ({
+    "@type": "Question",
+    name: item.q,
+    acceptedAnswer: { "@type": "Answer", text: item.a },
+  })),
+};
+---
+
+{
+  faq.length > 0 && (
+    <section class="mt-12" aria-labelledby="faq-heading">
+      <script type="application/ld+json" set:html={JSON.stringify(structuredData).replaceAll("<", "\\u003c")} />
+      <SectionHeading title={`Questions about the used ${model}`} id="faq" />
+      <dl class="mt-4 grid gap-x-10 gap-y-5 md:grid-cols-2">
+        {
+          faq.map((item) => (
+            <div>
+              <dt class="font-semibold text-slate-900">{item.q}</dt>
+              <dd class="mt-1 text-slate-600">{item.a}</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </section>
+  )
+}

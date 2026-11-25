@@ -1,11 +1,15 @@
 ---
 import TextPage from "../layouts/TextPage.astro";
-import { CONTACT_EMAIL, SITE_NAME } from "../lib/site";
+import { pageMeta } from "../lib/seo";
+import { CONTACT_EMAIL } from "../lib/site";
+
+const meta = pageMeta("contact");
 ---
 
 <TextPage
-  title="Contact"
-  description={`How to contact ${SITE_NAME}: corrections, questions and requests.`}
+  title={meta.title}
+  h1={meta.h1}
+  description={meta.description}
   intro="Questions, corrections and requests are welcome."
 >
   <h2>Email</h2>

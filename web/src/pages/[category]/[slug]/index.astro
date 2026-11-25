@@ -1,6 +1,7 @@
 ---
 // A product's overview page: /{category}/{slug}/. The other tabs (market insights, top deals, listings) are sibling folders.
 import Breadcrumb from "../../../components/Breadcrumb.astro";
+import ModelFaq from "../../../components/ModelFaq.astro";
 import OverviewChart from "../../../components/charts/OverviewChart";
 import DealRow from "../../../components/DealRow.astro";
 import LastUpdated from "../../../components/LastUpdated.astro";
@@ -12,7 +13,8 @@ import StatPanel from "../../../components/StatPanel.astro";
 import Base from "../../../layouts/Base.astro";
 import { byPopularity, getCatalog, getCategoryDeals, getProductPaths, getProductSeries, hasData, getProductSummary } from "../../../lib/catalog";
 import { count, money, moneyShort } from "../../../lib/format";
-import { averagePrice, fitTitle, formatPct, percentDiff, productSummary, quarterOf, trend30 } from "../../../lib/text";
+import { modelFaq, modelValues, pageMeta } from "../../../lib/seo";
+import { averagePrice, formatPct, percentDiff, productSummary, quarterOf, trend30 } from "../../../lib/text";
 
 // Runs once at build time: lists every page this file must produce, as /{category}/{slug}/.
 export async function getStaticPaths() {
@@ -28,7 +30,8 @@ const { series } = (await getProductSeries(slug!)).data;
 
 // The API groups the category's deals per product; a product without deals is missing from the answer.
 const dealGroups = (await getCategoryDeals(categoryKey!)).data;
-const deals = dealGroups.find((group) => group.slug === slug)?.deals.slice(0, DEALS_SHOWN) ?? [];
+const allDeals = dealGroups.find((group) => group.slug === slug)?.deals ?? [];
+const deals = allDeals.slice(0, DEALS_SHOWN);
 
 // The other models of the same category that have a page.
 const otherModels = category.products.filter((card) => hasData(card) && card.slug !== slug);
@@ -37,19 +40,13 @@ const related = [...otherModels].sort(byPopularity).slice(0, 4);
 const pagePath = `/${categoryKey}/${slug}/`;
 const trend = trend30(series);
 const last30 = series.slice(-30);
-// Kept short: Google shows about 60 characters of a title (the site name is appended by the layout).
-const title = fitTitle([
-  `${product.display_name} Price in Canada (${moneyShort(product.avg_price_30d)} avg)`,
-  `${product.display_name} Price in Canada`,
-  `${product.display_name} Price`,
-]);
-const description =
-  `${product.display_name} asking prices on Facebook Marketplace in Canada: ` +
-  `30-day average ${money(product.avg_price_30d)}, cheapest 25% under ${money(product.cutoff_price_cheapest_25pct_30d)}, ` +
-  `from ${product.listings_30d ?? 0} listings.`;
+// Title, description, H1 and FAQ come from seo_templates.yaml.
+const values = modelValues(product, { categoryName: category.category_name, deals: allDeals, dataAsOf: data_as_of });
+const meta = pageMeta("model_overview", values);
+const faq = modelFaq(values);
 ---
 
-<Base title={title} description={description}>
+<Base title={meta.title} description={meta.description}>
   <Breadcrumb
     items={[
       { label: "Home", href: "/" },
@@ -64,7 +61,7 @@ const description =
     <div class="relative grid gap-6 lg:grid-cols-[1.5fr_1fr] lg:items-end">
       <div>
         <p class="text-xs font-semibold uppercase tracking-widest text-white/75">{category.category_name} · Facebook Marketplace, Canada</p>
-        <h1 data-pagefind-meta="title" class="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">Used {product.display_name} Price in Canada</h1>
+        <h1 data-pagefind-meta="title" class="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">{meta.h1}</h1>
         <p class="mt-2 text-sm text-white/80">
           Asking prices, all configurations · <LastUpdated iso={data_as_of} />
         </p>
@@ -175,6 +172,8 @@ const description =
       </section>
     )
   }
+
+  <ModelFaq faq={faq} model={product.display_name} />
 
   {
     related.length > 0 && (

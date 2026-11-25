@@ -9,6 +9,7 @@ import StatPanel from "../../../../components/StatPanel.astro";
 import Base from "../../../../layouts/Base.astro";
 import { getCatalog, getProductPaths, getProductSummary } from "../../../../lib/catalog";
 import { count, moneyShort } from "../../../../lib/format";
+import { modelValues, pageMeta } from "../../../../lib/seo";
 import { formatPct, percentDiff, quarterOf } from "../../../../lib/text";
 
 export async function getStaticPaths() {
@@ -20,9 +21,10 @@ const category = (await getCatalog()).categories.find((c) => c.category_key === 
 const { data: product, data_as_of } = await getProductSummary(slug!);
 const name = product.display_name;
 const pagePath = `/${categoryKey}/${slug}/`;
+const meta = pageMeta("model_listings", modelValues(product));
 ---
 
-<Base title={`All ${name} Listings`} description={`All recent ${name} listings on Facebook Marketplace in Canada.`} noindex>
+<Base title={meta.title} description={meta.description} noindex>
   <Breadcrumb
     items={[
       { label: "Home", href: "/" },
@@ -31,7 +33,7 @@ const pagePath = `/${categoryKey}/${slug}/`;
       { label: "All listings" },
     ]}
   />
-  <h1 class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">All {name} listings</h1>
+  <h1 class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">{meta.h1}</h1>
   <p class="mt-2 text-slate-500">
     Asking prices on Facebook Marketplace, all configurations · <LastUpdated iso={data_as_of} />
   </p>

@@ -5,6 +5,7 @@ import Carousel from "../../components/Carousel.astro";
 import ModelColumn from "../../components/ModelColumn.astro";
 import { aroundCenter, byPopularity, getCatalog, getCategoryDeals, getCategoryTotals } from "../../lib/catalog";
 import { formatDateTime } from "../../lib/format";
+import { categoryValues, pageMeta } from "../../lib/seo";
 
 // One page per category, built from this single file: /iphone/, /macbook/, ...
 export async function getStaticPaths() {
@@ -21,16 +22,13 @@ const totals = await getCategoryTotals(category);
 const arranged = aroundCenter([...category.products].sort(byPopularity));
 
 const name = category.category_name;
-const title = `Used ${name} Prices in Canada`;
-const description =
-  `Compare used ${name} prices in Canada: average asking prices, the cheapest 25% cutoff and the best current deals ` +
-  `for ${category.products.length} models, from Facebook Marketplace listings.`;
+const meta = pageMeta("category", categoryValues(name, category.products));
 ---
 
-<Base title={title} description={description}>
+<Base title={meta.title} description={meta.description}>
   <Breadcrumb items={[{ label: "Home", href: "/" }, { label: name }]} />
 
-  <h1 data-pagefind-meta="title" class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
+  <h1 data-pagefind-meta="title" class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">{meta.h1}</h1>
   <div data-pagefind-body class="mt-3 max-w-3xl space-y-3 text-lg text-slate-600">
     <p>
       What are people really asking for a used {name} in Canada? We track {totals.listings30d.toLocaleString("en-CA")} listings

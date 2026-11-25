@@ -1,11 +1,15 @@
 ---
 import TextPage from "../layouts/TextPage.astro";
-import { CONTACT_EMAIL, SITE_NAME } from "../lib/site";
+import { pageMeta } from "../lib/seo";
+import { CONTACT_EMAIL, OWNER_NAME, SITE_NAME } from "../lib/site";
+
+const meta = pageMeta("privacy");
 ---
 
 <TextPage
-  title="Privacy policy"
-  description={`The privacy policy of ${SITE_NAME}: what information the site does and does not collect.`}
+  title={meta.title}
+  h1={meta.h1}
+  description={meta.description}
   intro="In short: this site does not ask for personal information and does not track you."
   updated="November 20, 2026"
 >
@@ -40,5 +44,5 @@ import { CONTACT_EMAIL, SITE_NAME } from "../lib/site";
   </p>
 
   <h2>Contact</h2>
-  <p>Questions about this policy or a request about your information: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</p>
+  <p>{SITE_NAME} is run by {OWNER_NAME}. Questions about this policy or a request about your information: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.</p>
 </TextPage>

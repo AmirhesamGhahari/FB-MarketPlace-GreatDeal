@@ -1,0 +1,190 @@
+# SEO templates: one block per PAGE TYPE (not per page). Edit the text, keep the {placeholders}, save, and tell me.
+# I then build the site to read these templates, so every page of that type follows them.
+#
+# HOW TO EDIT
+#  - title        = the blue link in Google (also the browser tab). Keep it about 30-55 characters.
+#  - description  = the grey text under it. Keep it about 120-155 characters (Google cuts after about 160).
+#  - h1           = the big heading on the page itself (can differ from the title).
+#  - A field written as a LIST ("- option") is tried from the top: the first option that fits the length limit and has every
+#    number it needs is used. Put the best/longest wording first and shorter fallbacks after it.
+#  - The site name is added to a title as " | Tech Deal Radar" ONLY if the whole title then stays within `max_title_length`.
+#  - {placeholders} are filled in at build time from real data. Only use the ones listed for that page type.
+#    If a number is missing for a page (not enough data), that option is skipped and the next one is used.
+#
+# PLACEHOLDERS
+#  everywhere:    {site} site name   {place} where the numbers are from (today always "Canada"; later the chosen city)   {updated} date of the last data refresh
+#  category:      {category} e.g. iPhone   {n_models}   {listings30} listings in 30 days (all its models)
+#                 {avg_low} {avg_high} lowest and highest model 30-day average in the category
+#  all-categories pages: {n_models} {n_categories} {listings30}
+#  top-deals hubs: {median_gap_pct} typical % that each model's cheapest listing is below its average   {n_deep} models with a listing 25%+ below
+#  insights hubs:  {n_fell} {n_rose} {n_steady} models whose 7-day average fell / rose / held steady over 30 days
+#  model pages:   {model} e.g. iPhone 16 Pro Max   {category}   {avg30} {avg7} {cutoff25} {listings30} {listings7}
+#                 {trend_sentence} e.g. "the 7-day average went down from $1,149 to $1,096 (-5%)"
+#                 {best_price} {best_gap} {best_gap_pct} the cheapest deal, its $ and % below the 30-day average
+#                 {n_deals} how many deals are listed
+#  money values print like "$1,098 CAD".
+
+global:
+  site_name: Tech Deal Radar
+  tagline: "Spot the cheapest used tech in Canada: real prices, trends and deals."
+  owner_name: Amir Ghahari          # shown on About, Privacy and Terms ("Who runs it")
+  contact_email: contact@techdealradar.ca
+  max_title_length: 60              # a title gets " | {site}" only if the total stays within this
+  max_description_length: 160
+
+pages:
+  home:                             # /
+    title:
+      - "Used Tech Prices and Best Deals in {place} | {site}"
+      - "Used Tech Prices, Trends and Best Deals in {place}"
+    description:
+      - "Know what used tech is really worth in {place}. Real asking prices, price trends and the cheapest current deals from Facebook Marketplace listings."
+    h1: "Know what used tech is really worth in {place}, and find the cheapest deals"
+
+  categories:                       # /categories/
+    title:
+      - "Used Electronics Prices in {place} by Category"
+      - "Used Electronics Prices in {place}"
+    description:
+      - "Browse {n_models} used models in {n_categories} categories: average asking prices, price trends and the cheapest current deals from Facebook Marketplace in {place}."
+      - "Browse used electronics by category: average asking prices, price trends and the cheapest current deals from Facebook Marketplace in {place}."
+    h1: "Used Electronics Prices in {place} by Category"
+
+  category:                         # /iphone/
+    title:
+      - "Used {category} Prices in {place}"
+    description:
+      - "Used {category} prices in {place}: {n_models} models from {avg_low} to {avg_high} on average, with the cheapest current deals. Based on {listings30} recent listings."
+      - "Compare used {category} prices in {place}: average asking prices, the cheapest 25% price and the best deals for {n_models} models."
+    h1: "Used {category} Prices in {place}"
+
+  hub_market_insights_root:         # /market-insights/
+    title:
+      - "Used Electronics Price History and Trends in {place}"
+      - "Used Electronics Price Trends in {place}"
+    description:
+      - "Price history and 30-day trends for used electronics in {place}: prices fell on {n_fell} models and rose on {n_rose}. See how asking prices moved, by category and model."
+      - "Price history and 30-day trends for used electronics in {place}: how asking prices on Facebook Marketplace moved, by category and model."
+    h1: "Used Electronics Price History and Trends in {place}"
+
+  hub_top_deals_root:               # /top-deals/
+    title:
+      - "Best Used Electronics Deals in {place}"
+    description:
+      - "The cheapest used electronics in {place}: the best listing of each of {n_models} models sits about {median_gap_pct}% below its 30-day average. Updated after each refresh."
+      - "The best current deals on used electronics in {place}, compared with the 30-day average asking price on Facebook Marketplace."
+    h1: "Best Used Electronics Deals in {place}"
+
+  hub_all_listings_root:            # /all-listings/   (not indexed by Google)
+    title:
+      - "All Used Electronics Listings in {place}"
+    description:
+      - "All recent used electronics listings from Facebook Marketplace in {place}, by category and model."
+    h1: "All Used Electronics Listings in {place}"
+
+  hub_market_insights_category:     # /market-insights/iphone/
+    title:
+      - "Used {category} Price Trends and Insights in {place}"
+      - "Used {category} Price Trends in {place}"
+    description:
+      - "How asking prices moved for used {category} models in {place}: prices fell on {n_fell} models, rose on {n_rose} and held steady on {n_steady} over 30 days."
+      - "How asking prices moved for used {category} models in {place}: 30-day trends and price history."
+    h1: "Used {category} Price Trends and Insights in {place}"
+
+  hub_top_deals_category:           # /top-deals/iphone/
+    title:
+      - "Best Used {category} Deals in {place}"
+    description:
+      - "The cheapest used {category} listings in {place}: the best deal on each of {n_models} models sits about {median_gap_pct}% below its 30-day average."
+      - "The best current deals on used {category} models in {place}, compared with each model's 30-day average."
+    h1: "Best Used {category} Deals in {place}"
+
+  hub_all_listings_category:        # /all-listings/iphone/   (not indexed)
+    title:
+      - "All Used {category} Listings in {place}"
+    description:
+      - "Every recent listing of used {category} models in {place}: sort by price and filter to find the cheapest."
+    h1: "All Used {category} Listings in {place}"
+
+  model_overview:                   # /iphone/iphone-16-pro-max/
+    title:
+      - "Used {model} Price in {place}"
+      - "{model} Price in {place}"
+      - "{model} Price"
+    description:
+      - "Used {model} price in {place}: 30-day average {avg30}, cheapest 25% under {cutoff25}, from {listings30} Facebook Marketplace listings. See the best deals."
+      - "{model} asking prices on Facebook Marketplace in {place}: 30-day average {avg30}, cheapest 25% under {cutoff25}, from {listings30} listings."
+      - "{model} asking prices on Facebook Marketplace in {place}, with price history and the best current deals."
+    h1: "Used {model} Price in {place}"
+
+  model_market_insights:            # /iphone/iphone-16-pro-max/market-insights/
+    title:
+      - "{model} Price History, Trends and Insights in {place}"
+      - "Used {model} Price History and Trends in {place}"
+      - "{model} Price History and Trends in {place}"
+      - "{model} Price History and Trends"
+      - "{model} Price History"
+    description:
+      - "Used {model} price history and trends in {place}: {trend_sentence}. Charts for the last 10 to 60 days."
+      - "Used {model} price history and trends in {place}: daily and 7-day average asking prices and listings per day."
+    h1: "Used {model} Price History, Trends and Insights in {place}"
+
+  model_top_deals:                  # /iphone/iphone-16-pro-max/top-deals/
+    title:
+      - "Best Used {model} Deals in {place}"
+      - "Best {model} Deals"
+    description:
+      - "Best used {model} deals in {place}: the cheapest listing asks {best_price}, {best_gap_pct}% under the 30-day average of {avg30}. {n_deals} deals ranked."
+      - "Best used {model} deals in {place}: the cheapest recent Facebook Marketplace listings compared with the 30-day average."
+    h1: "Best Used {model} Deals in {place}"
+
+  model_listings:                   # /iphone/iphone-16-pro-max/listings/   (not indexed)
+    title:
+      - "All {model} Listings"
+    description:
+      - "All recent {model} listings on Facebook Marketplace in {place}: sort by price, filter by period."
+    h1: "All {model} listings"
+
+  # Visible FAQ on every model overview page, also sent to Google as FAQ markup. Keep answers short and factual.
+  # A question is skipped when the answer needs a number the page does not have.
+  model_faq:
+    - q: "What is the average price of a used {model} in {place}?"
+      a: "The 30-day average asking price is {avg30} (7-day average {avg7}), based on {listings30} listings on Facebook Marketplace."
+    - q: "How much should I pay for a used {model}?"
+      a: "A quarter of the listings ask {cutoff25} or less, so a price near or under that is cheaper than most. Compare it with the 30-day average of {avg30}."
+    - q: "What is the cheapest used {model} right now?"
+      a: "The cheapest recent listing asks {best_price}, {best_gap} under the 30-day average. Check the condition and ask the seller questions before you decide."
+    - q: "Are these sold prices?"
+      a: "No. They are asking prices, what sellers want, not what buyers finally paid. We do not check whether a listing is still available."
+    - q: "How often is the {model} price updated?"
+      a: "After each data refresh. The numbers on this page were last updated on {updated}."
+
+  # Trust pages. {owner_name} and {contact_email} come from `global`.
+  about:                            # /about/
+    title: ["About"]
+    description: ["{site} is an independent price guide that turns public used-electronics listings in {place} into average prices, price history and the cheapest deals."]
+    h1: "About {site}"
+  contact:                          # /contact/
+    title: ["Contact"]
+    description: ["How to contact {site}: corrections, questions and requests."]
+    h1: "Contact"
+  disclosure:                       # /disclosure/
+    title: ["Disclosure"]
+    description: ["What {site} is, what it is not affiliated with, and how it is funded."]
+    h1: "Disclosure"
+  how_it_works:                     # /how-it-works/
+    title: ["How it works"]
+    description: ["How {site} collects used-electronics listings in {place} and calculates average asking prices, price cutoffs and the best deals."]
+    h1: "How it works"
+  privacy:                          # /privacy/
+    title: ["Privacy policy"]
+    description: ["The privacy policy of {site}: what information the site does and does not collect."]
+    h1: "Privacy policy"
+  terms:                            # /terms/
+    title: ["Terms of use"]
+    description: ["The terms for using {site}: information only, asking prices, no guarantees."]
+    h1: "Terms of use"
+  not_found:                        # 404 page (not indexed)
+    title: ["Page not found"]
+    description: ["This page does not exist. Browse used tech prices and deals in {place} from the home page."]
+    h1: "Page not found"
