@@ -3,6 +3,7 @@
 //   - an internal link or the sitemap points at a page that does not exist
 //   - an indexable page lacks a title, a description, a canonical address, or has not exactly one <h1>
 //   - a noindex page is listed in the sitemap, or an indexable page is missing from it
+//   - (launch build only) a model has no static listings file
 // Long titles and descriptions are only reported as warnings.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
@@ -78,6 +79,14 @@ for (const { pathname, html } of pages) {
   else if (new URL(canonical).pathname !== pathname) errors.push(`${pathname}: canonical points to ${canonical}`);
   if (h1Count !== 1) errors.push(`${pathname}: ${h1Count} <h1> elements (expected 1)`);
 }
+
+// Every model's listings page needs its static listings file (/data/listings/{category}/{slug}.json). Missing files are only a warning in a
+// hidden build (the table then uses the live API); in the build for launch (PUBLIC_SITE_LIVE=true) they are errors.
+const live = process.env.PUBLIC_SITE_LIVE === "true";
+const listingsPages = pages.filter((page) => /^\/[^/]+\/[^/]+\/listings\/$/.test(page.pathname));
+const missingFiles = listingsPages.filter((page) => !existsSync(join(DIST, "data", "listings", page.pathname.split("/")[1], `${page.pathname.split("/")[2]}.json`)));
+for (const page of missingFiles) (live ? errors : warnings).push(`${page.pathname}: no static listings file in dist/data/listings/{category}/`);
+console.log(`Listings files: ${listingsPages.length - missingFiles.length} of ${listingsPages.length} models.`);
 
 for (const path of sitemapPaths) {
   if (!known.has(path)) errors.push(`sitemap: ${path} does not exist in dist/`);

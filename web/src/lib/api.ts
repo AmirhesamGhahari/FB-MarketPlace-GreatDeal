@@ -187,3 +187,16 @@ export const getProduct = (slug: string) => get<ProductSummary>(`/products/${slu
 export const getTopDeals = (categoryKey: string) => get<ProductDeals[]>(`/deals/${categoryKey}/top`);
 export const getSeries = (slug: string) => get<ProductSeries>(`/products/${slug}/series`);
 export const getListingsAll = (slug: string) => get<ListingRow[]>(`/products/${slug}/listings/all`);
+
+// Browser only: the listings of a model from the static file written at build time (/data/listings/{category}/{slug}.json, with
+// the category in its URL form). Resolves to null when there is no such file, so the caller can fall back to getListingsAll.
+export async function getListingsFile(categoryKey: string, slug: string): Promise<Envelope<ListingRow[]> | null> {
+  try {
+    const res = await fetch(`/data/listings/${categoryKey}/${slug}.json`);
+    if (!res.ok) return null;
+    const body = (await res.json()) as Envelope<ListingRow[]>;
+    return Array.isArray(body?.data) ? body : null;
+  } catch {
+    return null;
+  }
+}

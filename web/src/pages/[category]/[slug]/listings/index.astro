@@ -84,7 +84,7 @@ const meta = pageMeta("model_listings", modelValues(product));
   </section>
 
   <section class="mt-8" aria-label="Listings">
-    <ListingsTable client:load slug={slug!} />
+    <ListingsTable client:load slug={slug!} categoryKey={categoryKey!} />
     <noscript>
       <p class="rounded-xl border border-slate-200 p-5 text-slate-600">This table needs JavaScript to load the listings.</p>
     </noscript>

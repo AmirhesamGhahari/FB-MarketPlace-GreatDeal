@@ -1,8 +1,9 @@
-// The all-listings table. It loads the product's listings from the API in the browser, then filters, sorts and pages them
-// itself, so clicking never makes another request.
+// The all-listings table. It loads the product's listings in the browser, from the static file written at build time
+// (/data/listings/{category}/{slug}.json) and, if there is none, from the live API, then filters, sorts and pages them itself, so clicking
+// never makes another request.
 import { useEffect, useState } from "react";
-import { getListingsAll, type ListingRow } from "../../lib/api";
-import { formatDate, formatPriceDiff, money } from "../../lib/format";
+import { getListingsAll, getListingsFile, type ListingRow } from "../../lib/api";
+import { formatDate, formatDateTime, formatPriceDiff, money } from "../../lib/format";
 
 const PERIODS = [1, 3, 7, 15, 30] as const;
 const PAGE_SIZES = [10, 25, 50, 100] as const;
@@ -51,13 +52,16 @@ function pageList(current: number, last: number): (number | "gap")[] {
 
 type Props = {
   slug: string;
+  categoryKey: string; // the category in its URL form (apple-watch), the folder of the static listings file
   defaultSort?: SortKey; // "price_asc" turns the table into a list of the cheapest listings (the deals explorer)
   defaultDays?: number;
   defaultPageSize?: number;
 };
 
-export default function ListingsTable({ slug, defaultSort = "newest", defaultDays = 15, defaultPageSize = 25 }: Props) {
+export default function ListingsTable({ slug, categoryKey, defaultSort = "newest", defaultDays = 15, defaultPageSize = 25 }: Props) {
   const [rows, setRows] = useState<ListingRow[] | null>(null);
+  const [asOf, setAsOf] = useState<string | null>(null); // when the listings were built
+  const [viaApi, setViaApi] = useState(false); // true while the slower live API is used
   const [failed, setFailed] = useState<false | "missing" | "error">(false);
   const [attempt, setAttempt] = useState(0);
   const [days, setDays] = useState<number>(defaultDays);
@@ -69,14 +73,25 @@ export default function ListingsTable({ slug, defaultSort = "newest", defaultDay
     let cancelled = false;
     setFailed(false);
     setRows(null);
-    getListingsAll(slug)
-      .then((res) => !cancelled && setRows(res.data))
+    setViaApi(false);
+    const show = (res: { data_as_of: string; data: ListingRow[] }) => {
+      if (cancelled) return;
+      setRows(res.data);
+      setAsOf(res.data_as_of);
+    };
+    getListingsFile(categoryKey, slug)
+      .then((file) => {
+        if (file || cancelled) return file && show(file);
+        // No static file for this model: ask the live API instead.
+        setViaApi(true);
+        return getListingsAll(slug).then(show);
+      })
       // "API 404" means the live API does not know the all-listings address (it has not been updated yet).
       .catch((error) => !cancelled && setFailed(String(error).includes("API 404") ? "missing" : "error"));
     return () => {
       cancelled = true;
     };
-  }, [slug, attempt]);
+  }, [categoryKey, slug, attempt]);
 
   if (failed) {
     return (
@@ -100,9 +115,11 @@ export default function ListingsTable({ slug, defaultSort = "newest", defaultDay
     return (
       <div className="rounded-xl border border-slate-200 p-6 text-slate-600" role="status">
         <p className="font-medium">Loading listings…</p>
-        <p className="mt-1 text-sm text-slate-500">
-          The first load after a quiet period can take up to 30 seconds while the database wakes up.
-        </p>
+        {viaApi && (
+          <p className="mt-1 text-sm text-slate-500">
+            This can take up to 30 seconds after a quiet period while the database wakes up.
+          </p>
+        )}
       </div>
     );
   }
@@ -125,6 +142,7 @@ export default function ListingsTable({ slug, defaultSort = "newest", defaultDay
 
   return (
     <div>
+      {asOf && <p className="mb-3 text-sm text-slate-500">Listings as of {formatDateTime(asOf)}</p>}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
         <div role="group" aria-label="Period" className="flex flex-wrap items-center gap-2">
           <span className="mr-1 text-sm text-slate-500">Listed in the last</span>

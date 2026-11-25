@@ -1,6 +1,6 @@
 // The list of categories and products, fetched once per build and shared by every page (menus, hubs, sitemap, search).
 // A module runs once and its variables stay alive for the whole build, so the first call fetches and the rest reuse it.
-import { getCategories, getCategoryProducts, getProduct, getSeries, getTopDeals, type CategoryProductCard } from "./api";
+import { getCategories, getCategoryProducts, getListingsAll, getProduct, getSeries, getTopDeals, type CategoryProductCard } from "./api";
 
 // The API's category keys use underscores (apple_watch). URLs use hyphens (apple-watch), which search engines read as word
 // separators, so `category_key` here is the URL form. Only the calls to the API convert back (toApiKey).
@@ -90,6 +90,22 @@ export function getProductSeries(slug: string) {
     seriesCache.set(slug, series);
   }
   return series;
+}
+
+// All recent listings of a product, for the static listings file (src/pages/data/listings/[category]/[slug].json.ts). Never throws: a model
+// whose listings cannot be fetched (for example the live API has no /listings/all yet) is reported as null, and the caller
+// decides whether that stops the build.
+const listingsCache = new Map<string, Promise<Awaited<ReturnType<typeof getListingsAll>> | null>>();
+export function getProductListings(slug: string) {
+  let listings = listingsCache.get(slug);
+  if (!listings) {
+    listings = getListingsAll(slug).catch((error) => {
+      console.warn(`[listings] no listings for ${slug}: ${error}`);
+      return null;
+    });
+    listingsCache.set(slug, listings);
+  }
+  return listings;
 }
 
 // The summary (headline numbers) of a product, fetched once per build and shared by its pages and the footer.

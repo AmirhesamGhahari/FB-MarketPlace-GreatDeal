@@ -77,7 +77,7 @@ const meta = pageMeta("model_top_deals", modelValues(product, { deals }));
       subtitle="Every comparable listing, cheapest first. Choose the period, how many to show and how to sort."
     />
     <div class="mt-4">
-      <ListingsTable client:visible slug={slug!} defaultSort="price_asc" defaultDays={30} defaultPageSize={10} />
+      <ListingsTable client:visible slug={slug!} categoryKey={categoryKey!} defaultSort="price_asc" defaultDays={30} defaultPageSize={10} />
     </div>
   </section>
 
