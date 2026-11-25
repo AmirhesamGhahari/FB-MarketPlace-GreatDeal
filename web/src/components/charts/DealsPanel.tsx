@@ -1,11 +1,14 @@
-// The cheapest listings of each day (up to 3 per day, from the last 7 days at that time) as dots. Hovering or focusing a dot
+// The cheapest listings of each day (the 5 cheapest posted that day) as dots, over two lines: the 30-day average and the cheapest-25% price as of each day. Hovering or focusing a dot
 // shows its details; clicking (or tapping) pins the details with a link that opens the listing on Facebook in a new tab.
 import { useEffect, useRef, useState, type MouseEvent } from "react";
-import { CartesianGrid, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, XAxis, YAxis } from "recharts";
+import { CartesianGrid, ComposedChart, Line, ResponsiveContainer, Scatter, XAxis, YAxis } from "recharts";
 import type { SeriesPoint } from "../../lib/api";
 import { formatPriceDiff, formatShortDate, money } from "../../lib/format";
 import { ChartCard, type Headline } from "./parts";
 import { AXIS, GRID, SERIES_COLORS, SURFACE, TICK } from "./theme";
+
+// The cheapest listings of one day. An API that does not send the per-day list yet falls back to the 3 cheapest of the 7 days.
+export const dealsOfDay = (row: SeriesPoint) => (row.lowest_5_deals_1d !== undefined ? row.lowest_5_deals_1d : row.lowest_3_deals_7d) ?? [];
 
 type Dot = { id: number; x: number; price: number; url: string | null; day: string; avg: number | null };
 type Active = { dot: Dot; cx: number; cy: number; pinned: boolean };
@@ -27,7 +30,7 @@ export default function DealsPanel({ title, subtitle, headline, rows }: Props) {
 
   // x is the position of the day in the window (0 = oldest shown), so days without deals stay as gaps.
   const dots: Dot[] = rows.flatMap((row, x) =>
-    (row.lowest_3_deals_7d ?? []).map((deal) => ({ id: 0, x, price: deal.price, url: deal.url, day: row.stat_date, avg: row.avg_price_30d })),
+    dealsOfDay(row).map((deal) => ({ id: 0, x, price: deal.price, url: deal.url, day: row.stat_date, avg: row.avg_price_30d })),
   );
   dots.forEach((dot, index) => (dot.id = index));
   // The dot closest to the pointer, if it is within 20 px.
@@ -48,8 +51,15 @@ export default function DealsPanel({ title, subtitle, headline, rows }: Props) {
     return best;
   }
 
-  const averages = rows.map((row) => row.avg_price_30d).filter((value): value is number => typeof value === "number");
-  const latestAverage = averages.length > 0 ? averages[averages.length - 1] : null;
+  // The two lines, one point per day on the same x positions as the dots.
+  const lineRows = rows.map((row, x) => ({ x, avg: row.avg_price_30d, cutoff: row.cutoff_price_cheapest_25pct_30d }));
+  // The same colours as the 30-day chart above (average blue, cheapest 25% orange); the dots take the third one.
+  const [avgColor, cutoffColor, dotColor] = SERIES_COLORS;
+  const legend = [
+    { key: "dots", label: "5 cheapest listings of the day", color: dotColor, kind: "dot" as const },
+    { key: "avg", label: "30-day average", color: avgColor, kind: "line" as const },
+    { key: "cutoff", label: "Cheapest 25% (30 days)", color: cutoffColor, kind: "line" as const },
+  ];
 
   const lastIndex = rows.length - 1;
   const tickEvery = Math.max(1, Math.ceil(rows.length / 8));
@@ -66,6 +76,7 @@ export default function DealsPanel({ title, subtitle, headline, rows }: Props) {
       title={title}
       subtitle={subtitle}
       headline={headline}
+      legend={legend}
       height={270}
       tableRows={[...dots].reverse()}
       tableColumns={[
@@ -89,7 +100,7 @@ export default function DealsPanel({ title, subtitle, headline, rows }: Props) {
         }}
       >
         <ResponsiveContainer width="100%" height={270}>
-          <ScatterChart margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+          <ComposedChart margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
             <CartesianGrid vertical={false} stroke={GRID} />
             <XAxis
               type="number"
@@ -111,16 +122,8 @@ export default function DealsPanel({ title, subtitle, headline, rows }: Props) {
               width={60}
               domain={["auto", "auto"]}
             />
-            {latestAverage !== null && (
-              <ReferenceLine
-                y={latestAverage}
-                ifOverflow="extendDomain"
-                stroke="#eb6834"
-                strokeWidth={1.5}
-                strokeOpacity={0.7}
-                label={{ value: `30-day average ${money(latestAverage)}`, position: "insideTopRight", fill: "#c2410c", fontSize: 12 }}
-              />
-            )}
+            <Line data={lineRows} dataKey="avg" type="linear" stroke={avgColor} strokeWidth={2.5} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
+            <Line data={lineRows} dataKey="cutoff" type="linear" stroke={cutoffColor} strokeWidth={2.5} dot={false} activeDot={false} isAnimationActive={false} connectNulls />
             <Scatter
               data={dots}
               isAnimationActive={false}
@@ -146,13 +149,13 @@ export default function DealsPanel({ title, subtitle, headline, rows }: Props) {
                     }}
                     onKeyDown={(event) => (event.key === "Enter" || event.key === " ") && show(true)}
                   >
-                    {isActive && <circle cx={cx} cy={cy} r={12} fill={SERIES_COLORS[0]} fillOpacity={0.18} />}
-                    <circle cx={cx} cy={cy} r={isActive ? 7 : 5} fill={SERIES_COLORS[0]} fillOpacity={isActive ? 1 : 0.85} stroke={SURFACE} strokeWidth={2} />
+                    {isActive && <circle cx={cx} cy={cy} r={12} fill={dotColor} fillOpacity={0.18} />}
+                    <circle cx={cx} cy={cy} r={isActive ? 7 : 5} fill={dotColor} fillOpacity={isActive ? 1 : 0.85} stroke={SURFACE} strokeWidth={2} />
                   </g>
                 );
               }}
             />
-          </ScatterChart>
+          </ComposedChart>
         </ResponsiveContainer>
 
         {active && (

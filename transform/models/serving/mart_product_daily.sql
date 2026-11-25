@@ -22,6 +22,10 @@ select
         select round(avg((e.item ->> 'price')::numeric), 2)
         from jsonb_array_elements(f.lowest_5_deals_1d) as e(item)
     ) as lowest_5_avg_1d,
+    -- the up to 5 cheapest listings posted that day (listing_id, url, price) and the price under which the cheapest 25% of
+    -- that day's own listings fall (null below 10 listings)
+    f.lowest_5_deals_1d,
+    f.cutoff_price_cheapest_25pct_1d,
     -- chart e: price under which the cheapest 25% of listings fall, over 30 and 7 days
     f.cutoff_price_cheapest_25pct_30d,
     f.cutoff_price_cheapest_25pct_7d,

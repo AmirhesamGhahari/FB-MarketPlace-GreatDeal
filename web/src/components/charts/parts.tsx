@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { formatShortDate } from "../../lib/format";
 import { CHART_HEIGHT } from "./theme";
 
-export type SeriesDef = { key: string; label: string; color: string; kind?: "line" | "bar" }; // kind only changes the legend symbol
+export type SeriesDef = { key: string; label: string; color: string; kind?: "line" | "bar" | "dot" }; // kind only changes the legend symbol
 export type Headline = { label: string; value: string; hint?: string; tone?: "good" | "bad" };
 export type TableColumn = { label: string; value: (row: any) => string };
 
@@ -55,7 +55,7 @@ export function ChartCard({ title, subtitle, legend, headline, tableColumns, tab
             {legend.map((item) => (
               <li key={item.key} className="flex items-center gap-2">
                 <span
-                  className={item.kind === "bar" ? "inline-block h-3 w-3 rounded-sm" : "inline-block h-0.5 w-4 rounded"}
+                  className={item.kind === "bar" ? "inline-block h-3 w-3 rounded-sm" : item.kind === "dot" ? "inline-block h-2.5 w-2.5 rounded-full" : "inline-block h-0.5 w-4 rounded"}
                   style={{ background: item.color }}
                   aria-hidden="true"
                 />

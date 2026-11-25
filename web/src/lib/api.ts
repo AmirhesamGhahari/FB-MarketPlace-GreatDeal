@@ -100,6 +100,10 @@ export type SeriesPoint = {
   // The average price of the up to 5 cheapest listings posted that day. Optional: the live API only sends it after the
   // 2026-11-24 update (api_contract.md 2.4).
   lowest_5_avg_1d?: number | null;
+  // The up to 5 cheapest listings posted that day, and the cheapest-25% price of that day's own listings. Optional like the
+  // field above: they come with the next API/dbt update (api_contract.md 2.4).
+  lowest_5_deals_1d?: LowestDeal[] | null;
+  cutoff_price_cheapest_25pct_1d?: number | null;
 };
 
 // Up to 60 days, oldest first; the last element is today (partial).

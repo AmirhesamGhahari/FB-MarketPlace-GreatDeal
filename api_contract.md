@@ -194,7 +194,11 @@ All chart data for one product: one object per day, oldest first, up to 60 days.
         ],
         "cutoff_price_cheapest_25pct_30d": 1050.0,
         "cutoff_price_cheapest_25pct_7d": 1040.0,
-        "lowest_5_avg_1d": 760.0
+        "lowest_5_avg_1d": 760.0,
+        "lowest_5_deals_1d": [
+          { "listing_id": "123456789", "url": "https://www.facebook.com/marketplace/item/123456789", "price": 700.0 }
+        ],
+        "cutoff_price_cheapest_25pct_1d": 980.0
       }
     ]
   }
@@ -205,6 +209,7 @@ Notes:
 - The last element is today, which is partial; the UI labels it "today so far".
 - Early days may have fewer than 30 days of history behind their 30-day figures; values are passed through as they are.
 - `lowest_5_avg_1d` (added 2026-11-24) is the average price of the up to 5 cheapest listings posted that day (`null` on a day without listings).
+- `lowest_5_deals_1d` and `cutoff_price_cheapest_25pct_1d` (added 2026-11-25) describe that day's own listings only: the up to 5 cheapest of them (cheapest first) and the price under which the cheapest 25% of them fall (`null` below 10 listings that day). `cutoff_price_cheapest_25pct_30d` is the same figure over the 30 days up to that day, so it moves slowly and can stay flat when many listings share a round price.
 - Charts: (a) `listings_1d` and `avg_price_1d`; (b) `avg_price_3d/7d/30d`; (c) `deal8_*`; (d) `lowest_3_deals_7d` with clickable URLs; (e) the two cutoff columns.
 
 ### 2.5 `GET /v1/products/{slug}/listings`

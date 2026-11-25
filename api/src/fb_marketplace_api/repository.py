@@ -37,7 +37,7 @@ PRODUCT_SERIES_SQL = text(
     select stat_date, listings_1d, avg_price_1d, avg_price_3d, avg_price_7d, avg_price_30d,
            deal8_listings_1d, deal8_avg_price_7d, deal8_avg_price_30d, lowest_3_deals_7d,
            cutoff_price_cheapest_25pct_30d, cutoff_price_cheapest_25pct_7d,
-           lowest_5_avg_1d,
+           lowest_5_avg_1d, lowest_5_deals_1d, cutoff_price_cheapest_25pct_1d,
            updated_at
     from serving.mart_product_daily
     where slug = :slug

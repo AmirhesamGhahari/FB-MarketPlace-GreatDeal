@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { SeriesPoint } from "../../lib/api";
 import { formatShortDate, moneyShort } from "../../lib/format";
 import DailyTable from "./DailyTable";
-import DealsPanel from "./DealsPanel";
+import DealsPanel, { dealsOfDay } from "./DealsPanel";
 import StackedPanel from "./StackedPanel";
 import { SERIES_COLORS } from "./theme";
 
@@ -43,7 +43,7 @@ export default function ProductCharts({ series }: { series: SeriesPoint[] }) {
   const change = firstPrice && lastPrice ? ((lastPrice - firstPrice) / firstPrice) * 100 : null;
   const fullDays = rows.slice(0, -1).filter((day) => typeof day.listings_1d === "number");
   const perDay = fullDays.length === 0 ? null : fullDays.reduce((sum, day) => sum + (day.listings_1d ?? 0), 0) / fullDays.length;
-  const cheapestPoints = rows.flatMap((day) => (day.lowest_3_deals_7d ?? []).map((deal) => ({ price: deal.price, day: day.stat_date })));
+  const cheapestPoints = rows.flatMap((day) => dealsOfDay(day).map((deal) => ({ price: deal.price, day: day.stat_date })));
   const lowest = cheapestPoints.length === 0 ? null : cheapestPoints.reduce((best, point) => (point.price < best.price ? point : best));
 
   return (
@@ -69,7 +69,7 @@ export default function ProductCharts({ series }: { series: SeriesPoint[] }) {
       <div className="mt-6 space-y-6">
         <StackedPanel
           title="Average asking price and listings per day"
-          subtitle="The line is the average asking price of each day; the columns are the number of listings posted that day."
+          subtitle="The lines are the average asking price of each day and the price that the cheapest 25% of that day's listings fall under (days with fewer than 10 listings have none); the columns are the number of listings posted that day."
           syncId="price-and-listings"
           headline={[
             { label: "Latest daily average", value: lastPrice === null ? "n/a" : moneyShort(lastPrice) },
@@ -81,12 +81,15 @@ export default function ProductCharts({ series }: { series: SeriesPoint[] }) {
             { label: "Listings per day", value: perDay === null ? "n/a" : perDay.toFixed(0), hint: "average of full days" },
           ]}
           rows={rows}
-          lines={[{ key: "avg_price_1d", label: "Average asking price", color: blue }]}
+          lines={[
+            { key: "avg_price_1d", label: "Average asking price", color: blue },
+            { key: "cutoff_price_cheapest_25pct_1d", label: "Cheapest 25% of the day", color: aqua },
+          ]}
           bar={{ key: "listings_1d", label: "Listings per day", color: orange }}
         />
         <StackedPanel
           title="30-day average, cheapest 25% and listings"
-          subtitle="Both lines look back 30 days. The columns are the total number of listings in the last 30 days (shown once 30 days of history exist)."
+          subtitle="Each day's point looks back 30 days from that day: the average, and the price that the cheapest 25% of those listings fall under. The columns are the total number of listings in the last 30 days (shown once 30 days of history exist)."
           syncId="averages-and-total"
           headline={[
             { label: "30-day average now", value: lastNumber(rows, (day) => day.avg_price_30d) === null ? "n/a" : moneyShort(lastNumber(rows, (day) => day.avg_price_30d)) },
@@ -102,11 +105,11 @@ export default function ProductCharts({ series }: { series: SeriesPoint[] }) {
         />
         <DealsPanel
           title="Cheapest listings by day"
-          subtitle="Up to three cheapest listings of the previous 7 days at each date. Hover a dot for details, click or tap it to open the listing on Facebook."
+          subtitle="Each dot is one of the 5 cheapest listings posted that day. The lines show, for each day, the 30-day average and the price that the cheapest 25% of the last 30 days' listings fall under. Hover a dot for details, click or tap it to open the listing on Facebook."
           rows={rows}
           headline={[
             { label: "Lowest listing in this period", value: lowest ? moneyShort(lowest.price) : "n/a", hint: lowest ? formatShortDate(lowest.day) : undefined },
-            { label: "Dots shown", value: String(cheapestPoints.length), hint: "up to 3 per day" },
+            { label: "Dots shown", value: String(cheapestPoints.length), hint: "up to 5 per day" },
           ]}
         />
       </div>

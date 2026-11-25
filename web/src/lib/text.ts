@@ -162,7 +162,7 @@ export function insightsCategorySentences(categoryName: string, items: Trend[]):
   }
   return [
     `In the last 30 days the 7-day average asking price ${movesClause(items, `${categoryName} model`)}.`,
-    "Falling prices show where buyers are getting the best chances, and rising ones show where waiting may cost more.",
+    "Models that are getting cheaper are the ones to watch for good prices; the cheapest listings below show how low they go.",
     lead,
   ];
 }

@@ -143,13 +143,14 @@ const section = "snap-start flex min-h-[calc(100svh-4rem)] items-center";
   <section class={`${section} relative overflow-hidden bg-gradient-to-br from-blue-800 via-blue-600 to-sky-500 text-white`}>
     <div class="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-white/10 blur-3xl" aria-hidden="true"></div>
     <div class="pointer-events-none absolute -right-20 bottom-0 h-96 w-96 rounded-full bg-sky-300/25 blur-3xl" aria-hidden="true"></div>
-    <div class="relative mx-auto grid w-full max-w-5xl items-center gap-10 px-4 py-16 lg:grid-cols-[1.35fr_1fr]">
+    <div class="relative mx-auto w-full max-w-5xl px-4 py-16">
+      <p class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white/90 ring-1 ring-white/20">
+        <span class="h-2 w-2 rounded-full bg-emerald-300"></span>{SITE_NAME}
+      </p>
+      <h1 class="mt-5 text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">{heroTitle}</h1>
+      <div class="mt-8 grid items-center gap-10 lg:grid-cols-[1.35fr_1fr]">
       <div>
-        <p class="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white/90 ring-1 ring-white/20">
-          <span class="h-2 w-2 rounded-full bg-emerald-300"></span>{SITE_NAME}
-        </p>
-        <h1 class="mt-5 text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">{heroTitle}</h1>
-        <p class="mt-5 max-w-xl text-lg text-white/90 sm:text-xl">
+        <p class="max-w-xl text-lg text-white/90 sm:text-xl">
           We track thousands of Facebook Marketplace listings and put the cheapest ones next to the real asking price and trend
           of every model, so you know what a fair price is and can spot a bargain the moment it appears.
         </p>
@@ -184,6 +185,7 @@ const section = "snap-start flex min-h-[calc(100svh-4rem)] items-center";
           </div>
         )
       }
+      </div>
     </div>
   </section>
 
