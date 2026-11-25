@@ -78,3 +78,20 @@ variable "alert_email" {
   description = "Email address for deal alert emails (the SNS subscription must be confirmed by clicking the link AWS emails)"
   type        = string
 }
+
+variable "domain_name" {
+  description = "The website's own domain (bought at Squarespace Domains; DNS lives in Route 53)"
+  type        = string
+  default     = "techdealradar.ca"
+}
+
+variable "extra_dns_records" {
+  description = "More DNS records for the domain, for example the email forwarding records from Squarespace (name \"@\" = the bare domain)"
+  type = list(object({
+    name   = string
+    type   = string
+    ttl    = optional(number, 3600)
+    values = list(string)
+  }))
+  default = []
+}

@@ -31,12 +31,25 @@ resource "aws_cloudfront_origin_access_control" "web" {
   signing_protocol                  = "sigv4"
 }
 
+# Folder addresses, trailing slashes and the www redirect (see site_function.js.tftpl). Only attached to the website behaviour.
+resource "aws_cloudfront_function" "site" {
+  name    = "${var.app_name}-site"
+  runtime = "cloudfront-js-2.0"
+  comment = "index.html for folders, trailing slash and www redirect"
+  publish = true
+  code = templatefile("${path.module}/site_function.js.tftpl", {
+    canonical_host = var.canonical_host
+    redirect_hosts = var.redirect_hosts
+  })
+}
+
 resource "aws_cloudfront_distribution" "main" {
   enabled             = true
   is_ipv6_enabled     = true
   comment             = "${var.app_name} website and API"
   default_root_object = "index.html"
   price_class         = var.price_class
+  aliases             = var.aliases
 
   origin {
     origin_id                = "web"
@@ -64,6 +77,20 @@ resource "aws_cloudfront_distribution" "main" {
     cached_methods         = ["GET", "HEAD"]
     compress               = true
     cache_policy_id        = data.aws_cloudfront_cache_policy.static.id
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.site.arn
+    }
+  }
+
+  # A page that does not exist: the private bucket answers 403, which becomes our 404 page with a real 404 status. Only 403 is
+  # mapped, because the API answers its own 404s (unknown product, no listings) and those must stay JSON.
+  custom_error_response {
+    error_code            = 403
+    response_code         = 404
+    response_page_path    = "/404.html"
+    error_caching_min_ttl = 60
   }
 
   ordered_cache_behavior {
@@ -83,7 +110,10 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    cloudfront_default_certificate = var.certificate_arn == "" ? true : null
+    acm_certificate_arn            = var.certificate_arn == "" ? null : var.certificate_arn
+    ssl_support_method             = var.certificate_arn == "" ? null : "sni-only"
+    minimum_protocol_version       = var.certificate_arn == "" ? null : "TLSv1.2_2021"
   }
 }
 

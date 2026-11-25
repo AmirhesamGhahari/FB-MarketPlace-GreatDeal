@@ -19,6 +19,19 @@ terraform {
   }
 }
 
+# CloudFront only accepts HTTPS certificates from us-east-1, so the domain module uses this second provider for the certificate.
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+
+  default_tags {
+    tags = {
+      App       = var.app_name
+      ManagedBy = "terraform"
+    }
+  }
+}
+
 provider "aws" {
   region = var.region
 

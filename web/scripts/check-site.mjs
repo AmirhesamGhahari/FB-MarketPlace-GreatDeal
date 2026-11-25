@@ -44,7 +44,8 @@ const sitemapPaths = new Set(
 if (sitemapFiles.length === 0) errors.push("sitemap: no sitemap-N.xml in dist/");
 
 for (const { pathname, html } of pages) {
-  const noindex = /<meta name="robots" content="[^"]*noindex/.test(html);
+  // The launch-switch tag (hidden mode before launch) is not a page decision, so it is ignored here.
+  const noindex = /<meta name="robots" content="[^"]*noindex[^>]*>/.test(html) && !/<meta name="robots"[^>]*data-launch-switch/.test(html);
   const isError = pathname === "/404/";
 
   // Internal links must lead somewhere.

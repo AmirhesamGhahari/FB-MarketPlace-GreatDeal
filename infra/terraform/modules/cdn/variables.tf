@@ -19,6 +19,30 @@ variable "api_domain" {
   type        = string
 }
 
+variable "aliases" {
+  description = "The domain names that reach this distribution (empty = only the cloudfront.net address)"
+  type        = list(string)
+  default     = []
+}
+
+variable "certificate_arn" {
+  description = "ACM certificate (us-east-1) for the aliases; empty = the default cloudfront.net certificate"
+  type        = string
+  default     = ""
+}
+
+variable "canonical_host" {
+  description = "The main address the website redirects to (for example techdealradar.ca); empty = no host redirect"
+  type        = string
+  default     = ""
+}
+
+variable "redirect_hosts" {
+  description = "Host names that are redirected permanently to canonical_host (for example www.techdealradar.ca)"
+  type        = list(string)
+  default     = []
+}
+
 variable "price_class" {
   description = "PriceClass_100 = North America and Europe edge locations (cheapest)"
   type        = string

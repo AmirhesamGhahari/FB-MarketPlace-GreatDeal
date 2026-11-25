@@ -5,7 +5,7 @@ import "../styles/global.css";
 import SiteFooter from "../components/SiteFooter.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import { fullTitle as buildTitle } from "../lib/seo";
-import { SITE_NAME } from "../lib/site";
+import { SITE_LIVE, SITE_NAME } from "../lib/site";
 
 interface Props {
   title: string; // page-specific part; the site name is appended when it fits
@@ -32,6 +32,7 @@ const shareImage = new URL("/og-default.png", Astro.site).href;
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     {noindex && <meta name="robots" content="noindex, follow" />}
+    {!SITE_LIVE && !noindex && <meta name="robots" content="noindex, nofollow" data-launch-switch />}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" />
 

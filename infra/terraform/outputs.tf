@@ -44,7 +44,17 @@ output "api_lambda_name" {
 
 output "site_url" {
   description = "Public site address (frontend at /, API under /api)"
+  value       = "https://${var.domain_name}"
+}
+
+output "cloudfront_url" {
+  description = "The distribution's own address; it shows the site before the domain works"
   value       = "https://${module.cdn.domain_name}"
+}
+
+output "name_servers" {
+  description = "Stage 1: paste these four nameservers at the registrar (Squarespace: DNS settings, custom nameservers)"
+  value       = module.domain.name_servers
 }
 
 output "cloudfront_distribution_id" {

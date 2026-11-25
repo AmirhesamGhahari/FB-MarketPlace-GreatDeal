@@ -8,6 +8,11 @@ export const CONTACT_EMAIL = SEO_GLOBAL.contact_email;
 // Shown as the person behind the site (About, Privacy, Terms).
 export const OWNER_NAME = SEO_GLOBAL.owner_name;
 
+// The launch switch. While false (the default) every page tells Google not to index it (noindex tag and a robots.txt that
+// disallows everything), so the site can run on its real domain before it is ready. Set PUBLIC_SITE_LIVE=true when building the
+// version that should be found by Google (see web/.env.example).
+export const SITE_LIVE = import.meta.env.PUBLIC_SITE_LIVE === "true";
+
 // Ad slots (AdSlot component) render nothing while this is false, so no empty boxes show before ads exist.
 export const ADS_ENABLED = false;
 

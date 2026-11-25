@@ -1,0 +1,41 @@
+// CloudFront Function (viewer request) for the website part of the distribution (not /api/*):
+//  - the www name is redirected permanently to the main address,
+//  - a folder address such as /iphone/ is served from its index.html (S3 does not do that by itself),
+//  - an address without a trailing slash and without a file extension (/iphone) is redirected to /iphone/ (on the same host).
+var MAIN_HOST = "${canonical_host}";
+var REDIRECT_HOSTS = ${jsonencode(redirect_hosts)};
+
+function toQuery(qs) {
+  var parts = [];
+  for (var key in qs) {
+    var item = qs[key];
+    if (item.multiValue) {
+      item.multiValue.forEach(function (entry) {
+        parts.push(key + "=" + entry.value);
+      });
+    } else {
+      parts.push(item.value === "" ? key : key + "=" + item.value);
+    }
+  }
+  return parts.length > 0 ? "?" + parts.join("&") : "";
+}
+
+function redirect(location) {
+  return { statusCode: 301, statusDescription: "Moved Permanently", headers: { location: { value: location } } };
+}
+
+function handler(event) {
+  var request = event.request;
+  var host = request.headers.host ? request.headers.host.value : "";
+  var uri = request.uri;
+
+  if (REDIRECT_HOSTS.indexOf(host) !== -1) {
+    return redirect("https://" + MAIN_HOST + uri + toQuery(request.querystring));
+  }
+  if (uri.charAt(uri.length - 1) === "/") {
+    request.uri = uri + "index.html";
+  } else if (uri.lastIndexOf(".") < uri.lastIndexOf("/")) {
+    return redirect("https://" + host + uri + "/" + toQuery(request.querystring));
+  }
+  return request;
+}

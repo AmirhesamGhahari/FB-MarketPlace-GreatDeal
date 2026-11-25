@@ -101,6 +101,18 @@ module "web" {
   app_name = var.app_name
 }
 
+module "domain" {
+  source = "./modules/domain"
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+  app_name               = var.app_name
+  domain_name            = var.domain_name
+  cloudfront_domain_name = module.cdn.domain_name
+  extra_records          = var.extra_dns_records
+}
+
 module "cdn" {
   source                          = "./modules/cdn"
   app_name                        = var.app_name
@@ -108,4 +120,8 @@ module "cdn" {
   web_bucket_arn                  = module.web.bucket_arn
   web_bucket_regional_domain_name = module.web.bucket_regional_domain_name
   api_domain                      = module.api.api_domain
+  aliases                         = [var.domain_name, "www.${var.domain_name}"]
+  certificate_arn                 = module.domain.certificate_arn
+  canonical_host                  = var.domain_name
+  redirect_hosts                  = ["www.${var.domain_name}"]
 }

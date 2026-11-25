@@ -14,8 +14,8 @@ const localApi = apiProxyTarget.startsWith('http://localhost');
 
 // https://astro.build/config
 export default defineConfig({
-  // Used for canonical links and the sitemap. Replace with the custom domain when there is one.
-  site: 'https://d2sru9uf6gw4cs.cloudfront.net',
+  // Used for canonical links, the sitemap and robots.txt. Override with SITE_URL when building for another address.
+  site: process.env.SITE_URL ?? 'https://techdealradar.ca',
 
   // Every page is built as /path/index.html and linked as /path/ (one address per page, no duplicates).
   trailingSlash: 'always',
