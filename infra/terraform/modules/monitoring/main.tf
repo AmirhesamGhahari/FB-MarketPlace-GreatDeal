@@ -95,3 +95,26 @@ resource "aws_cloudwatch_metric_alarm" "api_4xx" {
     Stage = "$default"
   }
 }
+
+# ── Alarm: an automatic deploy build failed (website build or API deploy) ──────
+# CodeBuild publishes FailedBuilds only while builds run, so quiet periods are not a problem. One failed build is
+# enough: the old site and the old API stay up, but they are no longer updated until someone looks at the build log.
+resource "aws_cloudwatch_metric_alarm" "codebuild_failed" {
+  for_each = var.codebuild_projects
+
+  alarm_name          = "${var.app_name}-${each.key}-build-failed"
+  alarm_description   = "The CodeBuild project ${each.value} had a failed build. Open CodeBuild, then ${each.value}, then Build history, for the log. The previous version stays online."
+  namespace           = "AWS/CodeBuild"
+  metric_name         = "FailedBuilds"
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 0
+  comparison_operator = "GreaterThanThreshold"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    ProjectName = each.value
+  }
+}

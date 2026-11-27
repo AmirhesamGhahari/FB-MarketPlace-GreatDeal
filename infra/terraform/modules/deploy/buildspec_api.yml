@@ -1,0 +1,16 @@
+version: 0.2
+
+# Deploys the website API: builds the Lambda package like api/build_lambda.sh does by hand, uploads it, and clears
+# the cached API answers in CloudFront. Environment: FUNCTION_NAME, CLOUDFRONT_DISTRIBUTION_ID.
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+  build:
+    commands:
+      - bash api/build_lambda.sh
+      - python3 -c "import shutil; shutil.make_archive('api', 'zip', 'api/build/lambda')"
+      - ls -lh api.zip
+      - aws lambda update-function-code --function-name "$FUNCTION_NAME" --zip-file fileb://api.zip --query "[FunctionName,CodeSize,LastUpdateStatus]" --output text
+      - aws lambda wait function-updated --function-name "$FUNCTION_NAME"
+      - aws cloudfront create-invalidation --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" --paths "/api/*" --query "Invalidation.Id" --output text

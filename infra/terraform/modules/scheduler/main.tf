@@ -122,6 +122,12 @@ resource "aws_iam_role_policy" "sfn_policy" {
         Resource = ["arn:aws:events:*:*:rule/StepFunctionsGetEventsForECSTaskRule"]
       },
       {
+        # The BuildWebsite state starts the website pipeline
+        Effect   = "Allow"
+        Action   = ["codepipeline:StartPipelineExecution"]
+        Resource = [var.web_pipeline_arn]
+      },
+      {
         # Marks mode=periodic after each successful ECS task
         Effect   = "Allow"
         Action   = ["dynamodb:UpdateItem"]
@@ -265,7 +271,20 @@ resource "aws_sfn_state_machine" "dispatcher" {
           }
         }
         ResultPath = null
-        Next = "RunNotify"
+        Next       = "BuildWebsite"
+      }
+
+      # Phase 6.2: the data is fresh, so start the website build (CodePipeline: CodeBuild clears the cached API answers,
+      # builds the site and uploads it). The start call returns at once and the build runs on its own. If even the start
+      # fails, the alert emails below must still go out, so the error is caught and the run continues. A build that
+      # fails afterwards raises the CodeBuild alarm (modules/monitoring).
+      BuildWebsite = {
+        Type       = "Task"
+        Resource   = "arn:aws:states:::aws-sdk:codepipeline:startPipelineExecution"
+        Parameters = { Name = var.web_pipeline_name }
+        ResultPath = null
+        Next       = "RunNotify"
+        Catch      = [{ ErrorEquals = ["States.ALL"], ResultPath = null, Next = "RunNotify" }]
       }
 
       RunNotify = {

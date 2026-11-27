@@ -95,3 +95,9 @@ variable "extra_dns_records" {
   }))
   default = []
 }
+
+variable "site_live" {
+  description = "Launch switch for the AUTOMATIC website builds (Phase 6.2). false: hidden version (noindex, robots.txt Disallow). true: the version Google may index. Change to true on launch day only, then terraform apply, then start the web pipeline once."
+  type        = bool
+  default     = false
+}

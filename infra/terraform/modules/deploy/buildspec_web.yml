@@ -1,0 +1,23 @@
+version: 0.2
+
+# Builds the website and publishes it (the same steps as infra/deploy_web.sh, which does the build, the checks, the
+# S3 upload and the final cache clearing). Environment: WEB_BUCKET, CLOUDFRONT_DISTRIBUTION_ID, PUBLIC_SITE_LIVE.
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      - node --version
+      - (cd web && npm ci)
+  build:
+    commands:
+      # The site build reads the whole API. CloudFront may still hold answers cached up to 6 hours, from before the data
+      # run that started this build, so clear them and WAIT until the clearing is complete.
+      - INVALIDATION_ID=$(aws cloudfront create-invalidation --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" --paths "/api/*" --query "Invalidation.Id" --output text)
+      - aws cloudfront wait invalidation-completed --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" --id "$INVALIDATION_ID"
+      - |
+        if [ "$PUBLIC_SITE_LIVE" = "true" ]; then
+          bash infra/deploy_web.sh live
+        else
+          bash infra/deploy_web.sh
+        fi

@@ -59,6 +59,9 @@ module "scheduler" {
   category_configs   = var.category_configs
   lambda_source_dir  = "${path.module}/../lambda/fanout"
   task_family        = "${var.app_name}-pipeline"
+
+  web_pipeline_name = module.deploy.web_pipeline_name
+  web_pipeline_arn  = module.deploy.web_pipeline_arn
 }
 
 module "codepipeline" {
@@ -94,6 +97,11 @@ module "monitoring" {
   alert_email       = var.alert_email
   api_function_name = module.api.function_name
   api_id            = module.api.api_id
+
+  codebuild_projects = {
+    api_deploy = module.deploy.api_project_name
+    web_build  = module.deploy.web_project_name
+  }
 }
 
 module "web" {
@@ -124,4 +132,23 @@ module "cdn" {
   certificate_arn                 = module.domain.certificate_arn
   canonical_host                  = var.domain_name
   redirect_hosts                  = ["www.${var.domain_name}"]
+}
+
+# Phase 6.1 and 6.2: the API and the website deploy themselves (see modules/deploy)
+module "deploy" {
+  source                     = "./modules/deploy"
+  app_name                   = var.app_name
+  region                     = var.region
+  github_owner               = var.github_owner
+  github_repo                = var.github_repo
+  github_branch              = var.github_branch
+  connection_arn             = module.codepipeline.connection_arn
+  artifact_bucket_name       = module.codepipeline.artifact_bucket_name
+  artifact_bucket_arn        = module.codepipeline.artifact_bucket_arn
+  api_function_name          = module.api.function_name
+  api_function_arn           = module.api.function_arn
+  web_bucket_name            = module.web.bucket_id
+  web_bucket_arn             = module.web.bucket_arn
+  cloudfront_distribution_id = module.cdn.distribution_id
+  site_live                  = var.site_live
 }

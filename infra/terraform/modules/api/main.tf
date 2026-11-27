@@ -58,6 +58,14 @@ resource "aws_lambda_function" "api" {
     aws_cloudwatch_log_group.api,
     aws_iam_role_policy_attachment.api_vpc,
   ]
+
+  # Phase 6.1: the code is deployed by the API pipeline (modules/deploy: CodeBuild builds the package and runs
+  # `aws lambda update-function-code`), not by Terraform. Without this, every `terraform apply` would put the old zip
+  # back. Terraform still sets the zip the first time the function is created. To deploy by hand, run
+  # `aws codepipeline start-pipeline-execution --name <app>-api-pipeline`.
+  lifecycle {
+    ignore_changes = [filename, source_code_hash]
+  }
 }
 
 # ── API Gateway (HTTP API): one catch-all route to the Lambda ────────────────

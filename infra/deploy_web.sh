@@ -30,4 +30,8 @@ aws s3 sync web/dist "s3://${BUCKET}" --delete --exclude "_astro/*" --cache-cont
 aws s3 sync web/dist/_astro "s3://${BUCKET}/_astro" --delete --cache-control "public, max-age=31536000, immutable"
 
 aws cloudfront create-invalidation --distribution-id "${DISTRIBUTION}" --paths "/*" --query "Invalidation.Id" --output text
-echo "Done. Open https://$(terraform -chdir=infra/terraform output -raw site_url | sed 's#https://##')/"
+if command -v terraform >/dev/null 2>&1; then
+  echo "Done. Open $(terraform -chdir=infra/terraform output -raw site_url)/"
+else
+  echo "Done."
+fi

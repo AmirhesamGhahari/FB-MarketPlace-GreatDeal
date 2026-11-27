@@ -66,3 +66,13 @@ output "web_bucket_name" {
   description = "Frontend bucket (Phase 5/6 deploys files here)"
   value       = module.web.bucket_id
 }
+
+output "web_pipeline_name" {
+  description = "Builds and uploads the website. Start by hand: aws codepipeline start-pipeline-execution --name <this>"
+  value       = module.deploy.web_pipeline_name
+}
+
+output "api_pipeline_name" {
+  description = "Deploys the API Lambda. Start by hand: aws codepipeline start-pipeline-execution --name <this>"
+  value       = module.deploy.api_pipeline_name
+}

@@ -16,3 +16,9 @@ variable "api_id" {
   description = "Website API Gateway HTTP API id (dimension of the API Gateway alarms)"
   type        = string
 }
+
+variable "codebuild_projects" {
+  description = "CodeBuild projects to watch for failed builds, as a map of short key => project name (keys must be known at plan time)"
+  type        = map(string)
+  default     = {}
+}

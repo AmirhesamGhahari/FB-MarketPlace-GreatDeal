@@ -35,3 +35,11 @@ variable "task_family" {
   description = "ECS task definition family name (used without revision to always run latest)"
   type        = string
 }
+variable "web_pipeline_name" {
+  description = "CodePipeline that builds and uploads the website (modules/deploy); started right after dbt"
+  type        = string
+}
+
+variable "web_pipeline_arn" {
+  type = string
+}
